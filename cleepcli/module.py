@@ -15,15 +15,15 @@ class Module():
     """
 
     DESC_SKEL = """{
-    "icon": "help-circle-outline",
-    "global": {
-        "js": ["%(MODULE_NAME)s.service.js"],
-        "html": [],
-        "css": []
+    \\"icon\\": \\"help-circle-outline\\",
+    \\"global\\": {
+        \\"js\\": [\\"%(MODULE_NAME)s.service.js\\"],
+        \\"html\\": [],
+        \\"css\\": []
     },
-    "config": {
-        "js": ["%(MODULE_NAME)s.config.js"],
-        "html": ["%(MODULE_NAME)s.config.html"]
+    \\"config\\": {
+        \\"js\\": [\\"%(MODULE_NAME)s.config.js\\"],
+        \\"html\\": [\\"%(MODULE_NAME)s.config.html\\"]
     }
 }
     """
@@ -33,6 +33,16 @@ class Module():
  */
 var %(MODULE_NAME)sService = function(\$q, \$rootScope, rpcService) {
     var self = this;
+
+    /**
+     * Call backend function
+     */
+    /*self.myFonction = function() {
+        return rpcService.sendCommand('my_function', '%(MODULE_NAME)s', {
+            'param1': 123,
+            'param2': 'cleep'
+        });
+    };*/
 
     /**
      * Catch x.x.x events
@@ -78,7 +88,7 @@ var %(MODULE_NAME)sConfigDirective = function(\$rootScope, %(MODULE_NAME)sServic
 var Cleep = angular.module('Cleep');
 Cleep.directive('%(MODULE_NAME)sConfigDirective', ['\$rootScope', '%(MODULE_NAME)sService', 'cleepService', %(MODULE_NAME)sConfigDirective]);
     """
-    ANGULAR_CONTROLLER_TEMPLATE_SKEL = """<div layout="column" layout-padding ng-cloak>
+    ANGULAR_CONTROLLER_TEMPLATE_SKEL = """<div layout=\\"column\\" layout-padding ng-cloak>
 
     <md-list>
     </md-list>
@@ -95,20 +105,20 @@ class %(MODULE_NAME_CAPITALIZED)s(CleepModule):
     \\"\\"\\"
     %(MODULE_NAME_CAPITALIZED)s application
     \\"\\"\\"
-    MODULE_AUTHOR = u'TODO'
-    MODULE_VERSION = u'0.0.0'
+    MODULE_AUTHOR = 'TODO'
+    MODULE_VERSION = '0.0.0'
     MODULE_DEPS = []
-    MODULE_DESCRIPTION = u'TODO'
-    MODULE_LONGDESCRIPTION = u'TODO'
+    MODULE_DESCRIPTION = 'TODO'
+    MODULE_LONGDESCRIPTION = 'TODO'
     MODULE_TAGS = []
-    MODULE_CATEGORY = u'TODO'
+    MODULE_CATEGORY = 'TODO'
     MODULE_COUNTRY = None
     MODULE_URLINFO = None
     MODULE_URLHELP = None
     MODULE_URLSITE = None
     MODULE_URLBUGS = None
 
-    MODULE_CONFIG_FILE = u'%(MODULE_NAME)s.conf'
+    MODULE_CONFIG_FILE = '%(MODULE_NAME)s.conf'
     DEFAULT_CONFIG = {}
 
     def __init__(self, bootstrap, debug_enabled):
@@ -162,16 +172,16 @@ class Test%(MODULE_NAME_CAPITALIZED)s(unittest.TestCase):
 
     def setUp(self):
         self.session = session.Session(logging.CRITICAL)
-        #next line instanciates your module, overwriting all useful stuff to isolate your module for tests
+        # next line instanciates your module, overwriting all useful stuff to isolate your module for tests
         self.module = self.session.setup(%(MODULE_NAME_CAPITALIZED)s)
 
     def tearDown(self):
         #clean session
         self.session.clean()
 
-    #write your tests here defining functions starting with \"test_\"
-    #see official documentation https://docs.python.org/2.7/library/unittest.html
-    #def test_my_test(self):
+    # write your tests here defining functions starting with \\"test_\\"
+    # see official documentation https://docs.python.org/2.7/library/unittest.html
+    # def test_my_test(self):
     #   ...
 
 #do not remove code below, otherwise test won't run
@@ -182,11 +192,11 @@ if __name__ == '__main__':
 import os, sys
 sys.path.insert(0, os.path.abspath('../'))
 
-project = u''
-copyright = u''
-author = u''
-version = u''
-release = u''
+project = ''
+copyright = ''
+author = ''
+version = ''
+release = ''
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.todo',
@@ -196,7 +206,7 @@ extensions = [
 source_suffix = '.rst'
 master_doc = 'index'
 language = None
-exclude_patterns = [u'_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 pygments_style = None
 html_theme = 'sphinx_rtd_theme'
 todo_include_todos = True
