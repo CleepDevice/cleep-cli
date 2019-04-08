@@ -4,10 +4,10 @@
 import logging
 import os
 import click
-from src.git import Git
-from src.file import File
-from src.watch import CleepWatchdog
-import src.config as config
+from cleepcli.git import Git
+from cleepcli.file import File
+from cleepcli.watch import CleepWatchdog
+import cleepcli.config as config
 
 #logging.basicConfig(level=logging.DEBUG, format=u'%(asctime)s %(levelname)s [%(name)s:%(lineno)d]: %(message)s')
 logging.basicConfig(level=logging.INFO, format=u'%(asctime)s %(levelname)s: %(message)s')

@@ -2,12 +2,12 @@ try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
-from src.config import VERSION
+from cleepcli.config import VERSION
 
 setup(
     name = 'cleepcli',
     version = VERSION,
-    description = 'Cleep-cli helps developers to build great Cleep applications from command line.'
+    description = 'Cleep-cli helps developers to build great Cleep applications from command line.',
     author = 'Tanguy Bonneau',
     author_email = 'tanguy.bonneau@gmail.com',
     maintainer = 'Tanguy Bonneau',
