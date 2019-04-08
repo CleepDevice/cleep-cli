@@ -20,6 +20,14 @@ This cli can run on platform supporting python but `watch` command is only avail
 Execute this command to get help on this cli:
 > cleep-cli --help
 
+## Watch usage
+Launch `watch` cli command to monitor changes on "/root/cleep" directory after cloning official repository.
+
+Then open your favorite editor on your development computer, configure a remote sync plugin to push local changes on your raspberry pi then cleep-cli will synchronize sources on Cleep execution environment and restart application automatically.
+
+### Visual studio code
+Install Visual studio code [ftp-sync](https://marketplace.visualstudio.com/items?itemName=lukasz-wronski.ftp-sync) plugin and configure it to access your raspberry pi.
+
 ## How it works
 This cli executes git commands to clone or update repository.
 
