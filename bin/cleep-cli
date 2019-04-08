@@ -5,6 +5,7 @@ import logging
 import os
 import click
 from cleepcli.git import Git
+from cleepcli.module import Module
 from cleepcli.file import File
 from cleepcli.watch import CleepWatchdog
 import cleepcli.config as config
@@ -48,6 +49,15 @@ def modsync(mod):
     f = File()
     f.module_sync(mod)
 
+@mod.command()
+@click.option('--name', prompt='Module name')
+def modcreate(name):
+    """
+    Create new module skeleton
+    """
+    m = Module()
+    m.create(name)
+
 @click.group()
 def watchdog():
     pass
@@ -60,8 +70,19 @@ def watch():
     w = CleepWatchdog()
     w.watch()
 
+@click.group()
+def general():
+    pass
 
-cli = click.CommandCollection(sources=[core, mod, watchdog])
+@general.command()
+def version():
+    """
+    Display cleep-cli version
+    """
+    click.echo(config.VERSION)
+
+
+cli = click.CommandCollection(sources=[general, core, mod, watchdog])
 if __name__ == '__main__':
     cli()
 
