@@ -19,7 +19,7 @@ class Git():
         if not config.PRIVATE_REPO:
             return ''
         dir_name = os.path.dirname(os.path.realpath(__file__))
-        return 'GIT_ASKPASS=%s' % os.path.join(dir_name, '../scripts/git_password.sh')
+        return 'GIT_ASKPASS=%s' % os.path.join(dir_name, 'git_password.sh')
 
     def pull_core(self):
         """
