@@ -1,4 +1,6 @@
 #!/bin/bash
+./build.sh
 cd ..
-python setup.py sdist upload -r pypi
+python -m twine upload dist/*
+cd -
 
