@@ -60,18 +60,14 @@ class ActionsExecutor(Thread):
         """
         if isinstance(action, ActionFileSync):
             if action.module is None:
-                self.logger.info('Synchronizing core sources')
                 self.file.core_sync()
             else:
-                self.logger.info('Synchronizing module "%s" source' % action.module)
                 self.file.module_sync(action.module)
 
         elif isinstance(action, ActionRestart):
             if action.frontend:
-                self.logger.info('Restarting frontend')
                 self.cleep.restart_frontend()
             else:
-                self.logger.info('Restarting backend')
                 self.cleep.restart_backend()
 
     def run(self):

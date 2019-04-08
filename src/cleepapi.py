@@ -21,6 +21,7 @@ class CleepApi():
         """
         Send command to restart backend
         """
+        self.logger.info('Restarting backend')
         resp = requests.post(self.COMMAND_URL, json={'to':'system', 'command':'restart', 'delay':0.0})
         self.logger.debug('Response[%s]: %s' % (resp.status_code, resp.json()))
 
@@ -28,6 +29,7 @@ class CleepApi():
         """
         Send command to restart frontend
         """
+        self.logger.info('Restarting frontend')
         resp = requests.post(self.COMMAND_URL, json={'to':'developer', 'command':'restart_frontend'})
         self.logger.debug('Response[%s]: %s' % (resp.status_code, resp.json()))
         

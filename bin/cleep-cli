@@ -1,0 +1,67 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import logging
+import os
+import click
+from src.git import Git
+from src.file import File
+from src.watch import CleepWatchdog
+import src.config as config
+
+#logging.basicConfig(level=logging.DEBUG, format=u'%(asctime)s %(levelname)s [%(name)s:%(lineno)d]: %(message)s')
+logging.basicConfig(level=logging.INFO, format=u'%(asctime)s %(levelname)s: %(message)s')
+
+@click.group()
+def core():
+    pass
+
+@core.command()
+def coreget():
+    """ 
+    Get or update core content from official repository
+    """
+    g = Git()
+    if not os.path.exists(config.CORE_SRC):
+        g.clone_core()
+    else:
+        g.pull_core()
+
+@core.command()
+def coresync():
+    """
+    Synchronize core content between source and execution folders
+    """
+    f = File()
+    f.core_sync()
+
+@click.group()
+def mod():
+    pass
+
+@mod.command()
+@click.option('--mod', required=True, help='Module name.')
+def modsync(mod):
+    """
+    Synchronize core content between source and execution folders
+    """
+    f = File()
+    f.module_sync(mod)
+
+@click.group()
+def watchdog():
+    pass
+
+@watchdog.command()
+def watch():
+    """
+    Start watchdog that monitors filesystem changes on Cleep sources
+    """
+    w = CleepWatchdog()
+    w.watch()
+
+
+cli = click.CommandCollection(sources=[core, mod, watchdog])
+if __name__ == '__main__':
+    cli()
+
