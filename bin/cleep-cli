@@ -64,10 +64,17 @@ def watchdog():
     pass
 
 @watchdog.command()
-def watch():
+@click.option('--quiet', is_flag=True, help='Disable logging.')
+@click.option('--loglevel', default=logging.INFO, help='Logging level (10=DEBUG, 20=INFO, 30=WARN, 40=ERROR).')
+def watch(quiet, loglevel):
     """
     Start watchdog that monitors filesystem changes on Cleep sources
     """
+    if quiet:
+        logging.disable(logging.CRITICAL)
+    else:
+        logging.getLogger().setLevel(loglevel)
+        
     w = CleepWatchdog()
     w.watch()
 
