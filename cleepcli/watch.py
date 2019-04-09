@@ -72,7 +72,7 @@ class ActionsExecutor(Thread):
 
     def run(self):
         """
-        Main process: unqueue request and process it
+        Main process: unqueue action and process it
         """
         while self.running:
             try:
@@ -80,7 +80,7 @@ class ActionsExecutor(Thread):
                 self.__execute_action(action)
 
             except IndexError:
-                #no request available
+                #no action available
                 time.sleep(0.25)
 
             except:
