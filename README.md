@@ -14,7 +14,7 @@ If you want to install it manually, execute following command:
 > pip install cleepcli
 
 ## Compatibility
-This cli can run on platform supporting python but `watch` command is only available on Raspbian distribution.
+This cli is developed in Python and is supposed to be used on Raspbian platform for Cleep application development because it has harcoded path.
 
 ## Help
 Execute this command to get help on this cli:
@@ -48,5 +48,5 @@ This cli executes git commands to clone or update repository.
 
 It uses rsync commands to synchronize files.
 
-The [watchdog](https://pypi.org/project/watchdog/) python library is used to detect changes on filesystem. According to changed files, it detects if change occurs on frontend or backend files and send commands to running Cleep software.
+The [watchdog](https://pypi.org/project/watchdog/) python library is used to detect changes on filesystem. According to changed files, it detects if change occurs on frontend or backend files and send commands to restart Cleep application.
 
