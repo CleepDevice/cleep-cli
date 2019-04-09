@@ -3,6 +3,8 @@
 
 import logging
 import os
+import platform
+import subprocess
 import click
 from cleepcli.git import Git
 from cleepcli.module import Module
@@ -10,7 +12,6 @@ from cleepcli.file import File
 from cleepcli.watch import CleepWatchdog
 import cleepcli.config as config
 
-#logging.basicConfig(level=logging.DEBUG, format=u'%(asctime)s %(levelname)s [%(name)s:%(lineno)d]: %(message)s')
 logging.basicConfig(level=logging.INFO, format=u'%(asctime)s %(levelname)s: %(message)s')
 
 @click.group()
@@ -84,5 +85,19 @@ def version():
 
 cli = click.CommandCollection(sources=[general, core, mod, watchdog])
 if __name__ == '__main__':
-    cli()
+
+    def is_raspbian():
+        if platform.system()!='Linux':
+            return False
+        res = subprocess.Popen(u'cat /etc/os-release | grep -i raspbian | wc -l', stdout=subprocess.PIPE, shell=True)
+        stdout = res.communicate()[0]
+        if stdout.strip()=='0':
+            return False
+        return True
+
+    #execute only on raspbian
+    if is_raspbian():
+        cli()
+    else:
+        click.echo('Cleep-cli runs only on raspbian distribution')
 
