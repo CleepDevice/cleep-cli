@@ -21,7 +21,7 @@ Execute this command to get help on this cli:
 > cleep-cli --help
 
 ## Watch usage
-Launch `watch` cli command to monitor changes on "/root/cleep" directory after cloning official repository.
+Launch `watch` cli command to monitor changes on "/root/cleep" directory after getting official Cleep repository using `coreget` command.
 
 Then open your favorite editor on your development computer, configure a remote sync plugin to push local changes on your raspberry pi then cleep-cli will synchronize sources on Cleep execution environment and restart application automatically.
 
