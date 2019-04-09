@@ -14,7 +14,7 @@ If you want to install it manually, execute following command:
 > pip install cleepcli
 
 ## Compatibility
-This cli is developed in Python and is supposed to be used on Raspbian platform for Cleep application development because it has harcoded path.
+This cli is written in Python and is supposed to be used only on Raspbian platform for Cleep application development because it has harcoded paths.
 
 ## Help
 Execute this command to get help on this cli:
