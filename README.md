@@ -25,6 +25,9 @@ Launch `watch` cli command to monitor changes on "/root/cleep" directory after g
 
 Then open your favorite editor on your development computer, configure a remote sync plugin to push local changes on your raspberry pi then cleep-cli will synchronize sources on Cleep execution environment and restart application automatically.
 
+### Paths
+If you develop on Cleep core, your editor must sync `/root/cleep` directory while if you're developping only on a module your editor must sync `/root/cleep/modules/<your module name>`.
+
 ### Visual studio code
 Install Visual studio code [sftp](https://marketplace.visualstudio.com/items?itemName=liximomo.sftp) plugin and configure it to access your raspberry pi:
 * Open VSCode command palette pressing CTRL-SHIFT-P
@@ -34,11 +37,11 @@ Install Visual studio code [sftp](https://marketplace.visualstudio.com/items?ite
 ```
 {
     "name": "Cleep",
-    "host": "raspberry pi ip address",
+    "host": "<raspberry pi ip address>",
     "protocol": "sftp",
     "port": 22,
     "username": "root",
-    "remotePath": "/root/cleep" | "/root/cleep/modules/<your module name>",
+    "remotePath": "/root/cleep" or "/root/cleep/modules/<your module name>",
     "uploadOnSave": true
 }
 ```
