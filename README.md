@@ -29,8 +29,7 @@ Then open your favorite editor on your development computer, configure a remote 
 Install Visual studio code [sftp](https://marketplace.visualstudio.com/items?itemName=liximomo.sftp) plugin and configure it to access your raspberry pi:
 * Open VSCode command palette pressing CTRL-SHIFT-P
 * Type "sftp: config"
-* It opens new file
-* Fill info like this:
+* Fill opened file with:
 
 ```
 {
