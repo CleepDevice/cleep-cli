@@ -38,7 +38,7 @@ Install Visual studio code [sftp](https://marketplace.visualstudio.com/items?ite
     "protocol": "sftp",
     "port": 22,
     "username": "root",
-    "remotePath": "/root/cleep",
+    "remotePath": "/root/cleep" | "/root/cleep/modules/<your module name>",
     "uploadOnSave": true
 }
 ```
