@@ -46,6 +46,9 @@ Install Visual studio code [sftp](https://marketplace.visualstudio.com/items?ite
 }
 ```
 
+### Local developements
+If you want to develop directly on the raspberry using vim or nano, simply develop on `/root/cleep/` directory. Cleep-cli watcher will synchronize all your modifications.
+
 ## How it works
 This cli executes git commands to clone or update repository.
 
