@@ -8,7 +8,7 @@ This utility helps developers to build Cleep applications providing some useful 
 * `watch` to watch for repository filesystem changes and automatically update files on execution folders. It also restart backend or/and frontend according to changes.
 
 ## Installation
-Cleep-cli is automatically installed and managed by Cleep developer application.
+Cleep-cli is automatically installed and managed by [Cleep developer](https://github.com/tangb/cleepmod-developer) application.
 
 If you want to install it manually, execute following command:
 > pip install cleepcli
