@@ -4,7 +4,7 @@
 import sys
 import os
 import logging
-import config
+from . import config
 import requests
 
 class CleepApi():

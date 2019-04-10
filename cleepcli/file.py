@@ -3,9 +3,9 @@
 
 import sys
 import os
-from console import Console
+from .console import Console
 import logging
-import config
+from . import config
 
 class File():
     """

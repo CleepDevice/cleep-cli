@@ -6,13 +6,13 @@ import re
 import os
 import time
 import logging
-import config
+from . import config
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import watchdog.events as events
 from threading import Thread
-from cleepapi import CleepApi
-from file import File
+from .cleepapi import CleepApi
+from .file import File
 from collections import deque
 
 class ActionFileSync():
