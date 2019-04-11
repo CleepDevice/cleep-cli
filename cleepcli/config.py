@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-VERSION = '1.0.5'
+VERSION = '1.0.6'
 
 PRIVATE_REPO = True
-REPO_URL = 'https://tangb@bitbucket.org/tangb/raspiot.git'
+REPO_PRIVATE_URL = 'https://$GIT_USERNAME@bitbucket.org/tangb/raspiot.git'
+REPO_PUBLIC_URL = 'https://github.com/tangb/cleep.git' # not available yet
 REPO_DIR = '/root/cleep'
 
 CORE_SRC = '%s/raspiot' % REPO_DIR

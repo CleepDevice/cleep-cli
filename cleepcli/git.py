@@ -48,7 +48,8 @@ class Git():
         #clone repo
         self.logger.info('Cloning core repository...')
         c = Console()
-        cmd = '%s git clone -q "%s" "%s"' % (self.__get_private_repo_git_command(), config.REPO_URL, config.REPO_DIR)
+        url = config.REPO_PRIVATE_URL if config.PRIVATE_REPO else config.REPO_PUBLIC_URL
+        cmd = '%s git clone -q "%s" "%s"' % (self.__get_private_repo_git_command(), url, config.REPO_DIR)
         self.logger.debug('cmd: %s' % cmd)
         resp = c.command(cmd, 60)
         self.logger.debug('Clone resp: %s' % resp)
