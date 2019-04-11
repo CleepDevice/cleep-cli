@@ -3,6 +3,7 @@
 
 import logging
 import os
+import sys
 import platform
 import subprocess
 import click
@@ -25,9 +26,13 @@ def coreget():
     """
     g = Git()
     if not os.path.exists(config.CORE_SRC):
-        g.clone_core()
+        res = g.clone_core()
     else:
-        g.pull_core()
+        res = g.pull_core()
+
+    if not res:
+        sys.exit(1)
+    sys.exit(0)
 
 @core.command()
 def coresync():
@@ -35,7 +40,11 @@ def coresync():
     Synchronize core content between source and execution folders
     """
     f = File()
-    f.core_sync()
+    res = f.core_sync()
+
+    if not res:
+        sys.exit(1)
+    sys.exit(0)
 
 @click.group()
 def mod():
@@ -48,7 +57,11 @@ def modsync(mod):
     Synchronize core content between source and execution folders
     """
     f = File()
-    f.module_sync(mod)
+    res = f.module_sync(mod)
+
+    if not res:
+        sys.exit(1)
+    sys.exit(0)
 
 @mod.command()
 @click.option('--name', prompt='Module name')
@@ -57,7 +70,11 @@ def modcreate(name):
     Create new module skeleton
     """
     m = Module()
-    m.create(name)
+    res = m.create(name)
+
+    if not res:
+        sys.exit(1)
+    sys.exit(0)
 
 @click.group()
 def watchdog():
@@ -76,7 +93,11 @@ def watch(quiet, loglevel):
         logging.getLogger().setLevel(loglevel)
         
     w = CleepWatchdog()
-    w.watch()
+    res = w.watch()
+
+    if not res:
+        sys.exit(1)
+    sys.exit(0)
 
 @click.group()
 def general():
@@ -88,6 +109,7 @@ def version():
     Display cleep-cli version
     """
     click.echo(config.VERSION)
+    sys.exit(0)
 
 
 cli = click.CommandCollection(sources=[general, core, mod, watchdog])
