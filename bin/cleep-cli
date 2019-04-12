@@ -13,7 +13,7 @@ from cleepcli.file import File
 from cleepcli.watch import CleepWatchdog
 import cleepcli.config as config
 
-logging.basicConfig(level=logging.INFO, format=u'%(asctime)s %(levelname)s: %(message)s')
+logging.basicConfig(level=logging.INFO, format=u'%(message)s', stream=sys.stdout)
 
 @click.group()
 def core():
