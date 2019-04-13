@@ -135,48 +135,59 @@ class CleepHandler(FileSystemEventHandler):
         """
         #drop dir modified event or created file (that always comes with modified file)
         if type(event) in (events.DirModifiedEvent, events.FileCreatedEvent):
+            self.logger.debug('Filtered: DirModifiedEvent or FileCreatedEvent')
             return True
 
         #filter invalid event
         if not event:
+            self.logger.debug('Filtered: invalid event')
             return True
 
         #filter event on current script
         if event.src_path == u'.%s' % __file__:
+            self.logger.debug('Filtered: event on current script')
             return True
 
         #filter root event
         if event.src_path == u'.':
+            self.logger.debug('Filtered: root event')
             return True
 
         #filter invalid extension
         src_ext = os.path.splitext(event.src_path)[1]
         if src_ext in self.REJECTED_EXTENSIONS:
+            self.logger.debug('Filtered: invalid extension')
             return True
 
         #filter by prefix
         for prefix in self.REJECTED_PREFIXES:
             if event.src_path.startswith(prefix):
+                self.logger.debug('Filtered: source prefix')
                 return True
             if getattr(event, u'dest_path', None) and event.dest_path.startswith(prefix):
+                self.logger.debug('Filtered: destination prefix')
                 return True
 
         #filter by suffix
         for suffix in self.REJECTED_SUFFIXES:
             if event.src_path.endswith(suffix):
+                self.logger.debug('Filtered: source suffix')
                 return True
             if getattr(event, u'dest_path', None) and event.dest_path.endswith(prefix):
+                self.logger.debug('Filtered: destination suffix')
                 return True
 
         #filter by filename
         for filename in self.REJECTED_FILENAMES:
             if event.src_path.endswith(filename):
+                self.logger.debug('Filtered: filename')
                 return True
 
         #filter by dir
         parts = event.src_path.split(os.path.sep)
         for dir in self.REJECTED_DIRS:
             if dir in parts:
+                self.logger.debug('Filtered: directory')
                 return True
 
         return False
@@ -221,17 +232,19 @@ class CleepHandler(FileSystemEventHandler):
         Returns:
             True if change occurs in core, False otherwise
         """
-        pattern = '^(%s/(?!tests|modules)(.*\.py)|%s/.*)$' % (config.CORE_SRC, config.HTML_SRC)
-        #self.logger.debug('Core pattern: %s' % pattern)
+        patternCore = '^(%s/(?!tests|modules)(.*\.py)|%s/.*)$' % (config.CORE_SRC, config.HTML_SRC)
+        patternBin = '^%s/raspiot' % (config.BIN_SRC)
+        #self.logger.debug('Core pattern: %s' % patternCore)
+        self.logger.debug('Bin pattern: %s' % patternBin)
 
         if hasattr(event, 'src_path'):
-            res = re.search(pattern, event.src_path)
-            if res:
+            if re.search(patternCore, event.src_path):
+                return True
+            if re.search(patternBin, event.src_path):
                 return True
 
         if hasattr(event, 'dest_path'):
-            res = re.search(pattern, event.dest_path)
-            if res:
+            if re.search(patternCore, event.dest_path):
                 return True
 
         return False
@@ -277,6 +290,7 @@ class CleepHandler(FileSystemEventHandler):
                     return 
 
                 #is event on module ?
+                change_on_core = False
                 change_on_module = self.__change_on_module(event)
                 if change_on_module is None:
                     change_on_core = self.__change_on_core(event)
@@ -299,9 +313,6 @@ class CleepHandler(FileSystemEventHandler):
                     self.logger.debug('  Change on backend')
                     self.actions_executor.add_action(ActionRestart())
                     self.__last_times['backend'] = now
-
-            else:
-                self.logger.debug('  Dropped by filter')
 
         except:
             self.logger.exception('Error occured during watcher event processing:')
@@ -329,7 +340,7 @@ class CleepWatchdog():
         event_handler = CleepHandler(self.actions_executor)
         observer = Observer()
         observer.schedule(event_handler, path, recursive=True)
-        self.logger.info('Cleep watchdog is running (CTRL-C to stop)')
+        self.logger.info('Cleep watchdog is running on "%s" (CTRL-C to stop)' % path)
         observer.start()
         try:
             while True:

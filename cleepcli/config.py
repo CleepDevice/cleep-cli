@@ -19,9 +19,9 @@ MODULES_DST = '%s/modules' % CORE_DST
 MODULES_HTML_DST = '%s/js/modules' % HTML_DST
 MODULES_SCRIPTS_DST = '/opt/raspiot/scripts'
 
-BIN_SRC = '%s/bin/' % REPO_DIR
+BIN_SRC = '%s/bin' % REPO_DIR
 BIN_DST = '/usr/bin'
 
-MEDIA_SRC = '%s/medias/' % REPO_DIR
+MEDIA_SRC = '%s/medias' % REPO_DIR
 MEDIA_DST = '/opt/raspiot'
 
