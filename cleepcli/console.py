@@ -61,6 +61,7 @@ class EndlessConsole(Thread):
         for line in iter(output.readline, b''):
             if not self.running:
                 break
+            #self.logger.info('line = %s' % line)
             queue.put(line.decode('utf-8').strip())
         try:
             output.close()
@@ -91,6 +92,39 @@ class EndlessConsole(Thread):
         self.killed = True
         self.__stop()
 
+    def __send_stds(self):
+        """
+        Read queues and send outputs if available
+
+        Returns:
+            True if something sent, False otherwise
+        """
+        if not self.callback:
+            return False
+
+        stdout = None
+        stderr = None
+
+        try:
+            stdout = self.__stdout_queue.get_nowait()
+        except Empty:
+            pass
+        except:
+            self.logger.exception('Error getting stdout queue')
+
+        try:
+            stderr = self.__stderr_queue.get_nowait()
+        except Empty:
+            pass
+        except:
+            self.logger.exception('Error getting stderr queue')
+
+        if stdout is not None or stderr is not None:
+            self.callback(stdout, stderr)
+            return True
+
+        return False
+
     def run(self):
         """
         Console process
@@ -119,19 +153,7 @@ class EndlessConsole(Thread):
             p.poll()
 
             #read outputs and trigger callback
-            if self.callback:
-                stdout = None
-                stderr = None
-                try:
-                    stdout = self.__stdout_queue.get_nowait()
-                except:
-                    pass
-                try:
-                    stderr = self.__stderr_queue.get_nowait()
-                except:
-                    pass
-                if stdout is not None or stderr is not None:
-                    self.callback(stdout, stderr)
+            self.__send_stds()
 
             #check end of command
             if p.returncode is not None:
@@ -141,6 +163,10 @@ class EndlessConsole(Thread):
             
             #pause
             time.sleep(0.25)
+
+        #purge queues
+        while self.__send_stds():
+            pass
 
         #make sure process (and child processes) is really killed
         try:
@@ -153,6 +179,7 @@ class EndlessConsole(Thread):
 
         #stop callback
         if self.callback_end:
+            self.logger.debug('Call end callback')
             self.callback_end(return_code, self.killed)
 
 
