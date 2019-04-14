@@ -11,6 +11,7 @@ from cleepcli.git import Git
 from cleepcli.module import Module
 from cleepcli.file import File
 from cleepcli.watch import CleepWatchdog
+from cleepcli.test import Test
 import cleepcli.config as config
 
 logging.basicConfig(level=logging.INFO, format=u'%(message)s', stream=sys.stdout)
@@ -100,6 +101,38 @@ def watch(quiet, loglevel):
     sys.exit(0)
 
 @click.group()
+def test():
+    pass
+
+@test.command()
+@click.option('--name', prompt='Module name')
+@click.option('--coverage', is_flag=True, help='Display coverage report.')
+def modtest(name, coverage):
+    """
+    Execute module tests
+    """
+    m = Test()
+    res = m.module_test(name, coverage)
+
+    if not res:
+        sys.exit(1)
+    sys.exit(0)
+
+@test.command()
+@click.option('--name', prompt='Module name')
+@click.option('--missing', is_flag=True, help='Display missing statements.')
+def modtestcov(name, missing):
+    """
+    Execute module tests
+    """
+    m = Test()
+    res = m.module_test_coverage(name, missing)
+
+    if not res:
+        sys.exit(1)
+    sys.exit(0)
+
+@click.group()
 def general():
     pass
 
@@ -112,9 +145,10 @@ def version():
     sys.exit(0)
 
 
-cli = click.CommandCollection(sources=[general, core, mod, watchdog])
+cli = click.CommandCollection(sources=[general, core, mod, watchdog, test])
 if __name__ == '__main__':
 
+    logging.debug('test')
     def is_raspbian():
         if platform.system()!='Linux':
             return False
