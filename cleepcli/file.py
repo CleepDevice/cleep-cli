@@ -23,7 +23,7 @@ class File():
         c = Console()
         cmd = """
 /bin/mkdir -p "%(HTML_DST)s/"
-/usr/bin/rsync -av "%(REPO_DIR)s/raspiot/" "%(CORE_DST)s/" --exclude "tests/" --exclude "modules/**/" --delete --exclude "*.pyc"
+/usr/bin/rsync -av "%(REPO_DIR)s/raspiot/" "%(CORE_DST)s/" --exclude "/tests/" --exclude "modules/**/" --delete --exclude "*.pyc"
 /usr/bin/rsync -av "%(REPO_DIR)s/html/" "%(HTML_DST)s/" --delete --exclude "js/modules/"
 /usr/bin/rsync -av "%(REPO_DIR)s/bin/raspiot" "%(BIN_DST)s/raspiot"
 /usr/bin/rsync -av "%(REPO_DIR)s/medias/sounds" "%(MEDIA_DST)s/sounds/" --delete
