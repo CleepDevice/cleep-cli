@@ -123,7 +123,7 @@ def modtest(name, coverage):
 @click.option('--missing', is_flag=True, help='Display missing statements.')
 def modtestcov(name, missing):
     """
-    Execute module tests
+    Display module test coverage summary
     """
     m = Test()
     res = m.module_test_coverage(name, missing)
