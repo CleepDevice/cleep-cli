@@ -18,7 +18,7 @@ class Test():
     def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.__endless_command_running = False
-        self.__endless_comand_return_code = 0
+        self.__endless_command_return_code = 0
         self.__module_version = None
         if not os.path.exists(self.COVERAGE_PATH):
             os.makedirs(self.COVERAGE_PATH)
@@ -28,7 +28,7 @@ class Test():
 
     def __console_end_callback(self, return_code, killed):
         self.__endless_command_running = False
-        self.__endless_comand_return_code = return_code
+        self.__endless_command_return_code = return_code
 
     def __get_module_version(self, module_name):
         if self.__module_version:
@@ -133,8 +133,8 @@ COVERAGE_FILE=%s coverage run --omit="/usr/local/lib/python2.7/*","test_*","../b
             self.logger.debug('Display coverage')
             self.module_test_coverage(module_name)
 
-        self.logger.debug('Return code: %s' % self.__endless_comand_return_code)
-        if self.__endless_comand_return_code!=0:
+        self.logger.debug('Return code: %s' % self.__endless_command_return_code)
+        if self.__endless_command_return_code!=0:
             return False
 
         return True
