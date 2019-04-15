@@ -12,6 +12,7 @@ from cleepcli.module import Module
 from cleepcli.file import File
 from cleepcli.watch import CleepWatchdog
 from cleepcli.test import Test
+from cleepcli.distrib import Distrib
 import cleepcli.config as config
 
 logging.basicConfig(level=logging.INFO, format=u'%(message)s', stream=sys.stdout)
@@ -133,6 +134,22 @@ def modtestcov(name, missing):
     sys.exit(0)
 
 @click.group()
+def distrib():
+    pass
+
+@distrib.command()
+def build():
+    """
+    Build Cleep debian package
+    """
+    d = Distrib()
+    res = d.build_cleep()
+
+    if not res:
+        sys.exit(1)
+    sys.exit(0)
+
+@click.group()
 def general():
     pass
 
@@ -145,10 +162,9 @@ def version():
     sys.exit(0)
 
 
-cli = click.CommandCollection(sources=[general, core, mod, watchdog, test])
+cli = click.CommandCollection(sources=[general, core, mod, watchdog, test, distrib])
 if __name__ == '__main__':
 
-    logging.debug('test')
     def is_raspbian():
         if platform.system()!='Linux':
             return False
