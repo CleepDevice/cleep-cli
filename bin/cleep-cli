@@ -13,6 +13,7 @@ from cleepcli.file import File
 from cleepcli.watch import CleepWatchdog
 from cleepcli.test import Test
 from cleepcli.distrib import Distrib
+from cleepcli.docs import Docs
 import cleepcli.config as config
 
 logging.basicConfig(level=logging.INFO, format=u'%(message)s', stream=sys.stdout)
@@ -53,26 +54,26 @@ def mod():
     pass
 
 @mod.command()
-@click.option('--mod', required=True, help='Module name.')
-def modsync(mod):
+@click.option('--module', required=True, help='Module name.')
+def modsync(module):
     """
     Synchronize core content between source and execution folders
     """
     f = File()
-    res = f.module_sync(mod)
+    res = f.module_sync(module)
 
     if not res:
         sys.exit(1)
     sys.exit(0)
 
 @mod.command()
-@click.option('--name', prompt='Module name')
-def modcreate(name):
+@click.option('--module', prompt='Module name')
+def modcreate(module):
     """
     Create new module skeleton
     """
     m = Module()
-    res = m.create(name)
+    res = m.create(module)
 
     if not res:
         sys.exit(1)
@@ -106,28 +107,28 @@ def test():
     pass
 
 @test.command()
-@click.option('--name', prompt='Module name')
+@click.option('--module', prompt='Module name')
 @click.option('--coverage', is_flag=True, help='Display coverage report.')
-def modtest(name, coverage):
+def modtest(module, coverage):
     """
     Execute module tests
     """
     m = Test()
-    res = m.module_test(name, coverage)
+    res = m.module_test(module, coverage)
 
     if not res:
         sys.exit(1)
     sys.exit(0)
 
 @test.command()
-@click.option('--name', prompt='Module name')
+@click.option('--module', prompt='Module name')
 @click.option('--missing', is_flag=True, help='Display missing statements.')
-def modtestcov(name, missing):
+def modtestcov(module, missing):
     """
     Display module test coverage summary
     """
     m = Test()
-    res = m.module_test_coverage(name, missing)
+    res = m.module_test_coverage(module, missing)
 
     if not res:
         sys.exit(1)
@@ -150,6 +151,23 @@ def build():
     sys.exit(0)
 
 @click.group()
+def docs():
+    pass
+
+@docs.command()
+@click.option('--module', prompt='Module name')
+def moddocs(module):
+    """
+    Generate module documentation in appropriate format
+    """
+    d = docs = Docs()
+    res = d.generate_module_docs(module)
+
+    if not res:
+        sys.exit(1)
+    sys.exit(0)
+
+@click.group()
 def general():
     pass
 
@@ -162,7 +180,7 @@ def version():
     sys.exit(0)
 
 
-cli = click.CommandCollection(sources=[general, core, mod, watchdog, test, distrib])
+cli = click.CommandCollection(sources=[general, core, mod, watchdog, test, distrib, docs])
 if __name__ == '__main__':
 
     def is_raspbian():
