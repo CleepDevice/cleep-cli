@@ -7,6 +7,7 @@ from .console import Console
 import logging
 from . import config
 import shutil
+import re
 
 class Module():
     """
@@ -147,6 +148,30 @@ class %(MODULE_NAME_CAPITALIZED)s(RaspIotModule):
         #  - ...
         pass
     """
+    TEST_DEFAULT = """import unittest
+import logging
+sys.path.append('../')
+from backend.%(MODULE_NAME)s import %(MODULE_NAME_CAPITALIZED)s
+from raspiot.utils import InvalidParameter, MissingParameter, CommandError, Unauthorized
+from raspiot.libs.tests import session
+
+LOG_LEVEL = logging.INFO
+
+class Test%(MODULE_NAME_CAPITALIZED)s(unittest.TestCase):
+
+    def setUp(self):
+        self.session = session.Session(LOG_LEVEL)
+        #next line instanciates your module, overwriting all useful stuff to isolate your module for tests
+        self.module = self.session.setup(%(MODULE_NAME_CAPITALIZED)s)
+
+    def tearDown(self):
+        #clean session
+        self.session.clean()
+
+    #write your tests here defining functions
+    #official documentation https://docs.python.org/2.7/library/unittest.html
+    #...
+    """
 
     def __init__(self):
         """
@@ -161,6 +186,8 @@ class %(MODULE_NAME_CAPITALIZED)s(RaspIotModule):
         Args:
             module_name (string): module name
         """
+        module_name = re.sub('[^0-9a-zA-Z]+', '', module_name).lstrip('0123456789').lower()
+        self.logger.debug('Module name to create: %s' % module_name)
         path = os.path.join(config.MODULES_SRC, module_name)
         self.logger.info('Creating module "%s" in "%s"' % (module_name, path))
         
@@ -173,7 +200,8 @@ class %(MODULE_NAME_CAPITALIZED)s(RaspIotModule):
             'ANGULAR_CONTROLLER': self.ANGULAR_CONTROLLER_SKEL % {'MODULE_NAME': module_name, 'MODULE_NAME_CAPITALIZED': module_name.capitalize()},
             'ANGULAR_CONTROLLER_TEMPLATE': self.ANGULAR_CONTROLLER_TEMPLATE_SKEL % {'MODULE_NAME': module_name, 'MODULE_NAME_CAPITALIZED': module_name.capitalize()},
             'DESC': self.DESC_SKEL % {'MODULE_NAME': module_name, 'MODULE_NAME_CAPITALIZED': module_name.capitalize()},
-            'PYTHON_MODULE': self.PYTHON_MODULE_SKEL % {'MODULE_NAME': module_name, 'MODULE_NAME_CAPITALIZED': module_name.capitalize()}
+            'PYTHON_MODULE': self.PYTHON_MODULE_SKEL % {'MODULE_NAME': module_name, 'MODULE_NAME_CAPITALIZED': module_name.capitalize()},
+            'TEST_DEFAULT': self.TEST_DEFAULT % {'MODULE_NAME': module_name, 'MODULE_NAME_CAPITALIZED': module_name.capitalize()},
         }
 
         c = Console()
@@ -188,6 +216,7 @@ class %(MODULE_NAME_CAPITALIZED)s(RaspIotModule):
 /bin/echo "%(ANGULAR_CONTROLLER_TEMPLATE)s" > %(MODULE_DIR)s/frontend/%(MODULE_NAME)s.config.html
 /bin/mkdir -p %(MODULE_DIR)s/tests
 /usr/bin/touch %(MODULE_DIR)s/tests/__init__.py
+/bin/echo "%(TEST_DEFAULT)s" > %(MODULE_DIR)s/tests/test_%(MODULE_NAME)s.py
         """ % {
             'MODULE_DIR': path,
             'MODULE_NAME': module_name,
@@ -195,12 +224,14 @@ class %(MODULE_NAME_CAPITALIZED)s(RaspIotModule):
             'ANGULAR_SERVICE': templates['ANGULAR_SERVICE'],
             'ANGULAR_CONTROLLER': templates['ANGULAR_CONTROLLER'],
             'ANGULAR_CONTROLLER_TEMPLATE': templates['ANGULAR_CONTROLLER_TEMPLATE'],
-            'PYTHON_MODULE': templates['PYTHON_MODULE']
+            'PYTHON_MODULE': templates['PYTHON_MODULE'],
+            'TEST_DEFAULT': templates['TEST_DEFAULT'],
         }, 10)
         if resp['error'] or resp['killed']:
             self.logger.error('Error occured while pulling repository: %s' % ('killed' if resp['killed'] else resp['stderr']))
             shutil.rmtree(path)
             return False
         
+        self.logger.info('Done')
         return True
 
