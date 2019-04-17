@@ -19,7 +19,7 @@ setup(
         'Click>=7.0,<8.0',
         'watchdog>=0.9.0,<1.0.0',
         'requests>=2.21.0,<3.0.0',
-        'coverage>=4.5.3,<5.0.0'
+        'coverage>=4.5.3,<5.0.0',
         'Sphinx>=1.8.5,<2.0.0',
         'sphinx-rtd-theme>=0.4.3',
         'sphinxcontrib-napoleon>=0.7',
