@@ -13,7 +13,7 @@ class Test():
     """
     Handle test operations
     """
-    COVERAGE_PATH = '/opt/raspiot/coverage'
+    COVERAGE_PATH = '/opt/raspiot/.coverage'
 
     def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -78,6 +78,12 @@ class Test():
             module_name (string): module name
             missing (bool): display missing statements (default False)
         """
+        #checking module path
+        path = os.path.join(config.MODULES_SRC, module_name, 'tests')
+        if not os.path.exists(path):
+            self.logger.error('Specified module "%s" does not exist' % (module_name))
+            return False
+
         module_version = self.__get_module_version(module_name)
         if module_version is None:
             return False
@@ -109,7 +115,12 @@ COVERAGE_FILE=%s coverage report %s
             module_name (string): module name
             display_coverage (bool): display coverage report (default False)
         """
-        self.logger.debug('display_coverage=%s' % display_coverage)
+        #checking module path
+        path = os.path.join(config.MODULES_SRC, module_name, 'tests')
+        if not os.path.exists(path):
+            self.logger.error('Specified module "%s" does not exist' % (module_name))
+            return False
+
         #create module coverage path
         module_version = self.__get_module_version(module_name)
         if module_version is None:
