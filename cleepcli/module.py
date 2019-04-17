@@ -172,6 +172,85 @@ class Test%(MODULE_NAME_CAPITALIZED)s(unittest.TestCase):
     #official documentation https://docs.python.org/2.7/library/unittest.html
     #...
     """
+    DOCS_CONF_PY = """# -*- coding: utf-8 -*-
+import os, sys
+sys.path.insert(0, os.path.abspath('../'))
+
+project = u''
+copyright = u''
+author = u''
+version = u''
+release = u''
+extensions = [
+    'sphinx.ext.autodoc',
+    'sphinx.ext.todo',
+    'sphinx.ext.githubpages',
+    'sphinx.ext.napoleon',
+]
+source_suffix = '.rst'
+master_doc = 'index'
+language = None
+exclude_patterns = [u'_build', 'Thumbs.db', '.DS_Store']
+pygments_style = None
+html_theme = 'sphinx_rtd_theme'
+todo_include_todos = True
+autodoc_default_options = { 
+    'undoc-members': True,
+    'private-members': False,
+}
+def setup(app):
+    app.add_css_file('cleep.css')
+    """
+    #'exclude-members': '__init__,_stop,_configure'
+    DOCS_INDEX_RST = """Welcome to %(MODULE_NAME_CAPITALIZED)s's documentation!
+=================================
+
+.. toctree::
+   :maxdepth: 3
+   :caption: Contents:
+
+   source/modules
+
+Indices and tables
+==================
+
+* :ref:\`genindex\`
+* :ref:\`modindex\`
+* :ref:\`search\`
+    """
+    DOCS_CLEEP_CSS = """.wy-nav-side {
+    background: #90a4ae !important;
+}
+.wy-side-nav-search {
+    background: #607d8b !important;
+}
+.rst-content dl:not(.docutils) dt {
+    color: #d32f2f !important;
+    background: #ffcdd2 !important;
+    border-top: solid 3px #b71c1c !important;
+ }
+.rst-content dl:not(.docutils) dl dt {
+    border: none !important;
+    border-left: solid 3px #d32f2f !important;
+    background: #eceff1 !important;
+    color: #607d8b !important;
+}
+a:visited, a:hover {
+    color: #d32f2f;
+}
+a {
+    color: #000000;
+}
+a:visited.icon.icon-home, a.icon.icon-home {
+    color: #FFFFFF !important;
+}
+a:hover.icon.icon-home {
+    color: #d32f2f;
+}
+.wy-menu-vertical header,.wy-menu-vertical p.caption {
+    color: #000000;
+}
+    """
 
     def __init__(self):
         """
@@ -202,21 +281,29 @@ class Test%(MODULE_NAME_CAPITALIZED)s(unittest.TestCase):
             'DESC': self.DESC_SKEL % {'MODULE_NAME': module_name, 'MODULE_NAME_CAPITALIZED': module_name.capitalize()},
             'PYTHON_MODULE': self.PYTHON_MODULE_SKEL % {'MODULE_NAME': module_name, 'MODULE_NAME_CAPITALIZED': module_name.capitalize()},
             'TEST_DEFAULT': self.TEST_DEFAULT % {'MODULE_NAME': module_name, 'MODULE_NAME_CAPITALIZED': module_name.capitalize()},
+            'DOCS_CONF_PY': self.DOCS_CONF_PY % {'MODULE_NAME': module_name, 'MODULE_NAME_CAPITALIZED': module_name.capitalize()},
+            'DOCS_INDEX_RST': self.DOCS_INDEX_RST % {'MODULE_NAME': module_name, 'MODULE_NAME_CAPITALIZED': module_name.capitalize()},
+            'DOCS_CLEEP_CSS': self.DOCS_CLEEP_CSS,
         }
 
         c = Console()
         resp = c.command("""
-/bin/mkdir -p %(MODULE_DIR)s/backend
-/usr/bin/touch %(MODULE_DIR)s/backend/__init__.py
+/bin/mkdir -p "%(MODULE_DIR)s/backend"
+/usr/bin/touch "%(MODULE_DIR)s/backend/__init__.py"
 /bin/echo "%(PYTHON_MODULE)s" > %(MODULE_DIR)s/backend/%(MODULE_NAME)s.py
-/bin/mkdir -p %(MODULE_DIR)s/frontend
+/bin/mkdir -p "%(MODULE_DIR)s/frontend"
 /bin/echo "%(DESC)s" > %(MODULE_DIR)s/frontend/desc.json
 /bin/echo "%(ANGULAR_SERVICE)s" > %(MODULE_DIR)s/frontend/%(MODULE_NAME)s.service.js
 /bin/echo "%(ANGULAR_CONTROLLER)s" > %(MODULE_DIR)s/frontend/%(MODULE_NAME)s.config.js
 /bin/echo "%(ANGULAR_CONTROLLER_TEMPLATE)s" > %(MODULE_DIR)s/frontend/%(MODULE_NAME)s.config.html
-/bin/mkdir -p %(MODULE_DIR)s/tests
-/usr/bin/touch %(MODULE_DIR)s/tests/__init__.py
+/bin/mkdir -p "%(MODULE_DIR)s/tests"
+/usr/bin/touch "%(MODULE_DIR)s/tests/__init__.py"
 /bin/echo "%(TEST_DEFAULT)s" > %(MODULE_DIR)s/tests/test_%(MODULE_NAME)s.py
+/bin/mkdir -p "%(MODULE_DIR)s/docs"
+/bin/echo "%(DOCS_CONF_PY)s" > %(MODULE_DIR)s/docs/conf.py
+/bin/echo "%(DOCS_INDEX_RST)s" > %(MODULE_DIR)s/docs/index.rst
+/bin/mkdir -p "%(MODULE_DIR)s/docs/_static"
+/bin/echo "%(DOCS_CLEEP_CSS)s" > %(MODULE_DIR)s/docs/_static/cleep.css
         """ % {
             'MODULE_DIR': path,
             'MODULE_NAME': module_name,
@@ -226,6 +313,9 @@ class Test%(MODULE_NAME_CAPITALIZED)s(unittest.TestCase):
             'ANGULAR_CONTROLLER_TEMPLATE': templates['ANGULAR_CONTROLLER_TEMPLATE'],
             'PYTHON_MODULE': templates['PYTHON_MODULE'],
             'TEST_DEFAULT': templates['TEST_DEFAULT'],
+            'DOCS_CONF_PY': templates['DOCS_CONF_PY'],
+            'DOCS_INDEX_RST': templates['DOCS_INDEX_RST'],
+            'DOCS_CLEEP_CSS': templates['DOCS_CLEEP_CSS'],
         }, 10)
         if resp['error'] or resp['killed']:
             self.logger.error('Error occured while pulling repository: %s' % ('killed' if resp['killed'] else resp['stderr']))
