@@ -62,13 +62,13 @@ class Docs():
             self.logger.exception('Unable to get module infos. Is module valid?')
             return None
 
-    def generate_module_docs(self, module_name, display_text=False):
+    def generate_module_docs(self, module_name, preview=False):
         """
         Generate module documentation
 
         Args:
             module_name (string): module name
-            display_text (bool): display generated documentation as text
+            preview (bool): preview generated documentation as text
         """
         #checking module path
         path = os.path.join(config.MODULES_SRC, module_name, 'docs')
@@ -119,7 +119,7 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
             'YEAR': today.year,
             'AUTHOR': module_data['author'],
             'VERSION': module_data['version'],
-            'DISPLAY_TEXT': 'echo; echo; echo "========== DOC PREVIEW =========="; echo; cat "%s-docs.txt"' % module_name,
+            'DISPLAY_TEXT': 'echo; echo; echo "========== DOC PREVIEW =========="; echo; cat "%s-docs.txt"' % module_name if preview else '',
         }
 
         self.logger.debug('Docs cmd: %s' % cmd)
