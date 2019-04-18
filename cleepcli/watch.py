@@ -244,7 +244,7 @@ class CleepHandler(FileSystemEventHandler):
                 return True
 
         if hasattr(event, 'dest_path'):
-            if re.search(patternCore, event.dest_path):
+            if re.search(pattern_core, event.dest_path):
                 return True
 
         return False
