@@ -62,12 +62,13 @@ class Docs():
             self.logger.exception('Unable to get module infos. Is module valid?')
             return None
 
-    def generate_module_docs(self, module_name):
+    def generate_module_docs(self, module_name, display_text=False):
         """
         Generate module documentation
 
         Args:
             module_name (string): module name
+            display_text (bool): display generated documentation as text
         """
         #checking module path
         path = os.path.join(config.MODULES_SRC, module_name, 'docs')
@@ -87,11 +88,28 @@ class Docs():
 cd "%(DOCS_PATH)s"
 /bin/rm -rf "%(BUILD_DIR)s" "%(SOURCE_DIR)s"
 /usr/local/bin/sphinx-apidoc -o "%(SOURCE_DIR)s/" "../backend"
+if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
+echo
+echo "Building html documentation..."
 /usr/local/bin/sphinx-build -M html "." "%(BUILD_DIR)s" -D project="%(MODULE_NAME_CAPITALIZED)s" -D copyright="%(YEAR)s %(AUTHOR)s" -D author="%(AUTHOR)s" -D version="%(VERSION)s" -D release="%(VERSION)s"
+if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
+echo
+echo "Building text documentation..."
+/usr/local/bin/sphinx-build -M text "." "%(BUILD_DIR)s" -D project="%(MODULE_NAME_CAPITALIZED)s" -D copyright="%(YEAR)s %(AUTHOR)s" -D author="%(AUTHOR)s" -D version="%(VERSION)s" -D release="%(VERSION)s"
+if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
+echo
+echo "Packaging html documentation..."
 /usr/bin/find "%(BUILD_DIR)s/" -type f -print0 | xargs -0 sed -i "s/backend/%(MODULE_NAME)s/g"
+if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
 /usr/bin/find "%(BUILD_DIR)s/" -type f -print0 | xargs -0 sed -i "s/Backend/%(MODULE_NAME_CAPITALIZED)s/g"
+if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
 /usr/bin/find "%(BUILD_DIR)s/" -iname \*.* | rename -v "s/backend/%(MODULE_NAME)s/g"
-/bin/tar -czvf "%(MODULE_NAME)s-docs.tar.gz" "%(BUILD_DIR)s/html" --transform='s/%(BUILD_DIR)s\//\//g' && ARCHIVE=`/usr/bin/realpath "%(MODULE_NAME)s-docs.tar.gz"` && echo "ARCHIVE=$ARCHIVE"
+if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
+#/bin/tar -czvf "%(MODULE_NAME)s-docs.tar.gz" "%(BUILD_DIR)s/html" --transform='s/%(BUILD_DIR)s\//\//g' && ARCHIVE=`/usr/bin/realpath "%(MODULE_NAME)s-docs.tar.gz"` && echo "ARCHIVE=$ARCHIVE"
+cd "_build"; /usr/bin/zip "../%(MODULE_NAME)s-docs.zip" -r "html"; cd ..
+if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
+/bin/cp -a "%(BUILD_DIR)s/text/source/%(MODULE_NAME)s.txt" "%(MODULE_NAME)s-docs.txt"
+%(DISPLAY_TEXT)s
         """ % {
             'DOCS_PATH': path,
             'SOURCE_DIR': 'source',
@@ -101,6 +119,7 @@ cd "%(DOCS_PATH)s"
             'YEAR': today.year,
             'AUTHOR': module_data['author'],
             'VERSION': module_data['version'],
+            'DISPLAY_TEXT': 'echo; echo; echo "========== DOC PREVIEW =========="; echo; cat "%s-docs.txt"' % module_name,
         }
 
         self.logger.debug('Docs cmd: %s' % cmd)

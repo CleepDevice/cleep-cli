@@ -156,12 +156,13 @@ def docs():
 
 @docs.command()
 @click.option('--module', prompt='Module name')
-def moddocs(module):
+@click.option('--preview', is_flag=True, help='Preview generated doc as text.')
+def moddocs(module, preview):
     """
     Generate module documentation in appropriate format
     """
     d = docs = Docs()
-    res = d.generate_module_docs(module)
+    res = d.generate_module_docs(module, preview)
 
     if not res:
         sys.exit(1)
