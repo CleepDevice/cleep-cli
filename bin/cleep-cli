@@ -161,8 +161,21 @@ def moddocs(module, preview):
     """
     Generate module documentation in appropriate format
     """
-    d = docs = Docs()
+    d = Docs()
     res = d.generate_module_docs(module, preview)
+
+    if not res:
+        sys.exit(1)
+    sys.exit(0)
+
+@docs.command()
+@click.option('--module', prompt='Module name')
+def moddocspath(module):
+    """
+    Display generated docs archive path
+    """
+    d = Docs()
+    res = d.get_module_docs_archive_path(module)
 
     if not res:
         sys.exit(1)

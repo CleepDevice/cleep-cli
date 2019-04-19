@@ -136,3 +136,21 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
 
         return True
 
+    def get_module_docs_archive_path(self, module_name):
+        """
+        Display module docs archive path if exists
+        """
+        #checking module path
+        docs_path = os.path.join(config.MODULES_SRC, module_name, 'docs')
+        if not os.path.exists(docs_path):
+            self.logger.error('Docs directory for module "%s" does not exist' % (module_name))
+            return False
+
+        zip_path = os.path.join(docs_path, '%s-docs.zip' % module_name)
+        if not os.path.exists(zip_path):
+            self.logger.error('There is no documentation archive generated for module "%s"' % (module_name))
+            return False
+
+        self.logger.info('DOC_ARCHIVE=%s' % zip_path)
+        return True
+
