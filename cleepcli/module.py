@@ -148,8 +148,11 @@ class %(MODULE_NAME_CAPITALIZED)s(RaspIotModule):
         #  - ...
         pass
     """
-    TEST_DEFAULT = """import unittest
+    TEST_DEFAULT = """#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+import unittest
 import logging
+import sys
 sys.path.append('../')
 from backend.%(MODULE_NAME)s import %(MODULE_NAME_CAPITALIZED)s
 from raspiot.utils import InvalidParameter, MissingParameter, CommandError, Unauthorized
