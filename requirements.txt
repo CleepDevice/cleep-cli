@@ -4,4 +4,4 @@ coverage>=4.5.3,<5.0.0
 Sphinx>=1.8.5
 sphinx-rtd-theme>=0.4.3
 sphinxcontrib-napoleon>=0.7
-urllib3>=1.25.1
+urllib3>=1.24.2
