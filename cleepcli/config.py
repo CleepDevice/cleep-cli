@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-VERSION = '1.3.1'
+VERSION = '1.4.0'
 
 PRIVATE_REPO = True
 REPO_PRIVATE_URL = 'https://$GIT_USERNAME@bitbucket.org/tangb/raspiot.git'

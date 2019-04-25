@@ -90,7 +90,10 @@ def watch(quiet, loglevel):
     """
     Start watchdog that monitors filesystem changes on Cleep sources
     """
-    if quiet:
+    if logging.getLogger().getEffectiveLevel()==logging.DEBUG:
+        #do not overwrite root logger level if configured to DEBUG (dev mode)
+        pass
+    elif quiet:
         logging.disable(logging.CRITICAL)
     else:
         logging.getLogger().setLevel(loglevel)
