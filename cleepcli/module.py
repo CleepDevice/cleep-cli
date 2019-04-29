@@ -158,12 +158,10 @@ from backend.%(MODULE_NAME)s import %(MODULE_NAME_CAPITALIZED)s
 from raspiot.utils import InvalidParameter, MissingParameter, CommandError, Unauthorized
 from raspiot.libs.tests import session
 
-LOG_LEVEL = logging.INFO
-
 class Test%(MODULE_NAME_CAPITALIZED)s(unittest.TestCase):
 
     def setUp(self):
-        self.session = session.Session(LOG_LEVEL)
+        self.session = session.Session(logging.CRITICAL)
         #next line instanciates your module, overwriting all useful stuff to isolate your module for tests
         self.module = self.session.setup(%(MODULE_NAME_CAPITALIZED)s)
 
