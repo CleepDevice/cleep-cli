@@ -48,8 +48,8 @@ class CleepApi():
         resp_data = None
         try:
             data_json = json.dumps(data).encode('utf-8')
-            resp = self.http.request('POST', url, body=data_json, header={'Content-Type': 'application/json'})
-            resp_data = json.loads(resp_raw.data.decode('utf-8'))
+            resp = self.http.request('POST', url, body=data_json, headers={'Content-Type': 'application/json-rpc'})
+            resp_data = json.loads(resp.data.decode('utf-8'))
             self.logger.debug('Response[%s]: %s' % (resp.status, resp_data))
         except Exception as e:
             if self.logger.getEffectiveLevel()==logging.DEBUG:
