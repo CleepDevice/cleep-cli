@@ -112,7 +112,7 @@ def test():
 @test.command()
 @click.option('--module', prompt='Module name')
 @click.option('--coverage', is_flag=True, help='Display coverage report.')
-def modtest(module, coverage):
+def modtests(module, coverage):
     """
     Execute module tests
     """
@@ -126,9 +126,9 @@ def modtest(module, coverage):
 @test.command()
 @click.option('--module', prompt='Module name')
 @click.option('--missing', is_flag=True, help='Display missing statements.')
-def modtestcov(module, missing):
+def modtestscov(module, missing):
     """
-    Display module test coverage summary
+    Display module tests coverage summary
     """
     m = Test()
     res = m.module_test_coverage(module, missing)
