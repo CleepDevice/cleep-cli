@@ -23,6 +23,7 @@ setup(
         'sphinx-rtd-theme>=0.4.3',
         'sphinxcontrib-napoleon>=0.7',
         'urllib3>=1.24.2',
+        'CProfileV>=1.0.7',
     ],
     scripts = ['bin/cleep-cli']
 )
