@@ -78,6 +78,29 @@ debuild -us -uc
 #clean python stuff
 rm -rf raspiot.egg-info
 rm -rf pyraspiot.egg-info/
+rm -rf tmp/
+
+#jump in build output
+cd ".."
+
+#collect variables
+DEB=`ls -A1 raspiot* | grep \.deb`
+ARCHIVE=raspiot_$VERSION.zip
+SHA256=raspiot_$VERSION.sha256
+PREINST=cleep/scripts/preinst.sh
+POSTINST=cleep/scripts/postinst.sh
+
+#build zip archive
+rm -f *.zip
+rm -f *.sha256
+cp -a $DEB raspiot.deb
+cp -a $PREINST .
+cp -a $POSTINST .
+zip $ARCHIVE raspiot.deb `basename $PREINST` `basename $POSTINST`
+rm -f `basename $PREINST`
+rm -f `basename $POSTINST`
+rm -f raspiot.deb
+sha256sum $ARCHIVE > $SHA256
         """ % (config.REPO_DIR)
         self.__endless_command_running = True
         c = EndlessConsole(cmd, self.__console_callback, self.__console_end_callback)
@@ -98,7 +121,7 @@ rm -rf pyraspiot.egg-info/
         """
         cmd = """
 GITHUB_OWNER=tangb
-GITHUB_REPO=cleep-os
+GITHUB_REPO=cleep
 GITHUB_ACCESS_TOKEN=`printenv GITHUB_ACCESS_TOKEN`
 
 if [ -z "$GITHUB_ACCESS_TOKEN" ]; then
@@ -134,28 +157,33 @@ clean() {
     rm -rf tmp
 }
 
+#jump in cleep root directory
+cd "%s"
+
+VERSION=`head -n 1 debian/changelog | awk '{ gsub("[\(\)]","",$2); print $2 }'`
+
 #jump in build output
 cd "%s/.."
 
 #collect variables
-DEB=`ls -A1 raspiot* | grep \.deb`
+#DEB=`ls -A1 raspiot* | grep \.deb`
 CHANGES=`ls -A1 raspiot* | grep \.changes`
 ARCHIVE=raspiot_$VERSION.zip
 SHA256=raspiot_$VERSION.sha256
-PREINST=raspiot/scripts/preinst.sh
-POSTINST=raspiot/scripts/postinst.sh
+#PREINST=raspiot/scripts/preinst.sh
+#POSTINST=raspiot/scripts/postinst.sh
 
 #build zip archive
-rm -f *.zip
-rm -f *.sha256
-cp -a $DEB raspiot.deb
-cp -a $PREINST .
-cp -a $POSTINST .
-zip $ARCHIVE raspiot.deb `basename $PREINST` `basename $POSTINST`
-rm -f `basename $PREINST`
-rm -f `basename $POSTINST`
-rm -f raspiot.deb
-sha256sum $ARCHIVE > $SHA256
+#rm -f *.zip
+#rm -f *.sha256
+#cp -a $DEB raspiot.deb
+#cp -a $PREINST .
+#cp -a $POSTINST .
+#zip $ARCHIVE raspiot.deb `basename $PREINST` `basename $POSTINST`
+#rm -f `basename $PREINST`
+#rm -f `basename $POSTINST`
+#rm -f raspiot.deb
+#sha256sum $ARCHIVE > $SHA256
 
 #get description
 sed -n "/raspiot ($VERSION)/,/Checksums-Sha1:/{/raspiot ($VERSION)/b;/Checksums-Sha1:/b;p}" $CHANGES | tail -n +2 > sed.out
