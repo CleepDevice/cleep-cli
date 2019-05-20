@@ -9,6 +9,7 @@ import os
 import sys
 import platform
 import subprocess
+import shutil
 import click
 from cleepcli.git import Git
 from cleepcli.module import Module
@@ -39,7 +40,6 @@ def coreget():
 
     if not res:
         sys.exit(1)
-    sys.exit(0)
 
 @core.command()
 def coresync():
@@ -51,7 +51,6 @@ def coresync():
 
     if not res:
         sys.exit(1)
-    sys.exit(0)
 
 @core.command()
 def cpuprof():
@@ -128,6 +127,31 @@ def memprof(interval):
         cmd = '/bin/systemctl start raspiot'
         subprocess.call(cmd, shell=True)
 
+@core.command()
+@click.pass_context
+def init(ctx):
+    """
+    Clear all existing Cleep stuff and install all necessary
+    """
+    confirm = False
+    if os.path.exists(config.CORE_DST) or os.path.exists(config.HTML_DST):
+        if click.confirm('Existing installed Cleep files (not repo!) will be deleted. Confirm ?'):
+            confirm = True
+    else:
+        confirm = True
+
+    if confirm:
+        try:
+            if os.path.exists(config.CORE_DST):
+                shutil.rmtree(config.CORE_DST)
+            if os.path.exists(config.HTML_DST):
+                shutil.rmtree(config.HTML_DST)
+            ctx.invoke(coresync)
+            for module in config.DEFAULT_MODULES:
+                ctx.invoke(modsync, module=module)
+        except:
+            logging.exception('Error occured during init:')
+
 @click.group()
 def mod():
     pass
@@ -143,7 +167,6 @@ def modsync(module):
 
     if not res:
         sys.exit(1)
-    sys.exit(0)
 
 @mod.command()
 @click.option('--module', prompt='Module name')
@@ -156,7 +179,6 @@ def modcreate(module):
 
     if not res:
         sys.exit(1)
-    sys.exit(0)
 
 @click.group()
 def watchdog():
@@ -182,7 +204,6 @@ def watch(quiet, loglevel):
 
     if not res:
         sys.exit(1)
-    sys.exit(0)
 
 @click.group()
 def test():
@@ -200,7 +221,6 @@ def modtests(module, coverage):
 
     if not res:
         sys.exit(1)
-    sys.exit(0)
 
 @test.command()
 @click.option('--module', prompt='Module name')
@@ -214,7 +234,6 @@ def modtestscov(module, missing):
 
     if not res:
         sys.exit(1)
-    sys.exit(0)
 
 @click.group()
 def distrib():
@@ -230,7 +249,6 @@ def build():
 
     if not res:
         sys.exit(1)
-    sys.exit(0)
 
 @click.group()
 def docs():
@@ -248,7 +266,6 @@ def moddocs(module, preview):
 
     if not res:
         sys.exit(1)
-    sys.exit(0)
 
 @docs.command()
 @click.option('--module', prompt='Module name')
@@ -261,7 +278,6 @@ def moddocspath(module):
 
     if not res:
         sys.exit(1)
-    sys.exit(0)
 
 @click.group()
 def general():
@@ -273,7 +289,6 @@ def version():
     Display cleep-cli version
     """
     click.echo(config.VERSION)
-    sys.exit(0)
 
 
 cli = click.CommandCollection(sources=[general, core, mod, watchdog, test, distrib, docs])

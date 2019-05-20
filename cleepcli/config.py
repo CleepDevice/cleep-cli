@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-VERSION = '1.5.0'
+VERSION = '1.6.0'
+
+DEFAULT_MODULES = ['system', 'parameters', 'cleepbus', 'audio', 'network']
 
 PRIVATE_REPO = True
 REPO_PRIVATE_URL = 'https://$GIT_USERNAME@bitbucket.org/tangb/raspiot.git'
