@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-VERSION = '1.6.0'
+VERSION = '1.7.0'
 
 DEFAULT_MODULES = ['system', 'parameters', 'cleepbus', 'audio', 'network']
 
