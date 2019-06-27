@@ -5,6 +5,7 @@ import sys
 import os
 import logging
 from . import config
+from .console import Console
 import urllib3
 import json
 
@@ -25,8 +26,20 @@ class CleepApi():
         Send command to restart backend
         """
         self.logger.info('Restarting backend')
-        data = {'to':'system', 'command':'restart', 'delay':0.0}
-        self.__post(self.COMMAND_URL, data)
+
+        #/!\ old way to restart cleep is not sure if core is broken
+        #data = {'to':'system', 'command':'restart', 'delay':0.0}
+        #self.__post(self.COMMAND_URL, data)
+
+        cmd = '/bin/systemctl restart raspiot'
+        c = Console()
+        resp = c.command(cmd)
+        self.logger.debug('Systemctl resp: %s' % resp)
+        if resp['error'] or resp['killed']:
+            self.logger.error('Error restarting cleep backend')
+            return False
+
+        return True
 
     def restart_frontend(self):
         """
