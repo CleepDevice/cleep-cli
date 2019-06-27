@@ -169,14 +169,14 @@ class Test%(MODULE_NAME_CAPITALIZED)s(unittest.TestCase):
         #clean session
         self.session.clean()
 
-    #write your tests here defining functions starting with "test_"
+    #write your tests here defining functions starting with \"test_\"
     #see official documentation https://docs.python.org/2.7/library/unittest.html
     #def test_my_test(self):
     #   ...
 
-    #do not remove code below, otherwise test won't run
-    if __name__ == "__main__":
-        unittest.main()
+#do not remove code below, otherwise test won't run
+if __name__ == '__main__':
+    unittest.main()
     """
     DOCS_CONF_PY = """# -*- coding: utf-8 -*-
 import os, sys
