@@ -1,9 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-VERSION = '1.7.0'
+VERSION = '1.8.0'
 
 DEFAULT_MODULES = ['system', 'parameters', 'cleepbus', 'audio', 'network']
+MODULES_REPO_URL = {
+    'system': 'https://github.com/tangb/cleepmod-system.git',
+    'parameters': 'https://github.com/tangb/cleepmod-parameters.git',
+    'cleepbus': 'https://github.com/tangb/cleepmod-cleepbus.git',
+    'audio': 'https://github.com/tangb/cleepmod-audio.git',
+    'network': 'https://github.com/tangb/cleepmod-network.git',
+}
 
 PRIVATE_REPO = True
 REPO_PRIVATE_URL = 'https://$GIT_USERNAME@bitbucket.org/tangb/raspiot.git'

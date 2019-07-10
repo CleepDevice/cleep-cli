@@ -32,6 +32,7 @@ def coreget():
     """ 
     Get or update core content from official repository
     """
+    #core
     g = Git()
     if not os.path.exists(config.CORE_SRC):
         res = g.clone_core()
@@ -40,6 +41,18 @@ def coreget():
 
     if not res:
         sys.exit(1)
+
+    #default modules
+    for module in config.DEFAULT_MODULES:
+        module_path = os.path.join(config.MODULES_SRC, module)
+        if not os.path.exists(module_path):
+            res = g.clone_mod(module)
+        else:
+            res = g.pull_mod(module)
+
+        if not res:
+            logging.error('Error getting "%s" default module' % module)
+            sys.exit(1)
 
 @core.command()
 def coresync():
@@ -129,9 +142,9 @@ def memprof(interval):
 
 @core.command()
 @click.pass_context
-def init(ctx):
+def reset(ctx):
     """
-    Clear all existing Cleep stuff and install all necessary
+    Clear all installed Cleep stuff and reinstall all necessary. All sources must exist (use coreget command).
     """
     confirm = False
     if os.path.exists(config.CORE_DST) or os.path.exists(config.HTML_DST):
