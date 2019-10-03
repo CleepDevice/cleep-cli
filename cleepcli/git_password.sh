@@ -1,3 +1,3 @@
 #!/bin/sh
-exec echo "$GIT_PASSWORD"
+echo "$GIT_PASSWORD"
 
