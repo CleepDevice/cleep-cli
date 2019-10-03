@@ -42,6 +42,10 @@ def coreget():
     if not res:
         sys.exit(1)
 
+    #force coresync to synchronize installation with repo
+    f = File()
+    res = f.core_sync()
+
     #default modules
     for module in config.DEFAULT_MODULES:
         module_path = os.path.join(config.MODULES_SRC, module)
