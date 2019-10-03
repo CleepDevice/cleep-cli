@@ -174,7 +174,7 @@ def mod():
     pass
 
 @mod.command()
-@click.option('--module', required=True, help='Module name.')
+@click.option('--module', prompt='Module name', help='Module name.')
 def modsync(module):
     """
     Synchronize core content between source and execution folders
@@ -186,7 +186,7 @@ def modsync(module):
         sys.exit(1)
 
 @mod.command()
-@click.option('--module', prompt='Module name.')
+@click.option('--module', prompt='Module name', help='Module name.')
 def modcreate(module):
     """
     Create new module skeleton
@@ -227,7 +227,7 @@ def test():
     pass
 
 @test.command()
-@click.option('--module', prompt='Module name.')
+@click.option('--module', prompt='Module name', help='Module name.')
 @click.option('--coverage', is_flag=True, help='Display coverage report.')
 def modtests(module, coverage):
     """
@@ -240,7 +240,7 @@ def modtests(module, coverage):
         sys.exit(1)
 
 @test.command()
-@click.option('--module', prompt='Module name.')
+@click.option('--module', prompt='Module name', help='Module name.')
 @click.option('--missing', is_flag=True, help='Display missing statements.')
 def modtestscov(module, missing):
     """
@@ -272,7 +272,7 @@ def docs():
     pass
 
 @docs.command()
-@click.option('--module', prompt='Module name.')
+@click.option('--module', prompt='Module name', help='Module name.')
 @click.option('--preview', is_flag=True, help='Preview generated doc as text.')
 def moddocs(module, preview):
     """
@@ -285,7 +285,7 @@ def moddocs(module, preview):
         sys.exit(1)
 
 @docs.command()
-@click.option('--module', prompt='Module name.')
+@click.option('--module', prompt='Module name', help='Module name.')
 def moddocspath(module):
     """
     Display generated docs archive path
