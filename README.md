@@ -10,6 +10,7 @@ This utility helps developers to build Cleep applications providing some useful 
 * Module commands:
     * `modsync` to synchronize sources from module folder to execution folders.
     * `modcreate` to create module (aka application) skeleton.
+    * `moddelete` to delete installed files of a module
     * `modtests` to execute module unit tests
     * `modtestscov` to display last execution tests coverage
     * `moddocs` to generate module documentation
