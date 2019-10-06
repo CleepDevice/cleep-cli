@@ -197,6 +197,19 @@ def modcreate(module):
     if not res:
         sys.exit(1)
 
+@mod.command()
+@click.option('--module', prompt='Module name', help='Module name.')
+def moddelete(module):
+    """
+    Delete all installed files for specified module
+    """
+    if click.confirm('All installed files for module "%s" will be deleted. Confirm ?' % module):
+        m = Module()
+        res = m.delete(module)
+
+        if not res:
+            sys.exit(1)
+
 @click.group()
 def watchdog():
     pass

@@ -331,3 +331,30 @@ a:hover.icon.icon-home {
         self.logger.info('Done')
         return True
 
+    def delete(self, module_name):
+        """
+        Delete installed files for specified  module
+
+        Args:
+            module_name (string): module name
+        """
+        #build all module paths
+        paths = [
+            os.path.join(config.MODULES_DST, module_name),
+            os.path.join(config.MODULES_HTML_DST, module_name),
+            os.path.join(config.MODULES_SCRIPTS_DST, module_name),
+        ]
+        self.logger.info('Deleting module "%s" in "%s"' % (module_name, paths))
+        
+        deleted = False
+        for path in paths:
+            if os.path.exists(path):
+                shutil.rmtree(path)
+                self.logger.debug('Directory "%s" deleted' % path)
+                deleted = True
+
+        if not deleted:
+            self.logger.info('Nothing has been deleted')
+
+        return True
+
