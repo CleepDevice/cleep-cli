@@ -1,11 +1,22 @@
 # Cleep-cli
 
 This utility helps developers to build Cleep applications providing some useful commands:
-* `coreget` to clone or pull official Cleep repository.
-* `coresync` to synchronize sources from repository to execution folders.
-* `modcreate` to create module (aka application) skeleton.
-* `modsync` to synchronize sources from module folder to execution folders.
-* `watch` to watch for repository filesystem changes and automatically update files on execution folders. It also restart backend or/and frontend according to changes.
+* Core commands:
+    * `coreget` to clone or pull official Cleep repository.
+    * `coresync` to synchronize sources from repository to execution folders.
+    * `cpuprof` to run CPU profiler on application execution instance.
+    * `memprof` to run memory profiler on application execution instance.
+    * `reset` clear existing installed Cleep files and install it again.
+* Module commands:
+    * `modsync` to synchronize sources from module folder to execution folders.
+    * `modcreate` to create module (aka application) skeleton.
+    * `modtests` to execute module unit tests
+    * `modtestscov` to display last execution tests coverage
+    * `moddocs` to generate module documentation
+* Watch commands:
+    * `watch` to watch for repository filesystem changes and automatically update files on execution folders. It also restart backend or/and frontend according to changes.
+* Misc commands:
+    * `version` to get cleep-cli version
 
 ## Installation
 Cleep-cli is automatically installed and managed by [Cleep developer](https://github.com/tangb/cleepmod-developer) application.
