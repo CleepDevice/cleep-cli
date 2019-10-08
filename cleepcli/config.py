@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-VERSION = '1.9.0'
+VERSION = '1.10.0'
 
 DEFAULT_MODULES = ['system', 'parameters', 'cleepbus', 'audio', 'network']
 MODULES_REPO_URL = {

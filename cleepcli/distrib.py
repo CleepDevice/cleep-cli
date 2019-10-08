@@ -3,15 +3,19 @@
 
 import sys
 import os
-from .console import EndlessConsole
+from .console import EndlessConsole, Console
 import logging
 import time
 from . import config
+from github import Github
 
 class Distrib():
     """
     Cleep distribution helper
     """
+
+    GITHUB_USER = 'tangb'
+    GITHUB_REPO = 'cleep'
 
     def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -115,122 +119,91 @@ sha256sum $ARCHIVE > $SHA256
 
         return True
 
-    def publish_cleep(self):
+    def publish_cleep(self, version):
         """
         Publish cleep version on github
         """
-        cmd = """
-GITHUB_OWNER=tangb
-GITHUB_REPO=cleep
-GITHUB_ACCESS_TOKEN=`printenv GITHUB_ACCESS_TOKEN`
+        github = Github(os.environ['GITHUB_ACCESS_TOKEN'])
+        repo = github.get_repo('%s/%s' % (self.GITHUB_USER, self.GITHUB_REPO))
 
-if [ -z "$GITHUB_ACCESS_TOKEN" ]; then
-    echo 
-    echo "ERROR: github access token not defined, please set an environment variable called GITHUB_ACCESS_TOKEN with a valid token"
-    echo
-    exit 1
-fi
+        #check build existence
+        archive = os.path.join(config.REPO_DIR, '..', 'raspiot_%s.zip' % version)
+        sha256 = os.path.join(config.REPO_DIR, '..', 'raspiot_%s.sha256' % version)
+        changes = os.path.join(config.REPO_DIR, '..', 'raspiot_%s_armhf.changes' % version)
+        if not os.path.exists(archive):
+            self.logger.error('Archive file "%s" does not exist' % archive)
+        if not os.path.exists(sha256):
+            self.logger.error('Checksum file "%s" does not exist' % sha256)
+        if not os.path.exists(changes):
+            self.logger.error('Changes file "%s" does not exist' % changes)
 
-#generate github release data
-# param1: version
-# param2: description file path
-github_release_data() {
-    cat <<EOF
-{
-  "tag_name": "v$1",
-  "target_commitish": "master",
-  "name": "$1",
-  "body": "`sed -E ':a;N;$!ba;s/\r{0,1}\n/\\\\n/g' $2`",
-  "draft": false,
-  "prerelease": true
-}
-EOF
-}
+        #get changelog
+        cmd = 'sed -n "/raspiot (%(version)s)/,/Checksums-Sha1:/{/raspiot (%(version)s)/b;/Checksums-Sha1:/b;p}" %(changes)s | tail -n +2' % {'version': version, 'changes': changes}
+        self.logger.debug('Cmd = %s' % cmd)
+        c = Console()
+        result = c.command(cmd)
+        if result['error']:
+            self.logger.error('Unable to read changelog')
+        changelog = '\n'.join([line.strip() for line in result['stdout']])
+        self.logger.debug('Changelog:\n%s' % changelog)
 
-#clean all files
-clean() {
-    echo `pwd`
-    rm -rf build
-    rm -rf debian/raspiot
-    rm -rf debian/*debhelper*
-    rm -rf ../raspiot_*_armhf.*
-    rm -rf tmp
-}
+        #search existing release
+        release_found = None
+        releases = repo.get_releases()
+        for release in releases:
+            self.logger.debug('%s' % release.title)
+            if release.title==version:
+                self.logger.debug(' -> Release found')
+                release_found = release
+                break
 
-#jump in cleep root directory
-cd "%s"
+        if not release_found:
+            #create release
+            self.logger.info('Creating new release "%s"...' % version)
+            try:
+                commits = repo.get_commits()
+                release_found = repo.create_git_release(
+                    tag='v%s' % version,
+                    name=version,
+                    message=changelog,
+                    draft=True,
+                    prerelease=False,
+                )
+            except:
+                self.logger.exception('Error occured creating new release:')
+                return False
 
-VERSION=`head -n 1 debian/changelog | awk '{ gsub("[\(\)]","",$2); print $2 }'`
+        else:
+            #only update draft release !
+            if not release_found.draft:
+                self.logger.error('Existing release "%s" is not draft. Please create new release' % version)
 
-#jump in build output
-cd "%s/.."
+            #update release data
+            try:
+                self.logger.info('Updating existing release "%s"...' % version)
+                release_found.update_release(
+                    name=version,
+                    message=changelog,
+                    draft=True,
+                    prerelease=False,
+                )
 
-#collect variables
-#DEB=`ls -A1 raspiot* | grep \.deb`
-CHANGES=`ls -A1 raspiot* | grep \.changes`
-ARCHIVE=raspiot_$VERSION.zip
-SHA256=raspiot_$VERSION.sha256
-#PREINST=raspiot/scripts/preinst.sh
-#POSTINST=raspiot/scripts/postinst.sh
+                #delete all assets
+                self.logger.info('Deleting all existing release assets...')
+                for asset in release_found.get_assets():
+                    asset.delete_asset()
+            except:
+                self.logger.exception('Error occured creating new release:')
+                return False
 
-#build zip archive
-#rm -f *.zip
-#rm -f *.sha256
-#cp -a $DEB raspiot.deb
-#cp -a $PREINST .
-#cp -a $POSTINST .
-#zip $ARCHIVE raspiot.deb `basename $PREINST` `basename $POSTINST`
-#rm -f `basename $PREINST`
-#rm -f `basename $POSTINST`
-#rm -f raspiot.deb
-#sha256sum $ARCHIVE > $SHA256
-
-#get description
-sed -n "/raspiot ($VERSION)/,/Checksums-Sha1:/{/raspiot ($VERSION)/b;/Checksums-Sha1:/b;p}" $CHANGES | tail -n +2 > sed.out
-
-#display changes
-echo "Files \"$ARCHIVE\" and \"$SHA256\" are ready to be uploaded in https://github.com/$GITHUB_OWNER/$GITHUB_REPO/releases with following informations:"
-echo "  - tag version \"v$VERSION\""
-echo "  - release title \"$VERSION\""
-echo "  - description:"
-cat sed.out
-
-#upload to github
-if [ -z "$NO_PUBLISH" ]; then
-    echo
-    echo "Uploading release to github..."
-    #https://www.barrykooij.com/create-github-releases-via-command-line/
-    curl --silent --output curl.out --data "$(github_release_data "$VERSION" "sed.out")" https://api.github.com/repos/$GITHUB_OWNER/$GITHUB_REPO/releases?access_token=$GITHUB_ACCESS_TOKEN
-    ID=`cat curl.out | grep "\"id\":" | head -n 1 | awk '{ gsub(",","",$2); print $2 }'`
-    if [ -z "$ID" ]; then
-        echo 
-        echo "ERROR: problem when creating gihub release. Please check curl.out file content."
-        echo
-        exit 1
-    fi
-    #https://gist.github.com/stefanbuck/ce788fee19ab6eb0b4447a85fc99f447
-    echo " - Uploading archive"
-    curl --output curl.out --progress-bar --data-binary @"$ARCHIVE" -H "Authorization: token $GITHUB_ACCESS_TOKEN" -H "Content-Type: application/octet-stream" "https://uploads.github.com/repos/$GITHUB_OWNER/$GITHUB_REPO/releases/$ID/assets?name=$(basename $ARCHIVE)"
-    echo " - Uploading checksum"
-    curl --output curl.out --progress-bar --data-binary @"$SHA256" -H "Authorization: token $GITHUB_ACCESS_TOKEN" -H "Content-Type: application/octet-stream" "https://uploads.github.com/repos/$GITHUB_OWNER/$GITHUB_REPO/releases/$ID/assets?name=$(basename $SHA256)"
-    rm curl.out
-    rm sed.out
-    echo "Done."
-fi
-
-#clean install
-cd -
-clean
-        """ % (config.REPO_DIR)
-        self.__endless_command_running = True
-        c = EndlessConsole(cmd, self.__console_callback, self.__console_end_callback)
-        c.start()
-
-        while self.__endless_command_running:
-            time.sleep(0.25)
-
-        self.logger.debug('Return code: %s' % self.__endless_command_return_code)
-        if self.__endless_command_return_code!=0:
+        #upload assets
+        try:
+            self.logger.info('Uploading asset "%s"...' % archive)
+            release_found.upload_asset(archive)
+            self.logger.info('Uploading asset "%s"...' % sha256)
+            release_found.upload_asset(sha256)
+        except:
+            self.logger.exception('Error uploading assets:')
             return False
 
         return True

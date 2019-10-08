@@ -280,6 +280,18 @@ def build():
     if not res:
         sys.exit(1)
 
+@distrib.command()
+@click.option('--version', prompt='Version', help='Version to publish.')
+def publish(version):
+    """
+    Publish built Cleep debian package
+    """
+    d = Distrib()
+    res = d.publish_cleep(version)
+
+    if not res:
+        sys.exit(1)
+
 @click.group()
 def docs():
     pass
