@@ -9,6 +9,7 @@ import time
 from . import config
 from github import Github
 import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 class Distrib():
     """
@@ -121,17 +122,30 @@ sha256sum $ARCHIVE > $SHA256
 
         return True
 
-    def __delete_github_tag(self, tag_name):
+    def __delete_github_tag(self, tag_name, token):
         """
         Delete specified tag name (this feature is not available on PyGithub API)
+
+        Args:
+            tag_name (string): tag name to delete
+            token (string): github authorization token
         """
         #curl request
         #curl -X DELETE -H "Authorization: token <token>" -H "User-Agent: PyGithub/Python" https://api.github.com/repos/tangb/cleep/git/refs/tags/<tag_name>
         try:
-            resp = self.http.request('DELETE', 'https://api.github.com/repos/%s/%s/git/refs/tags/%s' % (self.GITHUB_USER, self.GITHUB_REPO, tag_name))
-            if resp.status==200:
+            headers = {
+                'Authorization': 'token %s' % token,
+                'USer-Agent': 'PyGithub/Python',
+            }
+            resp = self.http.request(
+                'DELETE',
+                'https://api.github.com/repos/%s/%s/git/refs/tags/%s' % (self.GITHUB_USER, self.GITHUB_REPO, tag_name),
+                headers=headers,
+            )
+            if resp.status>=200 and resp.status<300:
                 return True
             else:
+                self.logger.debug('Response data: %s' % resp.data.decode('utf-8'))
                 self.logger.error('Unable to delete tag [status=%s]' % resp.status)
                 return False
         except:
@@ -142,13 +156,14 @@ sha256sum $ARCHIVE > $SHA256
         """
         Publish cleep version on github
         """
-        github = Github(os.environ['GITHUB_ACCESS_TOKEN'])
+        token = os.environ['GITHUB_ACCESS_TOKEN']
+        github = Github(token)
         repo = github.get_repo('%s/%s' % (self.GITHUB_USER, self.GITHUB_REPO))
 
         #check build existence
-        archive = os.path.join(config.REPO_DIR, '..', 'raspiot_%s.zip' % version)
-        sha256 = os.path.join(config.REPO_DIR, '..', 'raspiot_%s.sha256' % version)
-        changes = os.path.join(config.REPO_DIR, '..', 'raspiot_%s_armhf.changes' % version)
+        archive = os.path.abspath(os.path.join(config.REPO_DIR, '..', 'raspiot_%s.zip' % version))
+        sha256 = os.path.abspath(os.path.join(config.REPO_DIR, '..', 'raspiot_%s.sha256' % version))
+        changes = os.path.abspath(os.path.join(config.REPO_DIR, '..', 'raspiot_%s_armhf.changes' % version))
         if not os.path.exists(archive):
             self.logger.error('Archive file "%s" does not exist' % archive)
         if not os.path.exists(sha256):
@@ -170,7 +185,7 @@ sha256sum $ARCHIVE > $SHA256
         release_found = None
         releases = repo.get_releases()
         for release in releases:
-            self.logger.debug('%s' % release.title)
+            self.logger.debug('Release "%s"' % release.title)
             if release.title==version:
                 self.logger.debug(' -> Release found')
                 release_found = release
@@ -180,7 +195,7 @@ sha256sum $ARCHIVE > $SHA256
             #due to github limitation (bug or limitation?), draft assets are not downloadable
             #so we create prerelease version instead of draft and delete it before creating it
             #again when pushing version
-            self.logger.info('Deleting existing version...')
+            self.logger.info('Deleting existing release "%s"...' % release_found.tag_name)
             try:
                 release_found.delete_release()
             except:
@@ -188,7 +203,7 @@ sha256sum $ARCHIVE > $SHA256
                 return False
 
             #delete tag
-            if not self.__delete_github_tag(release_found.tag_name):
+            if not self.__delete_github_tag(release_found.tag_name, token):
                 return False
         
         #create release
