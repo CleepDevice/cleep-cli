@@ -8,6 +8,7 @@ import logging
 import time
 from . import config
 from github import Github
+import urllib3
 
 class Distrib():
     """
@@ -21,6 +22,7 @@ class Distrib():
         self.logger = logging.getLogger(self.__class__.__name__)
         self.__endless_command_running = False
         self.__endless_command_return_code = 0
+        self.http = urllib3.PoolManager(num_pools=1)
 
     def __console_callback(self, stdout, stderr):
         self.logger.info((stdout if stdout is not None else '') + (stderr if stderr is not None else ''))
@@ -119,6 +121,23 @@ sha256sum $ARCHIVE > $SHA256
 
         return True
 
+    def __delete_github_tag(self, tag_name):
+        """
+        Delete specified tag name (this feature is not available on PyGithub API)
+        """
+        #curl request
+        #curl -X DELETE -H "Authorization: token <token>" -H "User-Agent: PyGithub/Python" https://api.github.com/repos/tangb/cleep/git/refs/tags/<tag_name>
+        try:
+            resp = self.http.request('DELETE', 'https://api.github.com/repos/%s/%s/git/refs/tags/%s' % (self.GITHUB_USER, self.GITHUB_REPO, tag_name))
+            if resp.status==200:
+                return True
+            else:
+                self.logger.error('Unable to delete tag [status=%s]' % resp.status)
+                return False
+        except:
+            self.logger.exception('Error deleting tag "%s"' % tag_name)
+            return False
+
     def publish_cleep(self, version):
         """
         Publish cleep version on github
@@ -157,44 +176,35 @@ sha256sum $ARCHIVE > $SHA256
                 release_found = release
                 break
 
-        if not release_found:
-            #create release
-            self.logger.info('Creating new release "%s"...' % version)
+        if release_found and (release_found.prerelease or release_found.draft):
+            #due to github limitation (bug or limitation?), draft assets are not downloadable
+            #so we create prerelease version instead of draft and delete it before creating it
+            #again when pushing version
+            self.logger.info('Deleting existing version...')
             try:
-                commits = repo.get_commits()
-                release_found = repo.create_git_release(
-                    tag='v%s' % version,
-                    name=version,
-                    message=changelog,
-                    draft=True,
-                    prerelease=False,
-                )
+                release_found.delete_release()
             except:
-                self.logger.exception('Error occured creating new release:')
+                self.logger.exception('Error deleting existing release:')
                 return False
 
-        else:
-            #only update draft release !
-            if not release_found.draft:
-                self.logger.error('Existing release "%s" is not draft. Please create new release' % version)
-
-            #update release data
-            try:
-                self.logger.info('Updating existing release "%s"...' % version)
-                release_found.update_release(
-                    name=version,
-                    message=changelog,
-                    draft=True,
-                    prerelease=False,
-                )
-
-                #delete all assets
-                self.logger.info('Deleting all existing release assets...')
-                for asset in release_found.get_assets():
-                    asset.delete_asset()
-            except:
-                self.logger.exception('Error occured creating new release:')
+            #delete tag
+            if not self.__delete_github_tag(release_found.tag_name):
                 return False
+        
+        #create release
+        self.logger.info('Creating new release "%s"...' % version)
+        try:
+            commits = repo.get_commits()
+            release_found = repo.create_git_release(
+                tag='v%s' % version,
+                name=version,
+                message=changelog,
+                draft=False,
+                prerelease=True,
+            )
+        except:
+            self.logger.exception('Error occured creating new release:')
+            return False
 
         #upload assets
         try:
@@ -207,4 +217,45 @@ sha256sum $ARCHIVE > $SHA256
             return False
 
         return True
+
+        #TODO code for draft release removed for problem downloading draft assets
+        #if not release_found:
+        #    #create release
+        #    self.logger.info('Creating new release "%s"...' % version)
+        #    try:
+        #        commits = repo.get_commits()
+        #        release_found = repo.create_git_release(
+        #            tag='v%s' % version,
+        #            name=version,
+        #            message=changelog,
+        #            draft=True,
+        #            prerelease=False,
+        #        )
+        #    except:
+        #        self.logger.exception('Error occured creating new release:')
+        #        return False
+
+        #else:
+        #    #only update draft release !
+        #    if not release_found.draft:
+        #        self.logger.error('Existing release "%s" is not draft. Please create new release' % version)
+
+        #    #update release data
+        #    try:
+        #        self.logger.info('Updating existing release "%s"...' % version)
+        #        release_found.update_release(
+        #            name=version,
+        #            message=changelog,
+        #            draft=True,
+        #            prerelease=False,
+        #        )
+
+        #        #delete all assets
+        #        self.logger.info('Deleting all existing release assets...')
+        #        for asset in release_found.get_assets():
+        #            asset.delete_asset()
+        #    except:
+        #        self.logger.exception('Error occured creating new release:')
+        #        return False
+
 
