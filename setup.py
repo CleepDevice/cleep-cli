@@ -2,7 +2,7 @@ try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
-from cleepcli.config import VERSION
+from cleepcli.version import VERSION
 
 setup(
     name = 'cleepcli',

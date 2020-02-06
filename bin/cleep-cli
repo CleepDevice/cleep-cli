@@ -19,6 +19,7 @@ from cleepcli.test import Test
 from cleepcli.distrib import Distrib
 from cleepcli.docs import Docs
 import cleepcli.config as config
+from cleepcli.version import VERSION
 
 #logging.basicConfig(level=logging.DEBUG, format=u'%(asctime)s %(levelname)s [%(name)s:%(lineno)d]: %(message)s', stream=sys.stdout)
 logging.basicConfig(level=logging.INFO, format=u'%(message)s', stream=sys.stdout)
@@ -330,7 +331,7 @@ def version():
     """
     Display cleep-cli version
     """
-    click.echo(config.VERSION)
+    click.echo(VERSION)
 
 
 cli = click.CommandCollection(sources=[general, core, mod, watchdog, test, distrib, docs])
