@@ -1,6 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-#
+
 # Note:
 #   Python profiling article: http://www.marinamele.com/7-tips-to-time-python-scripts-and-control-memory-and-cpu-usage
 
@@ -21,8 +21,20 @@ from cleepcli.docs import Docs
 import cleepcli.config as config
 from cleepcli.version import VERSION
 
-#logging.basicConfig(level=logging.DEBUG, format=u'%(asctime)s %(levelname)s [%(name)s:%(lineno)d]: %(message)s', stream=sys.stdout)
+# logging.basicConfig(level=logging.DEBUG, format=u'%(asctime)s %(levelname)s [%(name)s:%(lineno)d]: %(message)s', stream=sys.stdout)
 logging.basicConfig(level=logging.INFO, format=u'%(message)s', stream=sys.stdout)
+
+# install logging trace level
+level = logging.TRACE = logging.DEBUG - 5
+def log_logger(self, message, *args, **kwargs):
+    if self.isEnabledFor(level):
+        self._log(level, message, args, **kwargs)
+logging.getLoggerClass().trace = log_logger
+def log_root(msg, *args, **kwargs):
+    logging.log(level, msg, *args, **kwargs)
+logging.addLevelName(level, "TRACE")
+logging.trace = log_root
+
 
 @click.group()
 def core():
@@ -43,11 +55,11 @@ def coreget():
     if not res:
         sys.exit(1)
 
-    #force coresync to synchronize installation with repo
+    # force coresync to synchronize installation with repo
     f = File()
     res = f.core_sync()
 
-    #default modules
+    # default modules
     for module in config.DEFAULT_MODULES:
         module_path = os.path.join(config.MODULES_SRC, module)
         if not os.path.exists(module_path):
@@ -71,6 +83,40 @@ def coresync():
         sys.exit(1)
 
 @core.command()
+@click.option('--coverage', is_flag=True, help='Display coverage report.')
+def coretests(coverage):
+    """
+    Execute core tests
+    """
+    m = Test()
+    res = m.core_test(coverage)
+
+    if not res:
+        sys.exit(1)
+
+@core.command()
+def coretestscov():
+    """
+    Display core tests coverage
+    """
+    m = Test()
+    res = m.core_test_coverage()
+
+    if not res:
+        sys.exit(1)
+
+@core.command()
+def coredocs():
+    """
+    Generate core documentation in appropriate format
+    """
+    d = Docs()
+    res = d.generate_core_docs()
+
+    if not res:
+        sys.exit(1)
+
+@core.command()
 def cpuprof():
     """
     Run CPU profiler on cleep
@@ -80,7 +126,7 @@ def cpuprof():
         public_ip = socket.gethostbyname(socket.gethostname())
         port = 4000
 
-        #stop running process
+        # stop running process
         cmd = '/bin/systemctl stop raspiot'
         subprocess.call(cmd, shell=True)
 
@@ -97,7 +143,7 @@ def cpuprof():
             logging.exception('Error occured during cpuprof:')
 
     finally:
-        #restart process
+        # restart process
         cmd = '/bin/systemctl start raspiot'
         subprocess.call(cmd, shell=True)
 
@@ -110,8 +156,8 @@ def memprof(interval):
     MPROF = '/usr/local/bin/mprof'
 
     try:
-        #memory profiling libraries are not installed because it is long to install.
-        #And this process is not the most important to perform due to raspberry pi
+        # memory profiling libraries are not installed because it is long to install.
+        # And this process is not the most important to perform due to raspberry pi
         #memory amount
         import memory_profiler
         import psutil
@@ -121,7 +167,7 @@ def memprof(interval):
         sys.exit(1)
 
     try:
-        #stop running process
+        # stop running process
         cmd = '/bin/systemctl stop raspiot'
         subprocess.call(cmd, shell=True)
 
@@ -131,7 +177,7 @@ def memprof(interval):
         subprocess.call(cmd, shell=True)
 
     except KeyboardInterrupt:
-        #generate output graph
+        # generate output graph
         cmd = 'cd /tmp; "%(BIN)s" plot --output "%(OUTPUT)s"' %{'BIN': MPROF, 'OUTPUT': '/tmp/cleep_memprof.png'}
         logging.debug('Memprof cmd: %s' % cmd)
         subprocess.call(cmd, shell=True)
@@ -223,7 +269,7 @@ def watch(quiet, loglevel):
     Start watchdog that monitors filesystem changes on Cleep sources
     """
     if logging.getLogger().getEffectiveLevel()==logging.DEBUG:
-        #do not overwrite root logger level if configured to DEBUG (dev mode)
+        # do not overwrite root logger level if configured to DEBUG (dev mode)
         pass
     elif quiet:
         logging.disable(logging.CRITICAL)
@@ -271,7 +317,7 @@ def distrib():
     pass
 
 @distrib.command()
-def build():
+def corebuild():
     """
     Build Cleep debian package
     """
@@ -346,7 +392,7 @@ if __name__ == '__main__':
             return False
         return True
 
-    #execute only on raspbian
+    # execute only on raspbian
     if is_raspbian():
         cli()
     else:
