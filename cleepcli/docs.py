@@ -68,7 +68,7 @@ class Docs():
 
         Args:
             module_name (string): module name
-            preview (bool): preview generated documentation as text
+            preview (bool): preview generated documentation as text directly on stdout
         """
         #checking module path
         path = os.path.join(config.MODULES_SRC, module_name, 'docs')
@@ -159,3 +159,95 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
         self.logger.info('DOC_ARCHIVE=%s' % zip_path)
         return True
 
+    def __get_core_data(self):
+        """
+        Return useful core data
+
+        Returns:
+            dict of data::
+
+                {
+                    author (string): author
+                    version (string): version
+                }
+
+        """
+        try:
+            from raspiot import __version__
+            return {
+                'author': 'Tanguy Bonneau',
+                'version': __version__
+            }
+        except:
+            self.logger.exception('Unable to get core infos')
+            return None
+
+    def generate_core_docs(self):
+        """
+        Generate core documentation
+
+        Args:
+            preview (bool): preview generated documentation as text directly on stdout
+        """
+        #checking core path
+        path = os.path.join(config.CORE_SRC, '../docs')
+        self.logger.debug('Core docs path: %s' % path)
+        if not os.path.exists(path):
+            self.logger.error('Docs directory for core does not exist')
+            return False
+
+        core_data = self.__get_core_data()
+        self.logger.debug('Core data: %s' % core_data)
+        if core_data is None:
+            return False
+
+        today = datetime.today()
+
+        self.logger.info('=> Generating documentation...')
+        cmd = """
+cd "%(DOCS_PATH)s"
+# disable source generation because it is customized
+# /bin/rm -rf "%(BUILD_DIR)s" "%(SOURCE_DIR)s"
+# /usr/local/bin/sphinx-apidoc -o "%(SOURCE_DIR)s/" "../raspiot" "../raspiot/tests/**" "../raspiot/modules/**"
+# if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
+# echo
+echo "=> Building html documentation..."
+/usr/local/bin/sphinx-build -M html "." "%(BUILD_DIR)s" -D project="%(PROJECT)s" -D copyright="%(YEAR)s %(AUTHOR)s" -D author="%(AUTHOR)s" -D version="%(VERSION)s" -D release="%(VERSION)s"
+if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
+echo
+echo "=> Building xml documentation..."
+/usr/local/bin/sphinx-build -M xml "." "%(BUILD_DIR)s" -D project="%(PROJECT)s" -D copyright="%(YEAR)s %(AUTHOR)s" -D author="%(AUTHOR)s" -D version="%(VERSION)s" -D release="%(VERSION)s"
+if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
+echo
+# echo "=> Building text documentation..."
+# /usr/local/bin/sphinx-build -M text "." "%(BUILD_DIR)s" -D project="%(PROJECT)s" -D copyright="%(YEAR)s %(AUTHOR)s" -D author="%(AUTHOR)s" -D version="%(VERSION)s" -D release="%(VERSION)s"
+# if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
+# echo
+echo "=> Packaging html documentation..."
+cd "_build"; /usr/bin/zip "../%(CORE)s-docs.zip" -r "html"; cd ..
+if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
+# TODO /bin/cp -a "%(BUILD_DIR)s/xml/source/%(CORE)s.xml" "%(CORE)s-docs.xml"
+        """ % {
+            'DOCS_PATH': path,
+            'SOURCE_DIR': 'source',
+            'BUILD_DIR': '_build',
+            'CORE': 'cleep-core',
+            'PROJECT': 'Cleep core API',
+            'YEAR': today.year,
+            'AUTHOR': core_data['author'],
+            'VERSION': core_data['version']
+        }
+
+        self.logger.debug('Docs cmd: %s' % cmd)
+        self.__endless_command_running = True
+        c = EndlessConsole(cmd, self.__console_callback, self.__console_end_callback)
+        c.start()
+
+        while self.__endless_command_running:
+            time.sleep(0.25)
+
+        self.logger.debug('Return code: %s' % self.__endless_command_return_code)
+        if self.__endless_command_return_code!=0:
+            return False
+
+        return True
