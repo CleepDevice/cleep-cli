@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import os
+try:
+    import raspiot
+except:
+    raise Exception('Please install Cleep before using its CLI')    
+
 DEFAULT_MODULES = ['system', 'parameters', 'cleepbus', 'audio', 'network']
 MODULES_REPO_URL = {
     'system': 'https://github.com/tangb/cleepmod-system.git',
@@ -16,7 +22,7 @@ REPO_PUBLIC_URL = 'https://github.com/tangb/cleep.git' # not available yet
 REPO_DIR = '/root/cleep'
 
 CORE_SRC = '%s/raspiot' % REPO_DIR
-CORE_DST = '/usr/lib/python2.7/dist-packages/raspiot'
+CORE_DST = os.path.dirname(raspiot.__file__)
 
 HTML_SRC = '%s/html' % REPO_DIR
 HTML_DST = '/opt/raspiot/html'
