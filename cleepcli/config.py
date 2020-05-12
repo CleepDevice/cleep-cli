@@ -3,7 +3,7 @@
 
 import os
 try:
-    import raspiot
+    import cleep
 except:
     raise Exception('Please install Cleep before using its CLI')    
 
@@ -17,24 +17,24 @@ MODULES_REPO_URL = {
 }
 
 PRIVATE_REPO = True
-REPO_PRIVATE_URL = 'https://$GIT_USERNAME@bitbucket.org/tangb/raspiot.git'
+REPO_PRIVATE_URL = 'https://$GIT_USERNAME@bitbucket.org/tangb/cleep.git'
 REPO_PUBLIC_URL = 'https://github.com/tangb/cleep.git' # not available yet
 REPO_DIR = '/root/cleep'
 
-CORE_SRC = '%s/raspiot' % REPO_DIR
-CORE_DST = os.path.dirname(raspiot.__file__)
+CORE_SRC = '%s/cleep' % REPO_DIR
+CORE_DST = os.path.dirname(cleep.__file__)
 
 HTML_SRC = '%s/html' % REPO_DIR
-HTML_DST = '/opt/raspiot/html'
+HTML_DST = '/opt/cleep/html'
 
 MODULES_SRC = '%s/modules' % REPO_DIR
 MODULES_DST = '%s/modules' % CORE_DST
 MODULES_HTML_DST = '%s/js/modules' % HTML_DST
-MODULES_SCRIPTS_DST = '/opt/raspiot/scripts'
+MODULES_SCRIPTS_DST = '/opt/cleep/scripts'
 
 BIN_SRC = '%s/bin' % REPO_DIR
 BIN_DST = '/usr/bin'
 
 MEDIA_SRC = '%s/medias' % REPO_DIR
-MEDIA_DST = '/opt/raspiot'
+MEDIA_DST = '/opt/cleep'
 

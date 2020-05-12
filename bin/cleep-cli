@@ -55,11 +55,11 @@ def coreget():
     if not res:
         sys.exit(1)
 
-    # force coresync to synchronize installation with repo
+    #force coresync to synchronize installation with repo
     f = File()
     res = f.core_sync()
 
-    # default modules
+    #default modules
     for module in config.DEFAULT_MODULES:
         module_path = os.path.join(config.MODULES_SRC, module)
         if not os.path.exists(module_path):
@@ -126,12 +126,12 @@ def cpuprof():
         public_ip = socket.gethostbyname(socket.gethostname())
         port = 4000
 
-        # stop running process
-        cmd = '/bin/systemctl stop raspiot'
+        #stop running process
+        cmd = '/bin/systemctl stop cleep'
         subprocess.call(cmd, shell=True)
 
         logging.info('Follow live profiler analysis on "http://%s:%s". CTRL-C to stop.' % (public_ip, port))
-        cmd = '/usr/local/bin/cprofilev -a "%s" -p %s "/usr/bin/raspiot"' % (public_ip, port)
+        cmd = '/usr/local/bin/cprofilev -a "%s" -p %s "/usr/bin/cleep"' % (public_ip, port)
         logging.debug('Cpuprof cmd: %s' % cmd)
         subprocess.call(cmd, shell=True)
 
@@ -143,8 +143,8 @@ def cpuprof():
             logging.exception('Error occured during cpuprof:')
 
     finally:
-        # restart process
-        cmd = '/bin/systemctl start raspiot'
+        #restart process
+        cmd = '/bin/systemctl start cleep'
         subprocess.call(cmd, shell=True)
 
 @core.command()
@@ -156,8 +156,8 @@ def memprof(interval):
     MPROF = '/usr/local/bin/mprof'
 
     try:
-        # memory profiling libraries are not installed because it is long to install.
-        # And this process is not the most important to perform due to raspberry pi
+        #memory profiling libraries are not installed because it is long to install.
+        #And this process is not the most important to perform due to raspberry pi
         #memory amount
         import memory_profiler
         import psutil
@@ -167,17 +167,17 @@ def memprof(interval):
         sys.exit(1)
 
     try:
-        # stop running process
-        cmd = '/bin/systemctl stop raspiot'
+        #stop running process
+        cmd = '/bin/systemctl stop cleep'
         subprocess.call(cmd, shell=True)
 
         logging.info('Memory profiling is running. CTRL-C to stop.')
-        cmd = 'cd /tmp; "%(BIN)s" clean; "%(BIN)s" run --interval %(INTERVAL)s --multiprocess "/usr/bin/raspiot"' % {'BIN': MPROF, 'INTERVAL': interval}
+        cmd = 'cd /tmp; "%(BIN)s" clean; "%(BIN)s" run --interval %(INTERVAL)s --multiprocess "/usr/bin/cleep"' % {'BIN': MPROF, 'INTERVAL': interval}
         logging.debug('Memprof cmd: %s' % cmd)
         subprocess.call(cmd, shell=True)
 
     except KeyboardInterrupt:
-        # generate output graph
+        #generate output graph
         cmd = 'cd /tmp; "%(BIN)s" plot --output "%(OUTPUT)s"' %{'BIN': MPROF, 'OUTPUT': '/tmp/cleep_memprof.png'}
         logging.debug('Memprof cmd: %s' % cmd)
         subprocess.call(cmd, shell=True)
@@ -188,7 +188,7 @@ def memprof(interval):
 
     finally:
         #restart process
-        cmd = '/bin/systemctl start raspiot'
+        cmd = '/bin/systemctl start cleep'
         subprocess.call(cmd, shell=True)
 
 @core.command()
@@ -269,7 +269,7 @@ def watch(quiet, loglevel):
     Start watchdog that monitors filesystem changes on Cleep sources
     """
     if logging.getLogger().getEffectiveLevel()==logging.DEBUG:
-        # do not overwrite root logger level if configured to DEBUG (dev mode)
+        #do not overwrite root logger level if configured to DEBUG (dev mode)
         pass
     elif quiet:
         logging.disable(logging.CRITICAL)
@@ -392,7 +392,7 @@ if __name__ == '__main__':
             return False
         return True
 
-    # execute only on raspbian
+    #execute only on raspbian
     if is_raspbian():
         cli()
     else:

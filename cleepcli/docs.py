@@ -12,7 +12,7 @@ from datetime import datetime
 
 class Docs():
     """
-    Handle documentation operations
+    Handle documentation processes
     @see https://samnicholls.net/2016/06/15/how-to-sphinx-readthedocs/
     """
 
@@ -50,7 +50,7 @@ class Docs():
             }
 
         try:
-            module_ = importlib.import_module(u'raspiot.modules.%s.%s' % (module_name, module_name))
+            module_ = importlib.import_module(u'cleep.modules.%s.%s' % (module_name, module_name))
             module_class_ = getattr(module_, module_name.capitalize())
             self.__module_version = module_class_.MODULE_VERSION
             self.__module_author = module_class_.MODULE_AUTHOR
@@ -173,7 +173,7 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
 
         """
         try:
-            from raspiot import __version__
+            from cleep import __version__
             return {
                 'author': 'Tanguy Bonneau',
                 'version': __version__
@@ -208,7 +208,7 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
 cd "%(DOCS_PATH)s"
 # disable source generation because it is customized
 # /bin/rm -rf "%(BUILD_DIR)s" "%(SOURCE_DIR)s"
-# /usr/local/bin/sphinx-apidoc -o "%(SOURCE_DIR)s/" "../raspiot" "../raspiot/tests/**" "../raspiot/modules/**"
+# /usr/local/bin/sphinx-apidoc -o "%(SOURCE_DIR)s/" "../cleep" "../cleep/tests/**" "../cleep/modules/**"
 # if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
 # echo
 echo "=> Building html documentation..."

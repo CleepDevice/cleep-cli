@@ -233,7 +233,7 @@ class CleepHandler(FileSystemEventHandler):
             True if change occurs in core, False otherwise
         """
         pattern_core = '^(%s/(?!tests|modules)(.*\.py)|%s/.*)$' % (config.CORE_SRC, config.HTML_SRC)
-        pattern_bin = '^%s/raspiot' % (config.BIN_SRC)
+        pattern_bin = '^%s/cleep' % (config.BIN_SRC)
         #self.logger.debug('Core pattern: %s' % pattern_core)
         #self.logger.debug('Bin pattern: %s' % pattern_bin)
 

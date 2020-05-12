@@ -41,14 +41,14 @@ var %(MODULE_NAME)sService = function(\$q, \$rootScope, rpcService) {
     });
 }
     
-var RaspIot = angular.module('RaspIot');
-RaspIot.service('%(MODULE_NAME)sService', ['\$q', '\$rootScope', 'rpcService', %(MODULE_NAME)sService]);
+var Cleep = angular.module('Cleep');
+Cleep.service('%(MODULE_NAME)sService', ['\$q', '\$rootScope', 'rpcService', %(MODULE_NAME)sService]);
     """
     ANGULAR_CONTROLLER_SKEL = """/**
  * %(MODULE_NAME_CAPITALIZED)s config directive
  * Handle %(MODULE_NAME)s application configuration
  */
-var %(MODULE_NAME)sConfigDirective = function(\$rootScope, %(MODULE_NAME)sService, raspiotService) {
+var %(MODULE_NAME)sConfigDirective = function(\$rootScope, %(MODULE_NAME)sService, cleepService) {
 
     var %(MODULE_NAME)sConfigController = function() {
         var self = this;
@@ -75,8 +75,8 @@ var %(MODULE_NAME)sConfigDirective = function(\$rootScope, %(MODULE_NAME)sServic
     };
 };
 
-var RaspIot = angular.module('RaspIot');
-RaspIot.directive('%(MODULE_NAME)sConfigDirective', ['\$rootScope', '%(MODULE_NAME)sService', 'raspiotService', %(MODULE_NAME)sConfigDirective]);
+var Cleep = angular.module('Cleep');
+Cleep.directive('%(MODULE_NAME)sConfigDirective', ['\$rootScope', '%(MODULE_NAME)sService', 'cleepService', %(MODULE_NAME)sConfigDirective]);
     """
     ANGULAR_CONTROLLER_TEMPLATE_SKEL = """<div layout="column" layout-padding ng-cloak>
 
@@ -88,10 +88,10 @@ RaspIot.directive('%(MODULE_NAME)sConfigDirective', ['\$rootScope', '%(MODULE_NA
     PYTHON_MODULE_SKEL = """#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from raspiot.utils import MissingParameter, InvalidParameter, CommandError
-from raspiot.raspiot import RaspIotModule
+from cleep.exception import MissingParameter, InvalidParameter, CommandError
+from cleep.core import CleepModule
 
-class %(MODULE_NAME_CAPITALIZED)s(RaspIotModule):
+class %(MODULE_NAME_CAPITALIZED)s(CleepModule):
     \\"\\"\\"
     %(MODULE_NAME_CAPITALIZED)s application
     \\"\\"\\"
@@ -119,7 +119,7 @@ class %(MODULE_NAME_CAPITALIZED)s(RaspIotModule):
             bootstrap (dict): bootstrap objects
             debug_enabled: debug status
         \\"\\"\\"
-        RaspIotModule.__init__(self, bootstrap, debug_enabled)
+        CleepModule.__init__(self, bootstrap, debug_enabled)
 
     def _configure(self):
         \\"\\"\\"
@@ -155,8 +155,8 @@ import logging
 import sys
 sys.path.append('../')
 from backend.%(MODULE_NAME)s import %(MODULE_NAME_CAPITALIZED)s
-from raspiot.utils import InvalidParameter, MissingParameter, CommandError, Unauthorized
-from raspiot.libs.tests import session
+from cleep.exception import InvalidParameter, MissingParameter, CommandError, Unauthorized
+from cleep.libs.tests import session
 
 class Test%(MODULE_NAME_CAPITALIZED)s(unittest.TestCase):
 

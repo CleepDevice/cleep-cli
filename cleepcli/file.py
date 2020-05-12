@@ -23,9 +23,9 @@ class File():
         c = Console()
         cmd = """
 /bin/mkdir -p "%(HTML_DST)s/"
-/usr/bin/rsync -av "%(REPO_DIR)s/raspiot/" "%(CORE_DST)s/" --exclude "/tests/" --exclude "modules/**/" --delete --exclude "*.pyc"
+/usr/bin/rsync -av "%(REPO_DIR)s/cleep/" "%(CORE_DST)s/" --exclude "/tests/" --exclude "modules/**/" --exclude "*__pycache__*" --delete --exclude "*.pyc"
 /usr/bin/rsync -av "%(REPO_DIR)s/html/" "%(HTML_DST)s/" --delete --exclude "js/modules/"
-/usr/bin/rsync -av "%(REPO_DIR)s/bin/raspiot" "%(BIN_DST)s/raspiot"
+/usr/bin/rsync -av "%(REPO_DIR)s/bin/cleep" "%(BIN_DST)s/cleep"
 /usr/bin/rsync -av "%(REPO_DIR)s/medias/sounds" "%(MEDIA_DST)s/sounds/" --delete
     """ % {'REPO_DIR': config.REPO_DIR, 'CORE_DST': config.CORE_DST, 'HTML_DST':config.HTML_DST, 'BIN_DST':config.BIN_DST, 'MEDIA_DST':config.MEDIA_DST}
         self.logger.debug('Coresync cmd: %s' % cmd)

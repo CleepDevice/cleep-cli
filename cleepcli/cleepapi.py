@@ -31,7 +31,7 @@ class CleepApi():
         #data = {'to':'system', 'command':'restart', 'delay':0.0}
         #self.__post(self.COMMAND_URL, data)
 
-        cmd = '/bin/systemctl restart raspiot'
+        cmd = '/bin/systemctl restart cleep'
         c = Console()
         resp = c.command(cmd)
         self.logger.debug('Systemctl resp: %s' % resp)

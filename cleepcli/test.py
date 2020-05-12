@@ -13,9 +13,9 @@ import datetime
 
 class Test():
     """
-    Handle test operations
+    Handle test processes
     """
-    COVERAGE_PATH = '/opt/raspiot/.coverage'
+    COVERAGE_PATH = '/opt/cleep/.coverage'
 
     def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -48,7 +48,7 @@ class Test():
             return self.__module_version
 
         try:
-            module_ = importlib.import_module(u'raspiot.modules.%s.%s' % (module_name, module_name))
+            module_ = importlib.import_module(u'cleep.modules.%s.%s' % (module_name, module_name))
             module_class_ = getattr(module_, module_name.capitalize())
             self.__module_version = module_class_.MODULE_VERSION
             return self.__module_version

@@ -51,9 +51,9 @@ fi
 clean() {
     echo `pwd`
     rm -rf build
-    rm -rf debian/raspiot
+    rm -rf debian/cleep
     rm -rf debian/*debhelper*
-    rm -rf ../raspiot_*_armhf.*
+    rm -rf ../cleep_*_armhf.*
     rm -rf tmp
 }
 
@@ -65,48 +65,48 @@ clean
 
 # check python version
 VERSION=`head -n 1 debian/changelog | awk '{ gsub("[\(\)]","",$2); print $2 }'`
-PYTHON_VERSION=`cat raspiot/__init__.py | grep $VERSION | wc -l`
+PYTHON_VERSION=`cat cleep/__init__.py | grep $VERSION | wc -l`
 if [ "$PYTHON_VERSION" -ne "1" ]
 then
     echo
-    echo "ERROR: python version is not the same than debian version, please update raspiot/__init__.py __version__ to $VERSION"
+    echo "ERROR: python version is not the same than debian version, please update cleep/__init__.py __version__ to $VERSION"
     echo
     exit 1
 fi
 
-# generate /etc/default/raspiot.conf
+# generate /etc/default/cleep.conf
 mkdir tmp
-touch tmp/raspiot.conf
-echo "SENTRY_DSN=$SENTRY_DSN" >> tmp/raspiot.conf
+touch tmp/cleep.conf
+echo "SENTRY_DSN=$SENTRY_DSN" >> tmp/cleep.conf
 
-# build raspiot application
+# build Cleep application
 debuild -us -uc
 
 # clean python stuff
-rm -rf raspiot.egg-info
-rm -rf pyraspiot.egg-info/
+rm -rf cleep.egg-info
+rm -rf pycleep.egg-info/
 rm -rf tmp/
 
 # jump in build output
 cd ".."
 
 # collect variables
-DEB=`ls -A1 raspiot* | grep \.deb`
-ARCHIVE=raspiot_$VERSION.zip
-SHA256=raspiot_$VERSION.sha256
+DEB=`ls -A1 cleep* | grep \.deb`
+ARCHIVE=cleep_$VERSION.zip
+SHA256=cleep_$VERSION.sha256
 # PREINST=cleep/scripts/preinst.sh
 # POSTINST=cleep/scripts/postinst.sh
 
 # build zip archive
-# rm -f raspiot_*.deb
-# rm -f raspiot_*.sha256
-# cp -a $DEB raspiot.deb
+# rm -f cleep_*.deb
+# rm -f cleep_*.sha256
+# cp -a $DEB cleep.deb
 # cp -a $PREINST .
 # cp -a $POSTINST .
-# zip $ARCHIVE raspiot.deb `basename $PREINST` `basename $POSTINST`
+# zip $ARCHIVE cleep.deb `basename $PREINST` `basename $POSTINST`
 # rm -f `basename $PREINST`
 # rm -f `basename $POSTINST`
-# rm -f raspiot.deb
+# rm -f cleep.deb
 sha256sum $DEB > $SHA256
         """ % (config.REPO_DIR)
         self.__endless_command_running = True
@@ -161,9 +161,9 @@ sha256sum $DEB > $SHA256
         repo = github.get_repo('%s/%s' % (self.GITHUB_USER, self.GITHUB_REPO))
 
         #check build existence
-        archive = os.path.abspath(os.path.join(config.REPO_DIR, '..', 'raspiot_%s.zip' % version))
-        sha256 = os.path.abspath(os.path.join(config.REPO_DIR, '..', 'raspiot_%s.sha256' % version))
-        changes = os.path.abspath(os.path.join(config.REPO_DIR, '..', 'raspiot_%s_armhf.changes' % version))
+        archive = os.path.abspath(os.path.join(config.REPO_DIR, '..', 'cleep_%s.zip' % version))
+        sha256 = os.path.abspath(os.path.join(config.REPO_DIR, '..', 'cleep_%s.sha256' % version))
+        changes = os.path.abspath(os.path.join(config.REPO_DIR, '..', 'cleep_%s_armhf.changes' % version))
         if not os.path.exists(archive):
             self.logger.error('Archive file "%s" does not exist' % archive)
         if not os.path.exists(sha256):
@@ -172,7 +172,7 @@ sha256sum $DEB > $SHA256
             self.logger.error('Changes file "%s" does not exist' % changes)
 
         #get changelog
-        cmd = 'sed -n "/raspiot (%(version)s)/,/Checksums-Sha1:/{/raspiot (%(version)s)/b;/Checksums-Sha1:/b;p}" %(changes)s | tail -n +2' % {'version': version, 'changes': changes}
+        cmd = 'sed -n "/cleep (%(version)s)/,/Checksums-Sha1:/{/cleep (%(version)s)/b;/Checksums-Sha1:/b;p}" %(changes)s | tail -n +2' % {'version': version, 'changes': changes}
         self.logger.debug('Cmd = %s' % cmd)
         c = Console()
         result = c.command(cmd)
