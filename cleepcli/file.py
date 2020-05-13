@@ -30,7 +30,9 @@ class File():
     """ % {'REPO_DIR': config.REPO_DIR, 'CORE_DST': config.CORE_DST, 'HTML_DST':config.HTML_DST, 'BIN_DST':config.BIN_DST, 'MEDIA_DST':config.MEDIA_DST}
         self.logger.debug('Coresync cmd: %s' % cmd)
         resp = c.command(cmd, 15)
-        self.logger.debug('Coresync response: %s' % resp)
+        self.logger.debug('Coresync stdout:\n%s' % '\n'.join(resp['stdout']))
+        if resp['stderr']:
+            self.logger.debug('Coresync stderr:\n%s' % '\n'.join(resp['stderr']))
         if resp['error'] or resp['killed']:
             self.logger.error('Error occured while sync core content: %s' % ('killed' if resp['killed'] else resp['stderr']))
             return False
@@ -60,15 +62,15 @@ class File():
         cmd = """ 
 if [ -d "%(BACKEND_SRC)s" ]; then
     /bin/mkdir -p "%(BACKEND_DST)s"
-    rsync -av "%(BACKEND_SRC)s" "%(BACKEND_DST)s" --delete --exclude "*.pyc"
+    rsync -av "%(BACKEND_SRC)s" "%(BACKEND_DST)s" --delete --exclude "*.pyc" --exclude "*__pycache__*"
 fi
 if [ -d "%(FRONTEND_SRC)s" ]; then
     /bin/mkdir -p "%(FRONTEND_DST)s"
-    rsync -av "%(FRONTEND_SRC)s" "%(FRONTEND_DST)s" --delete
+    rsync -av "%(FRONTEND_SRC)s" "%(FRONTEND_DST)s" --delete --exclude "*__pycache__*"
 fi
 if [ -d "%(SCRIPTS_SRC)s" ]; then
     /bin/mkdir -p "%(SCRIPTS_DST)s"
-    rsync -av "%(SCRIPTS_SRC)s" "%(SCRIPTS_DST)s" --delete
+    rsync -av "%(SCRIPTS_SRC)s" "%(SCRIPTS_DST)s" --delete --exclude "*__pycache__*"
 fi
     """ % { 
             'BACKEND_SRC': mod_backend_src, 'BACKEND_DST': mod_backend_dst,
@@ -77,7 +79,10 @@ fi
         }
         self.logger.debug('Modsync cmd: %s' % cmd)
         resp = c.command(cmd, 15) 
-        #self.logger.debug('Modsync resp: %s' % resp)
+
+        self.logger.debug('Modsync stdout:\n%s' % '\n'.join(resp['stdout']))
+        if resp['stderr']:
+            self.logger.debug('Modsync stderr:\n%s' % '\n'.join(resp['stderr']))
         if resp['error'] or resp[u'killed']:
             self.logger.error(u'Error occured while sync module content: %s' % (u'killed' if resp[u'killed'] else resp[u'stderr']))
             return False
