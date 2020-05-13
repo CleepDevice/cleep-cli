@@ -311,8 +311,12 @@ coverage run --omit="/usr/local/lib/python*/*","*test_*.py" --concurrency=thread
             c = EndlessConsole(cmd, self.__quiet_console_callback, self.__console_end_callback)
             c.start()
 
+            single_start = int(time.time())
             while self.__endless_command_running:
                 time.sleep(0.25)
+
+            single_duration = str(datetime.timedelta(seconds=(int(time.time()) - single_start)))
+            self.logger.info('  Duration %s' % single_duration)
 
             if self.__endless_command_return_code!=0:
                 self.logger.debug('Command output:\n%s' % '\n'.join(self.__stderr))
