@@ -3,17 +3,20 @@
 This utility helps developers to build Cleep applications providing some useful commands:
 * Core commands:
     * `coreget` to clone or pull official Cleep repository.
+    * `coredocs` to generate core documentation in HTML format.
     * `coresync` to synchronize sources from repository to execution folders.
+    * `coretests` to perform core tests suite.
+    * `coretestscov` to display last core tests code coverage report.
     * `cpuprof` to run CPU profiler on application execution instance.
     * `memprof` to run memory profiler on application execution instance.
     * `reset` clear existing installed Cleep files and install it again.
 * Module commands:
-    * `modsync` to synchronize sources from module folder to execution folders.
     * `modcreate` to create module (aka application) skeleton.
-    * `moddelete` to delete installed files of a module
-    * `modtests` to execute module unit tests
-    * `modtestscov` to display last execution tests coverage
-    * `moddocs` to generate module documentation
+    * `moddelete` to delete installed files of a module.
+    * `moddocs` to generate module documentation.
+    * `modsync` to synchronize sources from module folder to execution folders.
+    * `modtests` to execute module tests.
+    * `modtestscov` to display last module tests code coverage report.
 * Watch commands:
     * `watch` to watch for repository filesystem changes and automatically update files on execution folders. It also restart backend or/and frontend according to changes.
 * Misc commands:
