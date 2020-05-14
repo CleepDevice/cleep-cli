@@ -329,7 +329,7 @@ def corebuild():
 
 @distrib.command()
 @click.option('--version', prompt='Version', help='Version to publish.')
-def publish(version):
+def corepublish(version):
     """
     Publish built Cleep debian package
     """
