@@ -28,8 +28,10 @@ class Module():
 }
     """
     ANGULAR_SERVICE_SKEL = """/**
- * %(MODULE_NAME_CAPITALIZED)s service
- * Handle %(MODULE_NAME)s application requests
+ * %(MODULE_NAME_CAPITALIZED)s service.
+ * Handle %(MODULE_NAME)s application requests.
+ * Service is the place to store your application content (it is a singleton) and
+ * to provide your application functions.
  */
 var %(MODULE_NAME)sService = function(\$q, \$rootScope, rpcService) {
     var self = this;
@@ -47,32 +49,37 @@ var %(MODULE_NAME)sService = function(\$q, \$rootScope, rpcService) {
     /**
      * Catch x.x.x events
      */
-    \$rootScope.\$on('x.x.x', function(event, uuid, params) {
-    });
+    /*\$rootScope.\$on('x.x.x', function(event, uuid, params) {
+    });*/
+
 }
     
 var Cleep = angular.module('Cleep');
 Cleep.service('%(MODULE_NAME)sService', ['\$q', '\$rootScope', 'rpcService', %(MODULE_NAME)sService]);
     """
     ANGULAR_CONTROLLER_SKEL = """/**
- * %(MODULE_NAME_CAPITALIZED)s config directive
+ * %(MODULE_NAME_CAPITALIZED)s config component
  * Handle %(MODULE_NAME)s application configuration
+ * If your application doesn't need configuration page, delete this file and its references into desc.json
  */
-var %(MODULE_NAME)sConfigDirective = function(\$rootScope, %(MODULE_NAME)sService, cleepService) {
+var %(MODULE_NAME)sConfigComponent = function(\$q, \$rootScope, cleepService, %(MODULE_NAME)sService) {
 
     var %(MODULE_NAME)sConfigController = function() {
         var self = this;
+        self.config = {};
 
         /**
-         * Init controller
+         * Init component
          */
-        self.init = function() {
-            // TODO
+        self.$onInit = function() {
+            // get module config
+            cleepService.getModuleConfig()
+                .then(function(config) {
+                    self.config = config;
+                }, function(err) {
+                    // error getting config
+                });
         };
-    };
-
-    var %(MODULE_NAME)sConfigLink = function(scope, element, attrs, controller) {
-        controller.init();
     };
 
     return {
@@ -81,12 +88,11 @@ var %(MODULE_NAME)sConfigDirective = function(\$rootScope, %(MODULE_NAME)sServic
         scope: true,
         controller: %(MODULE_NAME)sConfigController,
         controllerAs: '%(MODULE_NAME)sCtl',
-        link: %(MODULE_NAME)sConfigLink
     };
 };
 
 var Cleep = angular.module('Cleep');
-Cleep.directive('%(MODULE_NAME)sConfigDirective', ['\$rootScope', '%(MODULE_NAME)sService', 'cleepService', %(MODULE_NAME)sConfigDirective]);
+Cleep.directive('%(MODULE_NAME)sConfigComponent', ['\$q', '\$rootScope', 'cleepService', '%(MODULE_NAME)sService', %(MODULE_NAME)sConfigComponent]);
     """
     ANGULAR_CONTROLLER_TEMPLATE_SKEL = """<div layout=\\"column\\" layout-padding ng-cloak>
 
