@@ -49,7 +49,7 @@ class File():
             sys.exit('Module "%s" doesn\'t exist [%s]' % (module_name, os.path.join(config.MODULES_SRC, module_name)))
     
         if not os.path.exists(os.path.join(config.MODULES_DST, module_name)):
-            os.mkdir(os.path.join(config.MODULES_DST, module_name))
+            os.makedirs(os.path.join(config.MODULES_DST, module_name))
 
         mod_backend_src = os.path.join(config.MODULES_SRC, module_name, 'backend/')
         mod_backend_dst = os.path.join(config.MODULES_DST, module_name)
