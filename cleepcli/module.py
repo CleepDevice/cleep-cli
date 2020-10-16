@@ -33,7 +33,10 @@ class Module():
  * Service is the place to store your application content (it is a singleton) and
  * to provide your application functions.
  */
-var %(MODULE_NAME)sService = function(\$q, \$rootScope, rpcService) {
+angular
+.module('Cleep')
+.service('%(MODULE_NAME)sService', ['\$rootScope', 'rpcService',
+function(\$rootScope, rpcService) {
     var self = this;
 
     /**
@@ -51,18 +54,16 @@ var %(MODULE_NAME)sService = function(\$q, \$rootScope, rpcService) {
      */
     /*\$rootScope.\$on('x.x.x', function(event, uuid, params) {
     });*/
-
-}
-    
-var Cleep = angular.module('Cleep');
-Cleep.service('%(MODULE_NAME)sService', ['\$q', '\$rootScope', 'rpcService', %(MODULE_NAME)sService]);
-    """
+}])"""
     ANGULAR_CONTROLLER_SKEL = """/**
  * %(MODULE_NAME_CAPITALIZED)s config component
  * Handle %(MODULE_NAME)s application configuration
  * If your application doesn't need configuration page, delete this file and its references into desc.json
  */
-var %(MODULE_NAME)sConfigComponent = function(\$q, \$rootScope, cleepService, %(MODULE_NAME)sService) {
+angular
+.module('Cleep')
+.directive('%(MODULE_NAME)sConfigComponent', ['\$rootScope', 'cleepService', '%(MODULE_NAME)sService',
+function(\$rootScope, cleepService, %(MODULE_NAME)sService) {
 
     var %(MODULE_NAME)sConfigController = function() {
         var self = this;
@@ -80,6 +81,17 @@ var %(MODULE_NAME)sConfigComponent = function(\$q, \$rootScope, cleepService, %(
                     // error getting config
                 });
         };
+
+        /**
+         * Keep app configuration in sync
+         */
+        $rootScope.$watch(function() {
+            return cleepService.modules['%(MODULE_NAME)s'].config;
+        }, function(newVal, oldVal) {
+            if(newVal && Object.keys(newVal).length) {
+                Object.assign(self.config, newVal);
+            }
+        });
     };
 
     return {
@@ -89,14 +101,13 @@ var %(MODULE_NAME)sConfigComponent = function(\$q, \$rootScope, cleepService, %(
         controller: %(MODULE_NAME)sConfigController,
         controllerAs: '%(MODULE_NAME)sCtl',
     };
-};
-
-var Cleep = angular.module('Cleep');
-Cleep.directive('%(MODULE_NAME)sConfigComponent', ['\$q', '\$rootScope', 'cleepService', '%(MODULE_NAME)sService', %(MODULE_NAME)sConfigComponent]);
-    """
+}])"""
     ANGULAR_CONTROLLER_TEMPLATE_SKEL = """<div layout=\\"column\\" layout-padding ng-cloak>
 
     <md-list>
+        <md-list-item>
+            config line
+        </md-list-item>
     </md-list>
 
 </div>
@@ -139,16 +150,25 @@ class %(MODULE_NAME_CAPITALIZED)s(CleepModule):
 
     def _configure(self):
         \\"\\"\\"
-        Configure module
+        Configure module.
+        Use this function to configure your variables and local stuff that is not blocking.
+        At this time other modules are not started and all your command requests will fail.
         \\"\\"\\"
-        # launch here custom thread or action that takes time to process
         pass
 
-    def _stop(self):
+    def _on_start(self):
+        \\"\\"\\"
+        Start module.
+        Use this function to start your tasks.
+        At this time all modules are started and should respond to your command requests.
+        \\"\\"\\"
+        pass
+
+    def _on_stop(self):
         \\"\\"\\"
         Stop module
+        Use this function to stop your tasks and close your external connections.
         \\"\\"\\"
-        # stop here your custom threads or close external connections
         pass
 
     def event_received(self, event):
@@ -212,20 +232,37 @@ extensions = [
 source_suffix = '.rst'
 master_doc = 'index'
 language = None
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = [
+    '_build',
+    'Thumbs.db',
+    '.DS_Store',
+    '**/*.pyc',
+]
+add_module_names = False
 pygments_style = None
+html_static_path = [
+    '_static',
+]
+html_css_files = [
+    '_static/cleep.css',
+]
 html_theme = 'sphinx_rtd_theme'
 todo_include_todos = True
-autodoc_default_options = { 
-    'undoc-members': True,
-    'private-members': False,
+html_theme_options = {
+    'prev_next_buttons_location': None,
+    'style_external_links': True,
+    'style_nav_header_background': '#607d8b',
+    'collapse_navigation': False,
+    'sticky_navigation': True,
+    'navigation_depth': 6,
+    'includehidden': False,
 }
+
 def setup(app):
     app.add_css_file('cleep.css')
     """
-    #'exclude-members': '__init__,_stop,_configure'
-    DOCS_INDEX_RST = """Welcome to %(MODULE_NAME_CAPITALIZED)s's documentation!
-=================================
+    DOCS_INDEX_RST = """%(TITLE)s
+%(LINE)s
 
 .. toctree::
    :maxdepth: 3
@@ -296,6 +333,7 @@ a:hover.icon.icon-home {
             self.logger.error('Module "%s" already exists in "%s"' % (module_name, path))
             return False
 
+        title = 'Welcome to %s\'s documentation!' % module_name.capitalize()
         templates = {
             'ANGULAR_SERVICE': self.ANGULAR_SERVICE_SKEL % {'MODULE_NAME': module_name, 'MODULE_NAME_CAPITALIZED': module_name.capitalize()},
             'ANGULAR_CONTROLLER': self.ANGULAR_CONTROLLER_SKEL % {'MODULE_NAME': module_name, 'MODULE_NAME_CAPITALIZED': module_name.capitalize()},
@@ -304,7 +342,7 @@ a:hover.icon.icon-home {
             'PYTHON_MODULE': self.PYTHON_MODULE_SKEL % {'MODULE_NAME': module_name, 'MODULE_NAME_CAPITALIZED': module_name.capitalize()},
             'TEST_DEFAULT': self.TEST_DEFAULT % {'MODULE_NAME': module_name, 'MODULE_NAME_CAPITALIZED': module_name.capitalize()},
             'DOCS_CONF_PY': self.DOCS_CONF_PY % {'MODULE_NAME': module_name, 'MODULE_NAME_CAPITALIZED': module_name.capitalize()},
-            'DOCS_INDEX_RST': self.DOCS_INDEX_RST % {'MODULE_NAME': module_name, 'MODULE_NAME_CAPITALIZED': module_name.capitalize()},
+            'DOCS_INDEX_RST': self.DOCS_INDEX_RST % {'MODULE_NAME': module_name, 'MODULE_NAME_CAPITALIZED': module_name.capitalize(), 'TITLE': title, 'LINE': '='*len(title)},
             'DOCS_CLEEP_CSS': self.DOCS_CLEEP_CSS,
         }
 
