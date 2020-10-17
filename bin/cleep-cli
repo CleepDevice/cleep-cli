@@ -35,6 +35,15 @@ def log_root(msg, *args, **kwargs):
 logging.addLevelName(level, "TRACE")
 logging.trace = log_root
 
+def print_version(ctx, param, value):
+    if not value or ctx.resilient_parsing:
+        return
+    click.echo('Version %s' % VERSION)
+    ctx.exit()
+
+#@click.command()
+#@click.option('--version', is_flag=True, callback=print_version, expose_value=False, is_eager=True)
+@click.version_option(version=VERSION)
 
 @click.group()
 def core():
@@ -106,12 +115,13 @@ def coretestscov():
         sys.exit(1)
 
 @core.command()
-def coredocs():
+@click.option('--publish', is_flag=True, help='Publish documentation to github pages.')
+def coredocs(publish):
     """
-    Generate core documentation in appropriate format
+    Generate core documentation in appropriate format an publish if specified
     """
     d = Docs()
-    res = d.generate_core_docs()
+    res = d.generate_core_docs(publish)
 
     if not res:
         sys.exit(1)
@@ -368,19 +378,19 @@ def moddocspath(module):
     if not res:
         sys.exit(1)
 
-@click.group()
-def general():
-    pass
+#@click.group()
+#def general():
+#    pass
+#
+#@general.command()
+#def version():
+#    """
+#    Display cleep-cli version
+#    """
+#    click.echo(VERSION)
 
-@general.command()
-def version():
-    """
-    Display cleep-cli version
-    """
-    click.echo(VERSION)
 
-
-cli = click.CommandCollection(sources=[general, core, mod, watchdog, test, distrib, docs])
+cli = click.CommandCollection(sources=[core, mod, watchdog, test, distrib, docs])
 if __name__ == '__main__':
 
     def is_raspbian():
