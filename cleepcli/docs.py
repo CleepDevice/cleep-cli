@@ -16,6 +16,12 @@ class Docs():
     @see https://samnicholls.net/2016/06/15/how-to-sphinx-readthedocs/
     """
 
+    GITHUB_REPO = 'git@github.com:tangb/cleep.git'
+    GITHUB_DOCS_BRANCH = 'docs'
+    DOCS_TEMP_PATH = '/tmp/cleep-docs'
+    DOCS_ARCHIVE_NAME = 'cleep-core-docs.zip'
+    DOCS_COMMIT_MESSAGE = 'API documentation update'
+
     def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.__endless_command_running = False
@@ -182,12 +188,9 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
             self.logger.exception('Unable to get core infos')
             return None
 
-    def generate_core_docs(self):
+    def generate_core_docs(self, publish=False):
         """
         Generate core documentation
-
-        Args:
-            preview (bool): preview generated documentation as text directly on stdout
         """
         #checking core path
         path = os.path.join(config.CORE_SRC, '../docs')
@@ -250,4 +253,74 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
         if self.__endless_command_return_code!=0:
             return False
 
+        # publish docs
+        if publish:
+            self.logger.info('=> Publishing documentation...')
+            return self.publish_core_docs()
+
         return True
+
+    def publish_core_docs(self):
+        """
+        Publish core docs to github pages
+        """
+        c = Console()
+
+        # check
+        docs_archive_path = os.path.join(config.REPO_DIR, 'docs/', self.DOCS_ARCHIVE_NAME)
+        if not os.path.exists(docs_archive_path):
+            self.logger.error('Core has no docs archive generated (%s). Please run "cleep-cli coredocs" first' % docs_archive_path)
+            return False
+
+        # clone repo
+        self.logger.debug('Cloning core repository...')
+        cmd = 'rm -rf "%s"; git clone -q "%s" "%s"' % (self.DOCS_TEMP_PATH, self.GITHUB_REPO, self.DOCS_TEMP_PATH)
+        self.logger.debug('cmd: %s' % cmd)
+        resp = c.command(cmd, 60) 
+        self.logger.debug('Clone resp: %s' % resp)
+        if resp['returncode'] != 0 or resp['killed']:
+            self.logger.error('Error occured while cloning repository: %s' % ('killed' if resp['killed'] else resp['stderr']))
+            return False
+    
+        # switch to branch
+        self.logger.debug('Switching to %s branch' % self.GITHUB_DOCS_BRANCH)
+        cmd = 'cd "%s" && git checkout "%s"' % (self.DOCS_TEMP_PATH, self.GITHUB_DOCS_BRANCH)
+        self.logger.debug('cmd: %s' % cmd)
+        resp = c.command(cmd, 60) 
+        self.logger.debug('Switch branch resp: %s' % resp)
+        if resp['returncode'] != 0 or resp['killed']:
+            self.logger.error('Error occured while switching repository branch: %s' % ('killed' if resp['killed'] else resp['stderr']))
+            return False
+
+        # add docs
+        self.logger.debug('Updating docs...')
+        cmd = 'unzip "%s" -d "%s" && rm -rf "%s" && mv "%s" "%s"' % (
+            docs_archive_path,
+            self.DOCS_TEMP_PATH,
+            os.path.join(self.DOCS_TEMP_PATH, 'docs'),
+            os.path.join(self.DOCS_TEMP_PATH, 'html'),
+            os.path.join(self.DOCS_TEMP_PATH, 'docs'),
+        )
+        self.logger.debug('cmd: %s' % cmd)
+        resp = c.command(cmd, 60) 
+        self.logger.debug('Unzip resp: %s' % resp)
+        if resp['returncode'] != 0 or resp['killed']:
+            self.logger.error('Error occured while unzipping core docs archive: %s' % ('killed' if resp['killed'] else resp['stderr']))
+            return False
+
+        # commit changes
+        self.logger.debug('Commiting changes...')
+        cmd = 'cd "%s" && git add . && git commit -m "%s" && git push' % (
+            self.DOCS_TEMP_PATH,
+            self.DOCS_COMMIT_MESSAGE,
+        )
+        self.logger.debug('cmd: %s' % cmd)
+        resp = c.command(cmd, 60) 
+        self.logger.debug('Commit resp: %s' % resp)
+        if resp['returncode'] != 0 or resp['killed']:
+            self.logger.error('Error occured while pushing changes: %s' % ('killed' if resp['killed'] else resp['stderr']))
+            return False
+
+        return True
+        
+
