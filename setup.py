@@ -4,6 +4,10 @@ except ImportError:
     from distutils.core import setup
 from cleepcli.version import VERSION
 
+requirements = []
+with open('requirements.txt') as f:
+    requirements = f.read().splitlines()
+
 setup(
     name = 'cleepcli',
     version = VERSION,
@@ -15,15 +19,7 @@ setup(
     url = 'http://www.github.com/tangb/cleep-cli/',
     packages = ['cleepcli'],
     include_package_data = True,
-    install_requires = [
-        'Click>=7.0,<8.0',
-        'watchdog>=0.9.0,<1.0.0',
-        'coverage>=4.5.3,<5.0.0',
-        'Sphinx>=1.8.5,<2.0.0',
-        'sphinx-rtd-theme>=0.4.3',
-        'sphinxcontrib-napoleon>=0.7',
-        'urllib3>=1.24.2',
-        'CProfileV>=1.0.7',
-    ],
+    install_requires = requirements,
     scripts = ['bin/cleep-cli']
 )
+
