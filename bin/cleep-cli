@@ -21,7 +21,7 @@ from cleepcli.docs import Docs
 import cleepcli.config as config
 from cleepcli.version import VERSION
 
-# logging.basicConfig(level=logging.DEBUG, format=u'%(asctime)s %(levelname)s [%(name)s:%(lineno)d]: %(message)s', stream=sys.stdout)
+#logging.basicConfig(level=logging.DEBUG, format=u'%(asctime)s %(levelname)s [%(name)s:%(lineno)d]: %(message)s', stream=sys.stdout)
 logging.basicConfig(level=logging.INFO, format=u'%(message)s', stream=sys.stdout)
 
 # install logging trace level
@@ -230,8 +230,24 @@ def reset(ctx):
 def mod():
     pass
 
+def get_module_name(ctx, param, value):
+    module_name = value if value else None
+    try:
+        current_path = os.getcwd()
+        if current_path.startswith(config.MODULES_SRC) and not module_name:
+            # we are already in module directory and no module specified
+            module_name = current_path.replace(config.MODULES_SRC + '/', '').split('/',1)[0]
+    except:
+        pass
+
+    if not module_name:
+        # prompt for module name
+        module_name = click.prompt('Module name')
+
+    return module_name
+
 @mod.command()
-@click.option('--module', prompt='Module name', help='Module name.')
+@click.option('--module', callback=get_module_name, help='Module name.')
 def modsync(module):
     """
     Synchronize core content between source and execution folders
