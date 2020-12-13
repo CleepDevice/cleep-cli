@@ -47,6 +47,23 @@ if [ -z "$SENTRY_DSN" ]; then
     exit 1
 fi
 
+# Check command result
+# $1: command result (usually $?)
+# $2: awaited command result
+# $3: error message
+checkResult() {
+    if [ $1 -ne $2 ]
+    then
+        msg=$3
+        if [[ -z "$1" ]]; then
+            msg="see output log"
+        fi
+        echo -e "${RED}Error occured: $msg.${NOCOLOR}"
+        slackKo "Image preparation failed: $msg"
+        exit 1
+    fi
+}
+
 # clean all files
 clean() {
     echo `pwd`
@@ -81,6 +98,7 @@ echo "SENTRY_DSN=$SENTRY_DSN" >> tmp/cleep.conf
 
 # build Cleep application
 debuild -us -uc
+checkResult $? 0 "Failed to build deb package"
 
 # clean python stuff
 rm -rf cleep.egg-info
@@ -92,7 +110,7 @@ cd ".."
 
 # collect variables
 DEB=`ls -A1 cleep* | grep \.deb`
-ARCHIVE=cleep_$VERSION.zip
+# ARCHIVE=cleep_$VERSION.deb
 SHA256=cleep_$VERSION.sha256
 # PREINST=cleep/scripts/preinst.sh
 # POSTINST=cleep/scripts/postinst.sh
@@ -161,7 +179,7 @@ sha256sum $DEB > $SHA256
         repo = github.get_repo('%s/%s' % (self.GITHUB_USER, self.GITHUB_REPO))
 
         #check build existence
-        archive = os.path.abspath(os.path.join(config.REPO_DIR, '..', 'cleep_%s.zip' % version))
+        archive = os.path.abspath(os.path.join(config.REPO_DIR, '..', 'cleep_%s_armhf.deb' % version))
         sha256 = os.path.abspath(os.path.join(config.REPO_DIR, '..', 'cleep_%s.sha256' % version))
         changes = os.path.abspath(os.path.join(config.REPO_DIR, '..', 'cleep_%s_armhf.changes' % version))
         if not os.path.exists(archive):
