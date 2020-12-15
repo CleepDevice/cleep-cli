@@ -68,6 +68,7 @@ checkResult() {
 clean() {
     echo `pwd`
     rm -rf build
+    rm -rf .pybuild
     rm -rf debian/cleep
     rm -rf debian/*debhelper*
     rm -rf ../cleep_*_armhf.*
