@@ -20,6 +20,11 @@ class File():
         Synchronize core content between source and execution folders
         """
         self.logger.info('Synchronizing core files...')
+
+        # check vars
+        if not config.CORE_DST:
+            raise Exception('Cleep needs to be installed before using this command')
+
         c = Console()
         cmd = """
 /bin/mkdir -p "%(HTML_DST)s/"

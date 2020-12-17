@@ -5,7 +5,8 @@ import os
 try:
     import cleep
 except:
-    raise Exception('Please install Cleep before using its CLI')    
+    class cleep:
+        __file__ = None
 
 DEFAULT_MODULES = ['system', 'parameters', 'cleepbus', 'audio', 'network']
 MODULES_REPO_URL = {
@@ -22,7 +23,7 @@ REPO_PUBLIC_URL = 'https://github.com/tangb/cleep.git' # not available yet
 REPO_DIR = '/root/cleep'
 
 CORE_SRC = '%s/cleep' % REPO_DIR
-CORE_DST = os.path.dirname(cleep.__file__)
+CORE_DST = os.path.dirname(cleep.__file__) if cleep.__file__ else None
 
 HTML_SRC = '%s/html' % REPO_DIR
 HTML_DST = '/opt/cleep/html'
