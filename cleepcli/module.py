@@ -42,12 +42,15 @@ function(\$rootScope, rpcService) {
     /**
      * Call backend function
      */
-    /*self.myFonction = function() {
-        return rpcService.sendCommand('my_function', '%(MODULE_NAME)s', {
-            'param1': 123,
-            'param2': 'cleep'
+    self.callAction = function() {
+        return rpcService.sendCommand('call_action', '%(MODULE_NAME)s');
+    };
+
+    self.setValue = function(value) {
+        return rpcService.sendCommand('set_value', '%(MODULE_NAME)s', {
+            'value': value,
         });
-    };*/
+    };
 
     /**
      * Catch x.x.x events
@@ -67,31 +70,49 @@ function(\$rootScope, cleepService, %(MODULE_NAME)sService) {
 
     var %(MODULE_NAME)sConfigController = function() {
         var self = this;
+        // use this variable in all your application (controller and view)
         self.config = {};
+        self.message = 'message';
+        self.checkbox = true;
+        self.slider = 25;
 
         /**
          * Init component
          */
-        self.$onInit = function() {
+        self.\$onInit = function() {
             // get module config
-            cleepService.getModuleConfig()
-                .then(function(config) {
-                    self.config = config;
-                }, function(err) {
-                    // error getting config
-                });
+            cleepService.getModuleConfig('%(MODULE_NAME)s');
         };
 
         /**
          * Keep app configuration in sync
          */
-        $rootScope.$watch(function() {
+        \$rootScope.\$watch(function() {
             return cleepService.modules['%(MODULE_NAME)s'].config;
         }, function(newVal, oldVal) {
             if(newVal && Object.keys(newVal).length) {
                 Object.assign(self.config, newVal);
             }
         });
+
+        self.setMessage = function() {
+            %(MODULE_NAME)sService.setValue(self.message)
+                .finally(function() {
+                    cleepService.reloadModuleConfig('%(MODULE_NAME)s');
+                });
+        };
+
+        self.callAction = function() {
+            %(MODULE_NAME)sService.callAction();
+        };
+
+        self.updateCheckbox = function() {
+            %(MODULE_NAME)sService.setValue(self.checkbox);
+        };
+
+        self.setSlider = function() {
+            %(MODULE_NAME)sService.setValue(self.slider);
+        };
     };
 
     return {
@@ -104,10 +125,82 @@ function(\$rootScope, cleepService, %(MODULE_NAME)sService) {
 }])"""
     ANGULAR_CONTROLLER_TEMPLATE_SKEL = """<div layout=\\"column\\" layout-padding ng-cloak>
 
-    <md-list>
+    <md-list ng-cloak>
+
+        <!-- A configuration section. It is a good way to make separation between different kind of parameters -->
+        <md-subheader class="md-no-sticky">A section header</md-subheader>
+
+        <!-- list item with single line description -->
         <md-list-item>
-            config line
+            <!-- generic cleep icon, use it as default line icon -->
+            <md-icon md-svg-icon="chevron-right"></md-icon>
+            <p>One line description</p>
         </md-list-item>
+
+        <!-- list item with double line description -->
+        <md-list-item class="md-2-line">
+            <md-icon md-svg-icon="chevron-right"></md-icon>
+            <div class="md-list-item-text">
+                <h3>Two line description</h3>
+                <p>Sub line uses smallest font</p>
+            </div>
+        </md-list-item>
+
+        <!-- list item with button -->
+        <md-list-item>
+            <md-icon md-svg-icon="chevron-right"></md-icon>
+            <p>Checkbox</p>
+            <md-button ng-click="%(MODULE_NAME)sCtl.callAction()" class="md-raised md-primary md-secondary">
+                <md-icon md-svg-icon="cog"></md-icon>
+                Button label
+            </md-button>
+        </md-list-item>
+
+        <!-- list item with text input -->
+        <md-list-item>
+            <md-icon md-svg-icon="chevron-right"></md-icon>
+            <p>Text input</p>
+            <md-input-container md-no-float class="md-secondary no-margin" layout="row" layout-align="start center" layout-padding>
+                <div class="no-md-error">
+                    <input ng-model="%(MODULE_NAME)sCtl.message" placeholder="message" aria-label="Message" class="no-margin">
+                </div>
+                <md-button ng-click="%(MODULE_NAME)sCtl.setMessage()" class="md-raised md-primary">
+                    <md-icon md-svg-icon="pencil"></md-icon>
+                </md-button>
+            </md-input-container>
+        </md-list-item>
+
+        <!-- list item with checkbox -->
+        <md-list-item>
+            <md-icon md-svg-icon="chevron-right"></md-icon>
+            <p>Checkbox</p>
+            <md-checkbox
+                class="md-secondary"
+                ng-model="%(MODULE_NAME)sCtl.checkbox"
+                ng-change="%(MODULE_NAME)sCtl.updateCheckbox()"
+                aria-label="Checkbox"
+            >
+            </md-checkbox>
+        </md-list-item>
+
+        <!-- list item with slider -->
+        <md-list-item>
+            <md-icon md-svg-icon="chevron-right"></md-icon>
+            <p>Slider</p>
+            <div class="md-secondary">
+                <md-slider
+                    ng-model="%(MODULE_NAME)sCtl.slider"
+                    ng-model-options="{debounce: 1000}"
+                    ng-change="%(MODULE_NAME)sCtl.setSlider()"
+                    min="0"
+                    max="100"
+                    aria-label="Slider"
+                    md-discrete
+                >
+                </md-slider>
+            </div>
+        </md-list-item>
+
     </md-list>
 
 </div>
@@ -142,7 +235,7 @@ class %(MODULE_NAME_CAPITALIZED)s(CleepModule):
         \\"\\"\\"
         Constructor
 
-        Params:
+        Args:
             bootstrap (dict): bootstrap objects
             debug_enabled: debug status
         \\"\\"\\"
@@ -171,11 +264,11 @@ class %(MODULE_NAME_CAPITALIZED)s(CleepModule):
         \\"\\"\\"
         pass
 
-    def event_received(self, event):
+    def on_event(self, event):
         \\"\\"\\"
         Event received
 
-        Params:
+        Args:
             event (MessageRequest): event data
         \\"\\"\\"
         # execute here actions when you receive an event:
@@ -183,6 +276,25 @@ class %(MODULE_NAME_CAPITALIZED)s(CleepModule):
         #  - on alert event => send email or push message
         #  - ...
         pass
+
+    def call_action(self):
+        \\"\\"\\"
+        This is a simple function call on frontend event
+
+        Returns:
+            bool: returns always True
+        \\"\\"\\"
+        self.logger.info('call_action called')
+        return True
+
+    def set_value(self):
+        \\"\\"\\"
+        This function is an example of how to pass value from frontend to backend
+
+        Args:
+            value (any): a value
+        \\"\\"\\"
+        self.logger.info('set_value called with param value=%s' % value)
     """
     TEST_DEFAULT = """#!/usr/bin/env python
 # -*- coding: utf-8 -*-
