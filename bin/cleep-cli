@@ -18,10 +18,10 @@ from cleepcli.watch import CleepWatchdog
 from cleepcli.test import Test
 from cleepcli.distrib import Distrib
 from cleepcli.docs import Docs
+from cleepcli.check import Check
 import cleepcli.config as config
 from cleepcli.version import VERSION
 
-#logging.basicConfig(level=logging.DEBUG, format=u'%(asctime)s %(levelname)s [%(name)s:%(lineno)d]: %(message)s', stream=sys.stdout)
 logging.basicConfig(level=logging.INFO, format=u'%(message)s', stream=sys.stdout)
 
 # install logging trace level
@@ -118,7 +118,7 @@ def coretestscov():
 @click.option('--publish', is_flag=True, help='Publish documentation to github pages.')
 def coredocs(publish):
     """
-    Generate core documentation in appropriate format an publish if specified
+    Generate core documentation in appropriate format and publish it if requested
     """
     d = Docs()
     res = d.generate_core_docs(publish)
@@ -149,7 +149,7 @@ def cpuprof():
         pass
 
     except:
-        if logging.getLogger().getEffectiveLevel()==logging.DEBUG:
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             logging.exception('Error occured during cpuprof:')
 
     finally:
@@ -394,19 +394,57 @@ def moddocspath(module):
     if not res:
         sys.exit(1)
 
-#@click.group()
-#def general():
-#    pass
-#
-#@general.command()
-#def version():
-#    """
-#    Display cleep-cli version
-#    """
-#    click.echo(VERSION)
+@click.group()
+def check():
+    pass
+
+@check.command()
+@click.option('--module', prompt='Module name', help='Module name.')
+def modcheckback(module):
+    """
+    Check module backend
+    """
+    c = Check()
+    try:
+        logging.info('%s' % c.check_backend(module))
+    except Exception as e:
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
+            logging.exception('Check backend failed:')
+        logging.error(str(e))
+        sys.exit(1)
+
+@check.command()
+@click.option('--module', prompt='Module name', help='Module name.')
+def modcheckfront(module):
+    """
+    Check module frontend
+    """
+    c = Check()
+    try:
+        logging.info('%s' % c.check_frontend(module))
+    except Exception as e:
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
+            logging.exception('Check frontend failed:')
+        logging.error(str(e))
+        sys.exit(1)
+
+@check.command()
+@click.option('--module', prompt='Module name', help='Module name.')
+def modcheckscripts(module):
+    """
+    Check module scripts
+    """
+    c = Check()
+    try:
+        logging.info('%s' % c.check_scripts(module))
+    except Exception as e:
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
+            logging.exception('Check scripts failed:')
+        logging.error(str(e))
+        sys.exit(1)
 
 
-cli = click.CommandCollection(sources=[core, mod, watchdog, test, distrib, docs])
+cli = click.CommandCollection(sources=[core, mod, watchdog, test, distrib, docs, check])
 if __name__ == '__main__':
 
     def is_raspbian():
