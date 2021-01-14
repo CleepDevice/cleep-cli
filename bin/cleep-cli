@@ -443,6 +443,21 @@ def modcheckscripts(module):
         logging.error(str(e))
         sys.exit(1)
 
+@check.command()
+@click.option('--module', prompt='Module name', help='Module name.')
+def modchecktests(module):
+    """
+    Check module tests
+    """
+    c = Check()
+    try:
+        logging.info('%s' % c.check_tests(module))
+    except Exception as e:
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
+            logging.exception('Check tests failed:')
+        logging.error(str(e))
+        sys.exit(1)
+
 
 cli = click.CommandCollection(sources=[core, mod, watchdog, test, distrib, docs, check])
 if __name__ == '__main__':

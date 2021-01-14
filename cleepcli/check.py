@@ -842,7 +842,7 @@ class Check():
             # drop some files
             filename = os.path.split(fullpath)[1]
             if filename not in ('preinst.sh', 'postinst.sh', 'preuninst.sh', 'postuninst.sh'):
-                out['warnings'].append('File "%s" in scripts folder won\'t be part of %s package' % (filename, module_name))
+                out['warnings'].append('File "%s" in scripts folder won\'t be packaged' % filename)
                 continue
 
             # store file infos
@@ -854,6 +854,65 @@ class Check():
 
         return out
 
+    def check_tests(self, module_name):
+        """
+        Check test files
+
+        Args:
+            module_name (string): module name
+
+        Returns:
+            dict: scripts infos::
+
+            {
+                errors (list): list of errors
+                warnings (list): list of warnings
+                files (list): list of files::
+                    [
+                        {
+                            fullpath (string): file fullpath
+                            filename (string): filename
+                            path (string): module path
+                        }
+                        ...
+                    ]
+            }
+
+        """
+        scripts_path = os.path.join(config.MODULES_SRC, module_name, 'tests')
+        fullpaths = glob.glob(scripts_path + '/**/*', recursive=True)
+        out = {
+            'errors': [],
+            'warnings': [],
+            'files': [],
+        }
+        for fullpath in fullpaths:
+            # drop some files
+            filename = os.path.split(fullpath)[1]
+            ext = os.path.splitext(fullpath)[1],
+            if filename.startswith('.') or filename.startswith('~') or filename.endswith('.tmp'):
+                continue
+            if '__pycache__' in fullpath:
+                continue
+            if filename.startswith('test_') and filename != 'test_%s.py' % module_name:
+                out['warnings'].append('Only one test file "test_%s.py" is allowed for now. File "%s" in tests folder won\'t be packaged.' % (module_name, filename))
+                continue
+
+            # store file infos
+            out['files'].append({
+                'fullpath': fullpath,
+                'filename': filename,
+                'path': fullpath.split('modules/%s/' % module_name)[1],
+            })
+
+        # check mandatory files
+        filenames = [item['filename'] for item in out['files']]
+        if '__init__.py' not in filenames:
+            out['errors'].append('Mandatory "__init__.py" file is missing in tests folder. Please add it')
+        if 'test_%s.py' % module_name not in filenames:
+            out['errors'].append('Tests file "test_%s.py" must exists in tests folder' % module_name)
+
+        return out
 
     def run_pylint(self):
         """
