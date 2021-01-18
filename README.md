@@ -17,6 +17,12 @@ This utility helps developers to build Cleep applications providing some useful 
     * `modsync` to synchronize sources from module folder to execution folders.
     * `modtests` to execute module tests.
     * `modtestscov` to display last module tests code coverage report.
+    * `modbuild` to create application package (.zip)
+    * `modcheckback` to check app backend (python files structure and content)
+    * `modcheckfront` to check app frontend (js files and desc.json)
+    * `modchecktests` to check app tests files
+    * `modcheckscripts` to check app scripts files
+    * `modcheckcode` to check backend code quality (run pylint)
 * Watch commands:
     * `watch` to watch for repository filesystem changes and automatically update files on execution folders. It also restart backend or/and frontend according to changes.
 * Misc commands:
@@ -80,6 +86,8 @@ If you want to develop directly on the raspberry using vim or nano, simply devel
 This cli executes git commands to clone or update repository.
 
 It uses rsync commands to synchronize files.
+
+It uses pylint to check code quality (it returns a score)
 
 The [watchdog](https://pypi.org/project/watchdog/) python library is used to detect changes on filesystem. According to changed files, it detects if change occurs on frontend or backend files and send commands to restart Cleep application.
 
