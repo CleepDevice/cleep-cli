@@ -387,7 +387,7 @@ sha256sum $DEB > $SHA256
         # add scripts
         for a_file in data_scripts['files']:
             path_in = a_file['fullpath']
-            path_out = os.path.join(self.SCRIPTS_DIR, a_file['path'])
+            path_out = a_file['path']
             archive.write(path_in, path_out)
 
         # add module.json
