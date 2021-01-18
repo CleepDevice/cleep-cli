@@ -365,6 +365,21 @@ def corepublish(version):
     if not res:
         sys.exit(1)
 
+@distrib.command()
+@click.option('--module', prompt='Module name', help='Module name.')
+def modbuild(module):
+    """
+    Build application package
+    """
+    d = Distrib()
+    try:
+        logging.info(d.build_module(module))
+    except Exception as e:
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
+            logging.exception('Build module "%s" failed:' % module)
+        logging.error(str(e))
+        sys.exit(1)
+
 @click.group()
 def docs():
     pass
@@ -452,6 +467,21 @@ def modchecktests(module):
     c = Check()
     try:
         logging.info('%s' % c.check_tests(module))
+    except Exception as e:
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
+            logging.exception('Check tests failed:')
+        logging.error(str(e))
+        sys.exit(1)
+
+@check.command()
+@click.option('--module', prompt='Module name', help='Module name.')
+def modcheckcode(module):
+    """
+    Check module code
+    """
+    c = Check()
+    try:
+        logging.info('%s' % c.check_code_quality(module))
     except Exception as e:
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             logging.exception('Check tests failed:')

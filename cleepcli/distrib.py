@@ -7,9 +7,14 @@ from .console import EndlessConsole, Console
 import logging
 import time
 from . import config
+from .check import Check
 from github import Github
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+from zipfile import ZipFile, ZIP_DEFLATED
+from tempfile import NamedTemporaryFile
+import json
+import copy
 
 class Distrib():
     """
@@ -18,6 +23,11 @@ class Distrib():
 
     GITHUB_USER = 'tangb'
     GITHUB_REPO = 'cleep'
+
+    FRONTEND_DIR = 'frontend/'
+    BACKEND_DIR = 'backend/'
+    SCRIPTS_DIR = 'scripts/'
+    TESTS_DIR = 'tests/'
 
     def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -292,4 +302,107 @@ sha256sum $DEB > $SHA256
         #        self.logger.exception('Error occured creating new release:')
         #        return False
 
+    def build_module(self, module_name):
+        """
+        Build module package
+
+        Args:
+            module_name
+
+        Returns:
+            string: package fullpath
+        """
+        self.logger.info('Building module "%s" package...' % module_name)
+#init
+        module_archive = None
+
+        # collect data
+        check = Check()
+        data_backend = check.check_backend(module_name)
+        if len(data_backend['errors']) > 0:
+            raise Exception('Error in backend. Fix it before packaging application')
+        data_frontend = check.check_frontend(module_name)
+        if len(data_frontend['errors']) > 0:
+            raise Exception('Error in frontend. Fix it before packaging application')
+        data_scripts = check.check_scripts(module_name)
+        if len(data_scripts['errors']) > 0:
+            raise Exception('Error in scripts. Fix it before packaging application')
+        data_tests = check.check_tests(module_name)
+        if len(data_tests['errors']) > 0:
+            raise Exception('Error in tests. Fix it before packaging application')
+        data_code_quality = check.check_code_quality(module_name)
+        if len(data_code_quality['errors']) > 0:
+            raise Exception('Error in code quality. Fix it before packaging application')
+        if data_code_quality['score'] < 7.0:
+            raise Exception('Code quality for app "%s" is too low to be packaged (%s). Please improve it to be greater than 7.0' % (module_name, data_code_quality['score']))
+
+        # build module description file (module.json)
+        fdesc = NamedTemporaryFile(delete=False, encoding='utf-8', mode='w')
+        module_json = fdesc.name
+        metadata = copy.deepcopy(data_backend['metadata'])
+        metadata['icon'] = data_frontend['icon']
+        metadata['quality'] = data_code_quality['score']
+        metadata['confidence'] = 0
+        metadata['changelog'] = 'TODO'
+        fdesc.write(str(json.dumps(metadata, indent=4, ensure_ascii=False, sort_keys=True)))
+        fdesc.close()
+
+        # build zip archive
+        fdesc = NamedTemporaryFile(delete=False)
+        module_archive = fdesc.name
+        self.logger.debug('Archive filepath: %s' % module_archive)
+        archive = ZipFile(fdesc, 'w', ZIP_DEFLATED)
+
+        # add frontend files
+        for a_file in data_frontend['files']:
+            archive.write(a_file['fullpath'], os.path.join(self.FRONTEND_DIR, 'js', 'modules', a_file['path']))
+
+        # add backend files
+        path_in = data_backend['files']['module']['fullpath']
+        path_out = os.path.join(self.BACKEND_DIR, 'modules', data_backend['files']['module']['path'])
+        archive.write(path_in, path_out)
+        for a_file in data_backend['files']['events']:
+            path_in = a_file['fullpath']
+            path_out = os.path.join(self.BACKEND_DIR, 'modules', a_file['path'])
+            archive.write(path_in, path_out)
+        for a_file in data_backend['files']['formatters']:
+            path_in = a_file['fullpath']
+            path_out = os.path.join(self.BACKEND_DIR, 'modules', a_file['path'])
+            archive.write(path_in, path_out)
+        for a_file in data_backend['files']['drivers']:
+            path_in = a_file['fullpath']
+            path_out = os.path.join(self.BACKEND_DIR, 'modules', a_file['path'])
+            archive.write(path_in, path_out)
+        for a_file in data_backend['files']['misc']:
+            path_in = a_file['fullpath']
+            path_out = os.path.join(self.BACKEND_DIR, 'modules', a_file['path'])
+            archive.write(path_in, path_out)
+
+        # add tests
+        for a_file in data_tests['files']:
+            path_in = a_file['fullpath']
+            path_out = a_file['path']
+            archive.write(path_in, path_out)
+
+        # add scripts
+        for a_file in data_scripts['files']:
+            path_in = a_file['fullpath']
+            path_out = os.path.join(self.SCRIPTS_DIR, a_file['path'])
+            archive.write(path_in, path_out)
+
+        # add module.json
+        archive.write(module_json, 'module.json')
+
+        # close archive
+        archive.close()
+        archive_path = os.path.join(os.path.dirname(module_archive), 'cleepmod_%s.zip' % module_name)
+        os.rename(module_archive, archive_path)
+
+        # clean some stuff
+        if os.path.exists(module_json):
+            os.remove(module_json)
+
+        self.logger.debug('Package for app "%s" has been built into "%s"' % (module_name, archive_path))
+
+        return archive_path
 

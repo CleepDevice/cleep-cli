@@ -3,7 +3,7 @@
 
 import sys
 import os
-from .console import Console
+from .console import AdvancedConsole
 import logging
 from . import config
 from . import tools as Tools
@@ -14,6 +14,7 @@ import inspect
 import glob
 import copy
 import json
+import time
 
 class Check():
     """
@@ -21,6 +22,243 @@ class Check():
         - check backend: variables, function
         - check frontend: config, desc.json, image directive
         - run pylint on backend
+    """
+
+    PYLINTRC = """[MASTER]
+extension-pkg-whitelist=
+ignore=git
+ignore-patterns=
+jobs=1
+load-plugins=
+persistent=yes
+suggestion-mode=yes
+unsafe-load-any-extension=no
+
+[MESSAGES CONTROL]
+confidence=
+disable=print-statement,
+        parameter-unpacking,
+        unpacking-in-except,
+        old-raise-syntax,
+        backtick,
+        long-suffix,
+        old-ne-operator,
+        old-octal-literal,
+        import-star-module-level,
+        non-ascii-bytes-literal,
+        invalid-unicode-literal,
+        raw-checker-failed,
+        bad-inline-option,
+        locally-disabled,
+        locally-enabled,
+        file-ignored,
+        suppressed-message,
+        useless-suppression,
+        deprecated-pragma,
+        apply-builtin,
+        basestring-builtin,
+        buffer-builtin,
+        cmp-builtin,
+        coerce-builtin,
+        execfile-builtin,
+        file-builtin,
+        long-builtin,
+        raw_input-builtin,
+        reduce-builtin,
+        standarderror-builtin,
+        unicode-builtin,
+        xrange-builtin,
+        coerce-method,
+        delslice-method,
+        getslice-method,
+        setslice-method,
+        no-absolute-import,
+        old-division,
+        dict-iter-method,
+        dict-view-method,
+        next-method-called,
+        metaclass-assignment,
+        indexing-exception,
+        raising-string,
+        reload-builtin,
+        oct-method,
+        hex-method,
+        nonzero-method,
+        cmp-method,
+        input-builtin,
+        round-builtin,
+        intern-builtin,
+        unichr-builtin,
+        map-builtin-not-iterating,
+        zip-builtin-not-iterating,
+        range-builtin-not-iterating,
+        filter-builtin-not-iterating,
+        using-cmp-argument,
+        eq-without-hash,
+        div-method,
+        idiv-method,
+        rdiv-method,
+        exception-message-attribute,
+        invalid-str-codec,
+        sys-max-int,
+        # bad-python3-import,
+        # deprecated-string-function,
+        deprecated-str-translate-call,
+        # deprecated-itertools-function,
+        # deprecated-types-field,
+        next-method-defined,
+        # dict-items-not-iterating,
+        # dict-keys-not-iterating,
+        # dict-values-not-iterating,
+        # deprecated-operator-function,
+        # deprecated-urllib-function,
+        xreadlines-attribute,
+        # deprecated-sys-function,
+        exception-escape,
+        comprehension-escape,
+        too-few-public-methods,
+        too-many-instance-attributes,
+        trailing-newlines,
+        len-as-condition,
+        logging-not-lazy,
+        broad-except,
+        relative-beyond-top-level, # to remove when pylint bug resolved
+enable=c-extension-no-member
+
+[REPORTS]
+evaluation=10.0 - ((float(5 * error + warning + refactor + convention) / statement) * 10)
+output-format=text
+reports=no
+score=yes
+
+[REFACTORING]
+max-nested-blocks=5
+never-returning-functions=optparse.Values,sys.exit
+
+[TYPECHECK]
+contextmanager-decorators=contextlib.contextmanager
+generated-members=
+ignore-mixin-members=yes
+ignore-on-opaque-inference=yes
+ignored-classes=optparse.Values,thread._local,_thread._local
+ignored-modules=
+missing-member-hint=yes
+missing-member-hint-distance=1
+missing-member-max-choices=1
+
+[VARIABLES]
+additional-builtins=
+allow-global-unused-variables=yes
+callbacks=cb_,
+          _cb
+dummy-variables-rgx=_+$|(_[a-zA-Z0-9_]*[a-zA-Z0-9]+?$)|dummy|^ignored_|^unused_
+ignored-argument-names=_.*|^ignored_|^unused_
+init-import=no
+redefining-builtins-modules=six.moves,past.builtins,future.builtins,io,builtins
+
+[SPELLING]
+max-spelling-suggestions=4
+spelling-dict=
+spelling-ignore-words=
+spelling-private-dict-file=
+spelling-store-unknown-words=no
+
+[FORMAT]
+expected-line-ending-format=
+ignore-long-lines=^\s*(# )?<?https?://\S+>?$
+indent-after-paren=4
+indent-string='    '
+max-line-length=130
+max-module-lines=1000
+no-space-check=trailing-comma,
+               dict-separator
+single-line-class-stmt=no
+single-line-if-stmt=no
+
+[BASIC]
+argument-naming-style=snake_case
+attr-naming-style=snake_case
+bad-names=foo,
+          bar,
+          baz,
+          toto,
+          tutu,
+          tata
+class-attribute-naming-style=any
+class-naming-style=PascalCase
+const-naming-style=UPPER_CASE
+docstring-min-length=-1
+function-naming-style=snake_case
+good-names=i,
+           j,
+           k,
+           ex,
+           Run,
+           to,
+           _
+include-naming-hint=no
+inlinevar-naming-style=any
+method-naming-style=snake_case
+module-naming-style=snake_case
+name-group=
+no-docstring-rgx=^_
+property-classes=abc.abstractproperty
+variable-naming-style=snake_case
+
+[MISCELLANEOUS]
+notes=FIXME,
+      XXX,
+      TODO
+
+[SIMILARITIES]
+ignore-comments=yes
+ignore-docstrings=yes
+ignore-imports=no
+min-similarity-lines=4
+
+[LOGGING]
+logging-modules=logging
+
+[IMPORTS]
+allow-wildcard-with-all=no
+analyse-fallback-blocks=no
+deprecated-modules=regsub,
+                   TERMIOS,
+                   Bastion,
+                   rexec
+ext-import-graph=
+import-graph=
+int-import-graph=
+known-standard-library=
+known-third-party=enchant
+
+[DESIGN]
+max-args=5
+max-attributes=7
+max-bool-expr=5
+max-branches=12
+max-locals=15
+max-parents=7
+max-public-methods=20
+max-returns=6
+max-statements=50
+min-public-methods=2
+
+[CLASSES]
+defining-attr-methods=__init__,
+                      __new__,
+                      setUp
+exclude-protected=_asdict,
+                  _fields,
+                  _replace,
+                  _source,
+                  _make
+valid-classmethod-first-arg=cls
+valid-metaclass-classmethod-first-arg=mcs
+
+[EXCEPTIONS]
+overgeneral-exceptions=Exception
+
     """
 
     def __init__(self):
@@ -43,9 +281,10 @@ class Check():
                 files (dict): collection of files::
                     {
                         module (dict): main module informations
-                        events (dict): events informations
-                        formatters (dict): formatters informations
-                        drivers (dict): drivers informations
+                        events (list): events informations
+                        formatters (list): formatters informations
+                        drivers (list): drivers informations
+                        misc (list): others files informations
                     }
             }
 
@@ -77,7 +316,7 @@ class Check():
                 'events': files['events'],
                 'drivers': files['drivers'],
                 'formatters': files['formatters'],
-                'libs': files['libs'],
+                'misc': files['misc'],
             }
         }
         
@@ -98,7 +337,7 @@ class Check():
                 events (list): list of events infos
                 formatters (list): list or formatters infos
                 drivers (list): list of drivers infos
-                libs (list): list of libs
+                misc (list): list of miscellaneous files
             }
                 
         """
@@ -120,22 +359,25 @@ class Check():
         errors += formatters['errors']
         warnings += formatters['warnings']
 
-        # get libs
+        # fill misc files
         found_files = ([e['fullpath'] for e in events['files']] + 
                        [f['fullpath'] for f in formatters['files']] +
                        [d['fullpath'] for d in drivers['files']])
         self.logger.debug('Found files: %s' % found_files)
-        libs = [f for f in all_files['files'] if f['fullpath'] not in found_files]
+        misc = [f for f in all_files['files'] if f['fullpath'] not in found_files]
+        misc += all_files['initpy']
+        self.logger.debug('Misc: %s' % misc)
 
         # check __init__.py
-        if not self.__has_init_py(all_files['initpy'], all_files['folders']):
+        initpy_fullpaths = [a_file['fullpath'] for a_file in all_files['initpy']]
+        if not self.__has_init_py(initpy_fullpaths, all_files['folders']):
             errors.append('Some __init__.py files are missing in root folder or sub folders')
 
         return {
             'errors': errors,
             'warnings': warnings,
             'module': all_files['module'],
-            'libs': sorted(libs, key=lambda k: k['fullpath']),
+            'misc': sorted(misc, key=lambda k: k['fullpath']),
             'events': sorted(events['files'], key=lambda k: k['fullpath']),
             'formatters': sorted(formatters['files'], key=lambda k: k['fullpath']),
             'drivers': sorted(drivers['files'], key=lambda k: k['fullpath']),
@@ -271,7 +513,11 @@ class Check():
 
             if fullpath.endswith('__init__.py'):
                 # handle __init__.py file
-                out['initpy'].append(fullpath)
+                out['initpy'].append({
+                    'fullpath': fullpath,
+                    'filename': os.path.split(fullpath)[1],
+                    'path': fullpath.split('modules/')[1],
+                })
             elif fullpath == class_path:
                 # handle main module
                 out['module'] = {
@@ -524,6 +770,7 @@ class Check():
             {
                 errors (list): list of errors
                 warnings (list): list of warnings
+                icon (string): icon name
                 files (list): files informations::
                     [
                         {
@@ -538,10 +785,14 @@ class Check():
             }
 
         """
+        if not os.path.exists(os.path.join(config.MODULES_DST, module_name)):
+            raise Exception('Module "%s" does not exist' % module_name)
+
         out = {
             'errors': [],
             'warnings': [],
-            'files': []
+            'files': [],
+            'icon' : None
         }
 
         # get all files
@@ -555,6 +806,7 @@ class Check():
         else:
             desc_json = self.__check_desc_json(desc_json_info)
             self.logger.debug('desc_json: %s' % desc_json)
+            out['icon'] = desc_json['content'].get('icon', None)
             out['errors'] += desc_json['errors']
             out['warnings'] += desc_json['warnings']
         if not desc_json['content']:
@@ -831,6 +1083,9 @@ class Check():
             }
 
         """
+        if not os.path.exists(os.path.join(config.MODULES_DST, module_name)):
+            raise Exception('Module "%s" does not exist' % module_name)
+
         scripts_path = os.path.join(config.MODULES_SRC, module_name, 'scripts')
         fullpaths = glob.glob(scripts_path + '/**/*', recursive=True)
         out = {
@@ -879,6 +1134,9 @@ class Check():
             }
 
         """
+        if not os.path.exists(os.path.join(config.MODULES_DST, module_name)):
+            raise Exception('Module "%s" does not exist' % module_name)
+
         scripts_path = os.path.join(config.MODULES_SRC, module_name, 'tests')
         fullpaths = glob.glob(scripts_path + '/**/*', recursive=True)
         out = {
@@ -914,9 +1172,79 @@ class Check():
 
         return out
 
-    def run_pylint(self):
+    def check_code_quality(self, module_name):
         """
-        Run pylint on backend. Add .pylintrc if file is missing
+        Check code quality running pylint on backend. Add .pylintrc if file is missing
+
+        Returns:
+            dict: result of pylint::
+
+            {
+                errors (list): list of errors::
+                {
+                    filename (string): {
+                        code (string): pylint code
+                        msg (string): pylint message
+                    }
+                }
+                warnings (list): list of warnings::
+                {
+                    filename (string): {
+                        code (string): pylint code
+                        msg (string): pylint message
+                    }
+                }
+                score (float): code quality score (/10)
+            }
+
         """
-        pass
+        if not os.path.exists(os.path.join(config.MODULES_DST, module_name)):
+            raise Exception('Module "%s" does not exist' % module_name)
+
+        backend_path = os.path.join(config.MODULES_SRC, module_name, 'backend')
+        pylintrc_path = os.path.join(backend_path, '.pylintrc')
+        if not os.path.exists(pylintrc_path):
+            self.logger.debug('Create default "%s" file' % pylintrc_path)
+            with open(pylintrc_path, 'w') as pylintrc_file:
+                pylintrc_file.write(self.PYLINTRC)
+            time.sleep(3.0)
+
+        # launch pylint
+        self.logger.debug('Launch pylint')
+        cmd = 'cd "%s"; pylint *.py' % backend_path
+        pattern = r'^(.*?\.py):(\d+):(\d+): ([CRWEF]\d+): (.*)$|^.*(\d+\.\d+)\/10.*$'
+        console = AdvancedConsole()
+        results = console.find(cmd, pattern, timeout=60, check_return_code=False)
+        self.logger.debug('Results: %s' % results)
+
+        out = {
+            'errors': [],
+            'warnings': [],
+            'score': 0.0,
+        }
+        if len(results) == 0:
+            out['errors'].append({
+                'code': None,
+                'msg': 'Internal error: linter execution failed. Please check your code.',
+            })
+        for result in results:
+            group = list(filter(None, result[1]))
+            if len(group) == 5:
+                # pylint output
+                msg = '%s [%s %s:%s]' % (group[4], group[0], group[1], group[2])
+                if group[3].startswith('E') or group[3].startswith('F'):
+                    out['errors'].append({
+                        'code': group[3],
+                        'msg': msg
+                    })
+                else:
+                    out['warnings'].append({
+                        'code': group[3],
+                        'msg': msg,
+                    })
+            elif len(group) == 1:
+                # score
+                out['score'] = float(group[0])
+
+        return out
 
