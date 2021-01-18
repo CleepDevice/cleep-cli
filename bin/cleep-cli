@@ -16,7 +16,7 @@ from cleepcli.module import Module
 from cleepcli.file import File
 from cleepcli.watch import CleepWatchdog
 from cleepcli.test import Test
-from cleepcli.distrib import Distrib
+from cleepcli.package import Package
 from cleepcli.docs import Docs
 from cleepcli.check import Check
 import cleepcli.config as config
@@ -339,41 +339,41 @@ def modtestscov(module, missing):
         sys.exit(1)
 
 @click.group()
-def distrib():
+def package():
     pass
 
-@distrib.command()
+@package.command()
 def corebuild():
     """
     Build Cleep debian package
     """
-    d = Distrib()
-    res = d.build_cleep()
+    p = Package()
+    res = p.build_cleep()
 
     if not res:
         sys.exit(1)
 
-@distrib.command()
+@package.command()
 @click.option('--version', prompt='Version', help='Version to publish.')
 def corepublish(version):
     """
     Publish built Cleep debian package
     """
-    d = Distrib()
-    res = d.publish_cleep(version)
+    p = Package()
+    res = p.publish_cleep(version)
 
     if not res:
         sys.exit(1)
 
-@distrib.command()
+@package.command()
 @click.option('--module', prompt='Module name', help='Module name.')
 def modbuild(module):
     """
     Build application package
     """
-    d = Distrib()
+    p = Package()
     try:
-        logging.info(d.build_module(module))
+        logging.info(p.build_module(module))
     except Exception as e:
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             logging.exception('Build module "%s" failed:' % module)
@@ -489,7 +489,7 @@ def modcheckcode(module):
         sys.exit(1)
 
 
-cli = click.CommandCollection(sources=[core, mod, watchdog, test, distrib, docs, check])
+cli = click.CommandCollection(sources=[core, mod, watchdog, test, package, docs, check])
 if __name__ == '__main__':
 
     def is_raspbian():

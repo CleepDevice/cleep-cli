@@ -16,9 +16,11 @@ from tempfile import NamedTemporaryFile
 import json
 import copy
 
-class Distrib():
+class Package():
     """
-    Cleep distribution helper
+    Helper for package generation. Helps to create:
+     * Cleep .deb package
+     * application .zip package
     """
 
     GITHUB_USER = 'tangb'
