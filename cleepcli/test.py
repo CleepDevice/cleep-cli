@@ -4,7 +4,7 @@
 import sys
 import os
 import time
-from .console import EndlessConsole, Console
+from .console import EndlessConsole, Console, AdvancedConsole
 import logging
 from . import config
 import importlib
@@ -25,6 +25,32 @@ class Test():
         self.__stderr = []
         if not os.path.exists(self.COVERAGE_PATH):
             os.makedirs(self.COVERAGE_PATH)
+
+    def __coverage_to_dict(self, stdout):
+        """
+        Convert coverage results to dict
+
+        Args:
+            stdout (string): coverage results
+        """
+        out = {
+            'files': [],
+            'score': 0.0,
+        }
+
+        c = AdvancedConsole()
+        results = c.find_in_string(stdout, r'((?:/.*?)+\.py)\s+\d+\s+\d+\s+(\d+)%|^(TOTAL)\s+\d+\s+\d+\s+(\d+)%$')
+        for result in results:
+            groups = list(filter(None, result[1]))
+            if groups[0].startswith('TOTAL'):
+                out['score'] = int(groups[1]) / 10
+            else:
+                out['files'].append({
+                    'file': groups[0],
+                    'coverage': int(groups[1]),
+                })
+
+        return out
 
     def __reset_stds(self):
         self.__stderr.clear()
@@ -140,19 +166,22 @@ cd "%(path)s"
 
     def module_test(self, module_name, display_coverage=False):
         """
-        Execute module unit tests
+        Execute module unit tests and display process output on stdout
 
         Args:
             module_name (string): module name
             display_coverage (bool): display coverage report (default False)
+
+        Returns:
+            bool: True if process succeed, False otherwise
         """
-        #checking module path
+        # checking module path
         path = os.path.join(config.MODULES_SRC, module_name, 'tests')
         if not os.path.exists(path):
             self.logger.error('Specified module "%s" does not exist' % (module_name))
             return False
 
-        #create module coverage path
+        # create module coverage path
         module_version = self.__get_module_version(module_name)
         if module_version is None:
             return False
@@ -171,7 +200,7 @@ COVERAGE_FILE=%s coverage run --omit="/usr/local/lib/python*/*","test_*","../bac
         while self.__endless_command_running:
             time.sleep(0.25)
 
-        #display coverage report
+        # display coverage report
         if display_coverage:
             self.logger.debug('Display coverage')
             self.module_test_coverage(module_name)
@@ -182,28 +211,30 @@ COVERAGE_FILE=%s coverage run --omit="/usr/local/lib/python*/*","test_*","../bac
 
         return True
 
-    def module_test_coverage(self, module_name, missing=False):
+    def module_test_coverage(self, module_name, missing=False, as_json=False):
         """
         Display module coverage
 
         Args:
             module_name (string): module name
             missing (bool): display missing statements (default False)
+            as_json (bool): return results as json
+
+        Returns:
+            string or dict according to as_json option
         """
-        #checking module path
+        # checking module path
         path = os.path.join(config.MODULES_SRC, module_name, 'tests')
         if not os.path.exists(path):
-            self.logger.error('Specified module "%s" does not exist' % (module_name))
-            return False
+            raise Exception('Specified module "%s" does not exist' % (module_name))
 
         module_version = self.__get_module_version(module_name)
         if module_version is None:
-            return False
+            raise Exception('Module version not found')
 
         coverage_file = self.__get_coverage_file(module_name, module_version)
         if not os.path.exists(coverage_file):
-            self.logger.error('No coverage file found. Did tests run ?')
-            return False
+            raise Exception('No coverage file found. Did tests run ?')
 
         res = self.__coverage_simple_command(
             self.__get_module_tests_path(module_name),
@@ -212,12 +243,12 @@ COVERAGE_FILE=%s coverage run --omit="/usr/local/lib/python*/*","test_*","../bac
             coverage_file,
         )
         if res == False:
-            self.logger.error('Error executing coverage report')
-            return False
+            raise Exception('Error executing coverage report')
 
-        self.logger.info('\n'.join(res['stdout']))
-
-        return True
+        stdout = '\n'.join(res['stdout'])
+        if not as_json:
+            return stdout
+        return self.__coverage_to_dict(stdout)
 
     def __get_core_tests_path(self):
         """
@@ -276,10 +307,13 @@ COVERAGE_FILE=%s coverage run --omit="/usr/local/lib/python*/*","test_*","../bac
 
     def core_test(self, display_coverage=False):
         """
-        Execute core unit tests
+        Execute core unit tests and display process output on stdout
 
         Args:
             display_coverage (bool): display coverage report (default False)
+
+        Returns:
+            bool: True if process succeed.
         """
         start = int(time.time())
 
@@ -351,21 +385,27 @@ coverage run --omit="/usr/local/lib/python*/*","*test_*.py" --concurrency=thread
 
         return True if len(files_on_error) == 0 else False
 
-    def core_test_coverage(self):
+    def core_test_coverage(self, as_json=False):
         """
         Get core test coverage last results
+
+        Args:
+            as_json (bool): return output as json
+
+        Returns:
+            string or dict according to as_json option
         """
         # combine results
         if self.__coverage_simple_command(self.__get_core_tests_path(), 'combine', timeout=120.0) == False:
-            self.logger.error('Error preparing coverage results')
-            return False
+            raise Exception('Error preparing coverage results')
 
         # combine results
         res = self.__coverage_simple_command(self.__get_core_tests_path(), 'report', '-i', timeout=120.0)
         if res == False:
-            self.logger.error('Error generating coverage results')
-            return False
+            raise Exception('Error generating coverage results')
 
-        self.logger.info('\n'.join(res['stdout']))
+        stdout = '\n'.join(res['stdout'])
+        if not as_json:
+            return stdout
+        return self.__coverage-to_dict(stdout)
 
-        return True

@@ -1248,3 +1248,52 @@ overgeneral-exceptions=Exception
 
         return out
 
+    def check_changelog(self, module_name):
+        """
+        Check module changelog
+
+        Args:
+            module_name (string): module name
+
+        Returns:
+        """
+        if not os.path.exists(os.path.join(config.MODULES_DST, module_name)):
+            raise Exception('Module "%s" does not exist' % module_name)
+
+        # search for changelog.md file
+        changelog_path = None
+        fullpaths = glob.glob(os.path.join(config.MODULES_SRC, module_name) + '/*')
+        for fullpath in fullpaths:
+            if os.path.basename(fullpath).lower() == 'changelog.md':
+                changelog_path = fullpath
+        if not changelog_path:
+            raise Exception('Changelog "%s" does not exist. Please create it' % changelog_path)
+        self.logger.debug('Using changelog "%s"' % changelog_path)
+
+        with open(changelog_path) as changelog_file:
+            lines = changelog_file.readlines()
+
+        # read all sections
+        sections = []
+        current_section = None
+        for line in lines:
+            if line.startswith('## '):
+                current_section = [line,]
+                sections.append(current_section)
+            elif current_section:
+                current_section.append(line)
+
+        # get first section and search for version
+        first_section = sections[0] if len(sections) > 0 else []
+        found_version = None
+        if len(first_section) > 0:
+            pattern = re.compile(r'\d+\.\d+\.\d+')
+            match = pattern.search(first_section[0])
+            found_version = match.group() if match else None
+        self.logger.debug('Found version: %s' % found_version)
+
+        return {
+            'version': found_version,
+            'changelog': ''.join(first_section).strip(),
+        }
+

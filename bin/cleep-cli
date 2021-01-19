@@ -11,6 +11,7 @@ import platform
 import subprocess
 import shutil
 import click
+import json
 from cleepcli.git import Git
 from cleepcli.module import Module
 from cleepcli.file import File
@@ -104,14 +105,23 @@ def coretests(coverage):
         sys.exit(1)
 
 @core.command()
-def coretestscov():
+@click.option('-j', '--json', 'as_json', is_flag=True, help='Output format as json')
+def coretestscov(as_json):
     """
     Display core tests coverage
     """
-    m = Test()
-    res = m.core_test_coverage()
+    t = Test()
+    try:
+        res = t.core_test_coverage(as_json)
 
-    if not res:
+        if as_json:
+            logging.info(json.dumps(res))
+        else:
+            logging.info(res)
+    except Exception as e:
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
+            logging.exception('Check frontend failed:')
+        logging.error(str(e))
         sys.exit(1)
 
 @core.command()
@@ -327,15 +337,23 @@ def modtests(module, coverage):
 
 @test.command()
 @click.option('--module', prompt='Module name', help='Module name.')
-@click.option('--missing', is_flag=True, help='Display missing statements.')
-def modtestscov(module, missing):
+@click.option('--missing', is_flag=True, help='display missing statements.')
+@click.option('-j', '--json', 'as_json', is_flag=True, help='Output format as json')
+def modtestscov(module, missing, as_json):
     """
     Display module tests coverage summary
     """
-    m = Test()
-    res = m.module_test_coverage(module, missing)
-
-    if not res:
+    t = Test()
+    try:
+        res = t.module_test_coverage(module, missing, as_json)
+        if as_json:
+            logging.info(json.dumps(res))
+        else:
+            logging.info(res)
+    except Exception as e:
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
+            logging.exception('Module "%s" tests coverage failed:' % module)
+        logging.error(str(e))
         sys.exit(1)
 
 @click.group()
@@ -367,13 +385,14 @@ def corepublish(version):
 
 @package.command()
 @click.option('--module', prompt='Module name', help='Module name.')
-def modbuild(module):
+@click.option('--ci', is_flag=True, help='CI flag')
+def modbuild(module, ci):
     """
     Build application package
     """
     p = Package()
     try:
-        logging.info(p.build_module(module))
+        logging.info(p.build_module(module, ci))
     except Exception as e:
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             logging.exception('Build module "%s" failed:' % module)
@@ -484,7 +503,22 @@ def modcheckcode(module):
         logging.info('%s' % c.check_code_quality(module))
     except Exception as e:
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
-            logging.exception('Check tests failed:')
+            logging.exception('Check code failed:')
+        logging.error(str(e))
+        sys.exit(1)
+
+@check.command()
+@click.option('--module', prompt='Module name', help='Module name.')
+def modcheckchangelog(module):
+    """
+    Check module changelog
+    """
+    c = Check()
+    try:
+        logging.info('%s' % c.check_changelog(module))
+    except Exception as e:
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
+            logging.exception('Check changelog failed:')
         logging.error(str(e))
         sys.exit(1)
 

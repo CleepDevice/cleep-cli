@@ -8,6 +8,7 @@ import logging
 import time
 from . import config
 from .check import Check
+from .test import Test
 from github import Github
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -15,6 +16,7 @@ from zipfile import ZipFile, ZIP_DEFLATED
 from tempfile import NamedTemporaryFile
 import json
 import copy
+import hashlib
 
 class Package():
     """
@@ -36,6 +38,23 @@ class Package():
         self.__endless_command_running = False
         self.__endless_command_return_code = 0
         self.http = urllib3.PoolManager(num_pools=1)
+
+    def __compute_sha256(self, fullpath):
+        """
+        Compute sha256 for specified file
+
+        Args:
+            fullpath (string): fullpath
+
+        Returns:
+            string: sha256 string
+        """
+        sha256_hash = hashlib.sha256()
+        with open(fullpath,'rb') as f:
+            for byte_block in iter(lambda: f.read(4096),b''):
+                sha256_hash.update(byte_block)
+
+        return sha256_hash.hexdigest()
 
     def __console_callback(self, stdout, stderr):
         self.logger.info((stdout if stdout is not None else '') + (stderr if stderr is not None else ''))
@@ -304,18 +323,26 @@ sha256sum $DEB > $SHA256
         #        self.logger.exception('Error occured creating new release:')
         #        return False
 
-    def build_module(self, module_name):
+    def build_module(self, module_name, ci=False):
         """
         Build module package
 
         Args:
-            module_name
+            module_name (string): module name
+            ci (bool): flag for CI (enable tests execution)
 
         Returns:
-            string: package fullpath
+            dict: package informations::
+
+            {
+                package (string): package fullpath
+                sha256 (string): package sha256
+                confidence (float): code confidence indicator (based on unit test results)
+                quality (float): code quality indicator (based on linter result)
+            }
+
         """
         self.logger.info('Building module "%s" package...' % module_name)
-#init
         module_archive = None
 
         # collect data
@@ -337,6 +364,18 @@ sha256sum $DEB > $SHA256
             raise Exception('Error in code quality. Fix it before packaging application')
         if data_code_quality['score'] < 7.0:
             raise Exception('Code quality for app "%s" is too low to be packaged (%s). Please improve it to be greater than 7.0' % (module_name, data_code_quality['score']))
+        data_changelog = check.check_changelog(module_name)
+        if data_changelog['version'] != data_backend['metadata']['version']:
+            raise Exception('Changelog does not seems to have been updated')
+        data_test = {
+            'score': 0.0
+        }
+        if ci:
+            # execute tests
+            test = Test()
+            if not test.module_test(module_name):
+                raise Exception('Test execution failed for "%s". Please fix it.' % module_name)
+            data_test = test.module_test_coverage(module_name, as_json=True)
 
         # build module description file (module.json)
         fdesc = NamedTemporaryFile(delete=False, encoding='utf-8', mode='w')
@@ -344,8 +383,8 @@ sha256sum $DEB > $SHA256
         metadata = copy.deepcopy(data_backend['metadata'])
         metadata['icon'] = data_frontend['icon']
         metadata['quality'] = data_code_quality['score']
-        metadata['confidence'] = 0
-        metadata['changelog'] = 'TODO'
+        metadata['confidence'] = data_test['score']
+        metadata['changelog'] = data_changelog['changelog']
         fdesc.write(str(json.dumps(metadata, indent=4, ensure_ascii=False, sort_keys=True)))
         fdesc.close()
 
@@ -397,7 +436,7 @@ sha256sum $DEB > $SHA256
 
         # close archive
         archive.close()
-        archive_path = os.path.join(os.path.dirname(module_archive), 'cleepmod_%s.zip' % module_name)
+        archive_path = os.path.join(os.path.dirname(module_archive), 'cleepmod_%s_v%s.zip' % (module_name, metadata['version']))
         os.rename(module_archive, archive_path)
 
         # clean some stuff
@@ -406,5 +445,10 @@ sha256sum $DEB > $SHA256
 
         self.logger.debug('Package for app "%s" has been built into "%s"' % (module_name, archive_path))
 
-        return archive_path
+        return {
+            'package': archive_path,
+            'sha256': self.__compute_sha256(archive_path),
+            'quality': metadata['quality'],
+            'confidence': metadata['confidence'],
+        }
 
