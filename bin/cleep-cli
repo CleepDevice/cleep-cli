@@ -20,6 +20,7 @@ from cleepcli.test import Test
 from cleepcli.package import Package
 from cleepcli.docs import Docs
 from cleepcli.check import Check
+from cleepcli.ci import Ci
 import cleepcli.config as config
 from cleepcli.version import VERSION
 
@@ -434,13 +435,18 @@ def check():
 
 @check.command()
 @click.option('--module', prompt='Module name', help='Module name.')
-def modcheckback(module):
+@click.option('-j', '--json', 'as_json', is_flag=True, help='Output format as json')
+def modcheckback(module, as_json):
     """
     Check module backend
     """
     c = Check()
     try:
-        logging.info('%s' % c.check_backend(module))
+        res = c.check_backend(module)
+        if as_json:
+            logging.info('%s' % json.dumps(res))
+        else:
+            logging.info('%s' % res)
     except Exception as e:
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             logging.exception('Check backend failed:')
@@ -449,13 +455,18 @@ def modcheckback(module):
 
 @check.command()
 @click.option('--module', prompt='Module name', help='Module name.')
-def modcheckfront(module):
+@click.option('-j', '--json', 'as_json', is_flag=True, help='Output format as json')
+def modcheckfront(module, as_json):
     """
     Check module frontend
     """
     c = Check()
     try:
-        logging.info('%s' % c.check_frontend(module))
+        res = c.check_frontend(module)
+        if as_json:
+            logging.info('%s' % json.dumps(res))
+        else:
+            logging.info('%s' % res)
     except Exception as e:
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             logging.exception('Check frontend failed:')
@@ -464,13 +475,18 @@ def modcheckfront(module):
 
 @check.command()
 @click.option('--module', prompt='Module name', help='Module name.')
-def modcheckscripts(module):
+@click.option('-j', '--json', 'as_json', is_flag=True, help='Output format as json')
+def modcheckscripts(module, as_json):
     """
     Check module scripts
     """
     c = Check()
     try:
-        logging.info('%s' % c.check_scripts(module))
+        res = c.check_scripts(module)
+        if as_json:
+            logging.info('%s' % json.dumps(res))
+        else:
+            logging.info('%s' % res)
     except Exception as e:
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             logging.exception('Check scripts failed:')
@@ -479,13 +495,18 @@ def modcheckscripts(module):
 
 @check.command()
 @click.option('--module', prompt='Module name', help='Module name.')
-def modchecktests(module):
+@click.option('-j', '--json', 'as_json', is_flag=True, help='Output format as json')
+def modchecktests(module, as_json):
     """
     Check module tests
     """
     c = Check()
     try:
-        logging.info('%s' % c.check_tests(module))
+        res = c.check_tests(module)
+        if as_json:
+            logging.info('%s' % json.dumps(res))
+        else:
+            logging.info('%s' % res)
     except Exception as e:
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             logging.exception('Check tests failed:')
@@ -494,13 +515,18 @@ def modchecktests(module):
 
 @check.command()
 @click.option('--module', prompt='Module name', help='Module name.')
-def modcheckcode(module):
+@click.option('-j', '--json', 'as_json', is_flag=True, help='Output format as json')
+def modcheckcode(module, as_json):
     """
     Check module code
     """
     c = Check()
     try:
-        logging.info('%s' % c.check_code_quality(module))
+        res = c.check_code_quality(module)
+        if as_json:
+            logging.info('%s' % json.dumps(res))
+        else:
+            logging.info('%s' % res)
     except Exception as e:
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             logging.exception('Check code failed:')
@@ -509,21 +535,60 @@ def modcheckcode(module):
 
 @check.command()
 @click.option('--module', prompt='Module name', help='Module name.')
-def modcheckchangelog(module):
+@click.option('-j', '--json', 'as_json', is_flag=True, help='Output format as json')
+def modcheckchangelog(module, as_json):
     """
     Check module changelog
     """
     c = Check()
     try:
-        logging.info('%s' % c.check_changelog(module))
+        res = c.check_changelog(module)
+        if as_json:
+            logging.info('%s' % json.dumps(res))
+        else:
+            logging.info('%s' % res)
     except Exception as e:
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             logging.exception('Check changelog failed:')
         logging.error(str(e))
         sys.exit(1)
 
+@click.group()
+def ci():
+    pass
 
-cli = click.CommandCollection(sources=[core, mod, watchdog, test, package, docs, check])
+@ci.command()
+@click.option('--package', prompt='Package path', help='Package path.')
+def cimodinstall(package):
+    """
+    Install module. Useful for CI
+    """
+    c = Ci()
+    try:
+        c.mod_install_source(package)
+    except Exception as e:
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
+            logging.exception('Module source installation failed:')
+        logging.error(str(e))
+        sys.exit(1)
+
+@ci.command()
+@click.option('--module', prompt='Module name', help='Module name.')
+def cimodcheck(module):
+    """
+    Shortcut for some module checkings. Useful for CI
+    """
+    c = Ci()
+    try:
+        c.mod_check(module)
+    except Exception as e:
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
+            logging.exception('Module checking failed:')
+        logging.error(str(e))
+        sys.exit(1)
+
+
+cli = click.CommandCollection(sources=[core, mod, watchdog, test, package, docs, check, ci])
 if __name__ == '__main__':
 
     def is_raspbian():
