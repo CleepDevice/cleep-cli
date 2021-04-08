@@ -54,7 +54,7 @@ class Ci():
             raise Exception('Invalid application package file')
         
         # unzip content
-        self.logger.debug('Extracting archive "%s"' % package_path)
+        self.logger.debug('Extracting archive "%s" to "%s"' % (package_path, self.EXTRACT_DIR))
         with zipfile.ZipFile(package_path, 'r') as package:
             package.extractall(self.EXTRACT_DIR)
 
@@ -66,9 +66,11 @@ class Ci():
 
         # execute preinst script
         preinst_path = os.path.join(self.EXTRACT_DIR, 'scripts', 'preinst.sh')
+        self.logger.debug('preinst.sh path "%s" exists? %s' % (preinst_path, os.path.exists(preinst_path)))
         if os.path.exists(preinst_path):
             self.logger.info('Execute "%s" script' % preinst_path)
             resp = console.command('chmod +x "%(script)s" && "%(script)s"' % { 'script': preinst_path }, 120)
+            self.logger.debug('Resp: %s' % resp)
             if resp['returncode'] != 0:
                 raise Exception('Preinst.sh script failed: %s' % resp['stderr'])
 
@@ -94,10 +96,12 @@ class Ci():
             os.rename(filepath, dest)
 
         # execute postinst script
-        preinst_path = os.path.join(self.EXTRACT_DIR, 'scripts', 'postinst.sh')
-        if os.path.exists(preinst_path):
-            self.logger.info('Execute "%s" script' % preinst_path)
-            resp = console.command('chmod +x "%(script)s" && "%(script)s"' % { 'script': preinst_path }, 120)
+        postinst_path = os.path.join(self.SOURCE_DIR, module_name, 'scripts', 'postinst.sh')
+        self.logger.debug('postinst.sh path "%s" exists? %s' % (postinst_path, os.path.exists(postinst_path)))
+        if os.path.exists(postinst_path):
+            self.logger.info('Execute "%s" script' % postinst_path)
+            resp = console.command('chmod +x "%(script)s" && "%(script)s"' % { 'script': postinst_path }, 120)
+            self.logger.debug('Resp: %s' % resp)
             if resp['returncode'] != 0:
                 raise Exception('Postinst.sh script failed: %s' % resp['stderr'])
 
