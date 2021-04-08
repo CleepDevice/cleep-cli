@@ -74,8 +74,12 @@ class Test():
             return self.__module_version
 
         try:
-            module_ = importlib.import_module(u'cleep.modules.%s.%s' % (module_name, module_name))
-            module_class_ = getattr(module_, module_name.capitalize())
+            module_ = importlib.import_module('cleep.modules.%s' % (module_name))
+            app_filename = getattr(module_, 'APP_FILENAME', module_name)
+            del module_
+            module_ = importlib.import_module('cleep.modules.%s.%s' % (module_name, app_filename))
+            class_name = next((item for item in dir(module_) if item.lower() == app_filename.lower()), None)
+            module_class_ = getattr(module_, class_name or '', None)
             self.__module_version = module_class_.MODULE_VERSION
             return self.__module_version
         except:

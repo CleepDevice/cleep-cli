@@ -294,8 +294,11 @@ overgeneral-exceptions=Exception
 
         # get module instance
         try:
-            module_ = importlib.import_module('cleep.modules.%s.%s' % (module_name, module_name))
-            class_name = next((item for item in dir(module_) if item.lower() == module_name.lower()), None)
+            module_ = importlib.import_module(u'cleep.modules.%s' % (module_name))
+            app_filename = getattr(module_, 'APP_FILENAME', module_name)
+            del module_
+            module_ = importlib.import_module('cleep.modules.%s.%s' % (module_name, app_filename))
+            class_name = next((item for item in dir(module_) if item.lower() == app_filename.lower()), None)
             class_ = getattr(module_, class_name or '', None)
         except Exception as e:
             self.logger.exception('Unable to load application "%s". Please check your code' % module_name)

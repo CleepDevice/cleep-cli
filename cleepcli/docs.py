@@ -57,7 +57,7 @@ class Docs():
 
         try:
             module_ = importlib.import_module('cleep.modules.%s' % (module_name))
-            app_filename = getattr(module_, 'app_filename', module_name)
+            app_filename = getattr(module_, 'APP_FILENAME', module_name)
             del module_
             module_ = importlib.import_module('cleep.modules.%s.%s' % (module_name, app_filename))
             class_name = next((item for item in dir(module_) if item.lower() == app_filename.lower()), None)
