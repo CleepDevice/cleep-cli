@@ -20,6 +20,6 @@ setup(
     packages = ['cleepcli'],
     include_package_data = True,
     install_requires = requirements,
-    scripts = ['bin/cleep-cli']
+    scripts = ['bin/cleep-cli', 'bin/ccli']
 )
 
