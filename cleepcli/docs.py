@@ -56,10 +56,15 @@ class Docs():
             }
 
         try:
-            module_ = importlib.import_module(u'cleep.modules.%s.%s' % (module_name, module_name))
-            module_class_ = getattr(module_, module_name.capitalize())
+            module_ = importlib.import_module('cleep.modules.%s' % (module_name))
+            app_filename = getattr(module_, 'app_filename', module_name)
+            del module_
+            module_ = importlib.import_module('cleep.modules.%s.%s' % (module_name, app_filename))
+            class_name = next((item for item in dir(module_) if item.lower() == app_filename.lower()), None)
+            module_class_ = getattr(module_, class_name or '', None)
             self.__module_version = module_class_.MODULE_VERSION
             self.__module_author = module_class_.MODULE_AUTHOR
+
             return {
                 'version': self.__module_version,
                 'author': self.__module_author
@@ -100,6 +105,10 @@ echo "=> Building html documentation..."
 /usr/local/bin/sphinx-build -M html "." "%(BUILD_DIR)s" -D project="%(MODULE_NAME_CAPITALIZED)s" -D copyright="%(YEAR)s %(AUTHOR)s" -D author="%(AUTHOR)s" -D version="%(VERSION)s" -D release="%(VERSION)s"
 if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
 echo
+echo "=> Building singlehtml documentation..."
+/usr/local/bin/sphinx-build -M singlehtml "." "%(BUILD_DIR)s" -D project="%(MODULE_NAME_CAPITALIZED)s" -D copyright="%(YEAR)s %(AUTHOR)s" -D author="%(AUTHOR)s" -D version="%(VERSION)s" -D release="%(VERSION)s"
+if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
+echo
 echo "=> Building xml documentation..."
 /usr/local/bin/sphinx-build -M xml "." "%(BUILD_DIR)s" -D project="%(MODULE_NAME_CAPITALIZED)s" -D copyright="%(YEAR)s %(AUTHOR)s" -D author="%(AUTHOR)s" -D version="%(VERSION)s" -D release="%(VERSION)s"
 if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
@@ -113,7 +122,7 @@ echo "=> Packaging html documentation..."
 if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
 /usr/bin/find "%(BUILD_DIR)s/" -type f -print0 | xargs -0 sed -i "s/Backend/%(MODULE_NAME_CAPITALIZED)s/g"
 if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
-/usr/bin/find "%(BUILD_DIR)s/" -iname \*.* | rename -v "s/backend/%(MODULE_NAME)s/g"
+/usr/bin/find "%(BUILD_DIR)s/" -iname \*.* | for f in $(find . -name backend*); do mv $f $(echo "$f" | sed -r 's|backend|%(MODULE_NAME)s|g'); done
 if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
 #/bin/tar -czvf "%(MODULE_NAME)s-docs.tar.gz" "%(BUILD_DIR)s/html" --transform='s/%(BUILD_DIR)s\//\//g' && ARCHIVE=`/usr/bin/realpath "%(MODULE_NAME)s-docs.tar.gz"` && echo "ARCHIVE=$ARCHIVE"
 cd "_build"; /usr/bin/zip "../%(MODULE_NAME)s-docs.zip" -r "html"; cd ..
