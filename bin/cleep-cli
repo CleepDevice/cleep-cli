@@ -177,14 +177,12 @@ def memprof(interval):
     MPROF = '/usr/local/bin/mprof'
 
     try:
-        #memory profiling libraries are not installed because it is long to install.
-        #And this process is not the most important to perform due to raspberry pi
-        #memory amount
+        # Memory profiling libraries are not installed because it is long to install.
         import memory_profiler
         import psutil
         import matplotlib
     except:
-        logger.error(u'Missing libraries. Please run following command: "pip2 install memory-profiler>=0.55.0,psutil>=5.4.6,matplotlib>=2.2.4"')
+        logger.error('Profiling libraries are not installed by cleep-cli. Please run following command: "python3 -m pip install memory-profiler>=0.55.0,psutil>=5.4.6,matplotlib>=2.2.4"')
         sys.exit(1)
 
     try:
@@ -199,9 +197,12 @@ def memprof(interval):
 
     except KeyboardInterrupt:
         #generate output graph
-        cmd = 'cd /tmp; "%(BIN)s" plot --output "%(OUTPUT)s"' %{'BIN': MPROF, 'OUTPUT': '/tmp/cleep_memprof.png'}
+        graph = '/tmp/cleep_memprof.png'
+        logging.info('Generating memory graph "%s"...' % graph)
+        cmd = 'cd /tmp; "%(BIN)s" plot --output "%(OUTPUT)s"' % {'BIN': MPROF, 'OUTPUT': graph}
         logging.debug('Memprof cmd: %s' % cmd)
         subprocess.call(cmd, shell=True)
+        logging.info('Done')
 
     except:
         if logging.getLogger().getEffectiveLevel()==logging.DEBUG:
@@ -526,7 +527,13 @@ def modcheckcode(module, as_json):
         if as_json:
             logging.info('%s' % json.dumps(res))
         else:
-            logging.info('%s' % res)
+            logging.info('Errors:')
+            for error in res['errors']:
+                logging.info('  - %s : %s' % (error['code'], error['msg']))
+            logging.info('Warnings:')
+            for warn in res['warnings']:
+                logging.info('  - %s : %s' % (warn['code'], warn['msg']))
+            logging.info('Score: %s' % res['score'])
     except Exception as e:
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             logging.exception('Check code failed:')
