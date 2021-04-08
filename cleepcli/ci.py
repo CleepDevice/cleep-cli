@@ -64,9 +64,17 @@ class Ci():
         if not os.path.exists(os.path.join(self.EXTRACT_DIR, 'module.json')):
             raise Exception('Invalid package structure')
 
+        # execute preinst script
+        preinst_path = os.path.join(self.EXTRACT_DIR, 'scripts', 'preinst.sh')
+        if os.path.exists(preinst_path):
+            self.logger.info('Execute "%s" script' % preinst_path)
+            resp = console.command('chmod +x "%(script)s" && "%(script)s"' % { 'script': preinst_path }, 120)
+            if resp['returncode'] != 0:
+                raise Exception('Preinst.sh script failed: %s' % resp['stderr'])
+
         # install source
         os.makedirs(os.path.join(self.SOURCE_DIR, module_name), exist_ok=True)
-        for filepath in glob.glob('/root/extract/**/*.*', recursive=True):
+        for filepath in glob.glob(self.EXTRACT_DIR + '/**/*.*', recursive=True):
             if filepath.startswith(os.path.join(self.EXTRACT_DIR, 'frontend')):
                 dest = filepath.replace(os.path.join(self.EXTRACT_DIR, 'frontend/js/modules/%s' % module_name), os.path.join(self.SOURCE_DIR, module_name, 'frontend'))
                 self.logger.debug(' -> frontend: %s' % dest)
@@ -84,6 +92,15 @@ class Ci():
                 self.logger.debug(' -> other: %s' % dest)
             os.makedirs(os.path.dirname(dest), exist_ok=True)
             os.rename(filepath, dest)
+
+        # execute postinst script
+        preinst_path = os.path.join(self.EXTRACT_DIR, 'scripts', 'postinst.sh')
+        if os.path.exists(preinst_path):
+            self.logger.info('Execute "%s" script' % preinst_path)
+            resp = console.command('chmod +x "%(script)s" && "%(script)s"' % { 'script': preinst_path }, 120)
+            if resp['returncode'] != 0:
+                raise Exception('Postinst.sh script failed: %s' % resp['stderr'])
+
 
     def mod_check(self, module_name):
         """
