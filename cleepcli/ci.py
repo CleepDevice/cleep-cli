@@ -69,10 +69,10 @@ class Ci():
         self.logger.debug('preinst.sh path "%s" exists? %s' % (preinst_path, os.path.exists(preinst_path)))
         if os.path.exists(preinst_path):
             self.logger.info('Execute "%s" script' % preinst_path)
-            resp = console.command('chmod +x "%(script)s" && "%(script)s"' % { 'script': preinst_path }, 120)
+            resp = console.command('chmod +x "%(script)s" && "%(script)s"' % { 'script': preinst_path }, 900)
             self.logger.debug('Resp: %s' % resp)
             if resp['returncode'] != 0:
-                raise Exception('Preinst.sh script failed: %s' % resp['stderr'])
+                raise Exception('Preinst.sh script failed (timeout=%s): %s' % (resp['killed'], resp['stderr']))
 
         # install source
         os.makedirs(os.path.join(self.SOURCE_DIR, module_name), exist_ok=True)
@@ -100,10 +100,10 @@ class Ci():
         self.logger.debug('postinst.sh path "%s" exists? %s' % (postinst_path, os.path.exists(postinst_path)))
         if os.path.exists(postinst_path):
             self.logger.info('Execute "%s" script' % postinst_path)
-            resp = console.command('chmod +x "%(script)s" && "%(script)s"' % { 'script': postinst_path }, 120)
+            resp = console.command('chmod +x "%(script)s" && "%(script)s"' % { 'script': postinst_path }, 900)
             self.logger.debug('Resp: %s' % resp)
             if resp['returncode'] != 0:
-                raise Exception('Postinst.sh script failed: %s' % resp['stderr'])
+                raise Exception('Postinst.sh script failed (timeout=%s): %s' % (resp['killed'], resp['stderr']))
 
 
     def mod_check(self, module_name):

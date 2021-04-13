@@ -1249,6 +1249,7 @@ overgeneral-exceptions=Exception
                 # score
                 out['score'] = float(group[0])
 
+        self.logger.debug('Code quality output: %s' % out)
         return out
 
     def check_changelog(self, module_name):

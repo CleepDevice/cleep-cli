@@ -37,16 +37,6 @@ def log_root(msg, *args, **kwargs):
 logging.addLevelName(level, "TRACE")
 logging.trace = log_root
 
-def print_version(ctx, param, value):
-    if not value or ctx.resilient_parsing:
-        return
-    click.echo('Version %s' % VERSION)
-    ctx.exit()
-
-#@click.command()
-#@click.option('--version', is_flag=True, callback=print_version, expose_value=False, is_eager=True)
-@click.version_option(version=VERSION)
-
 @click.group()
 def core():
     pass
@@ -283,7 +273,7 @@ def modcreate(module):
         sys.exit(1)
 
 @mod.command()
-@click.option('--module', prompt='Module name', help='Module name.')
+@click.option('--module', callback=get_module_name, help='Module name.')
 def moddelete(module):
     """
     Delete all installed files for specified module
@@ -325,7 +315,7 @@ def test():
     pass
 
 @test.command()
-@click.option('--module', prompt='Module name', help='Module name.')
+@click.option('--module', callback=get_module_name, help='Module name.')
 @click.option('--coverage', is_flag=True, help='Display coverage report.')
 def modtests(module, coverage):
     """
@@ -338,7 +328,7 @@ def modtests(module, coverage):
         sys.exit(1)
 
 @test.command()
-@click.option('--module', prompt='Module name', help='Module name.')
+@click.option('--module', callback=get_module_name, help='Module name.')
 @click.option('--missing', is_flag=True, help='display missing statements.')
 @click.option('-j', '--json', 'as_json', is_flag=True, help='Output format as json')
 def modtestscov(module, missing, as_json):
@@ -386,12 +376,16 @@ def corepublish(version):
         sys.exit(1)
 
 @package.command()
-@click.option('--module', prompt='Module name', help='Module name.')
+@click.pass_context
+@click.option('--module', callback=get_module_name, help='Module name.')
 @click.option('--ci', is_flag=True, help='CI flag')
-def modbuild(module, ci):
+def modbuild(ctx, module, ci):
     """
     Build application package
     """
+    # sync module
+    ctx.invoke(modsync, module=module)
+
     p = Package()
     try:
         logging.info(p.build_module(module, ci))
@@ -406,7 +400,7 @@ def docs():
     pass
 
 @docs.command()
-@click.option('--module', prompt='Module name', help='Module name.')
+@click.option('--module', callback=get_module_name, help='Module name.')
 @click.option('--preview', is_flag=True, help='Preview generated doc as text.')
 def moddocs(module, preview):
     """
@@ -419,7 +413,7 @@ def moddocs(module, preview):
         sys.exit(1)
 
 @docs.command()
-@click.option('--module', prompt='Module name', help='Module name.')
+@click.option('--module', callback=get_module_name, help='Module name.')
 def moddocspath(module):
     """
     Display generated docs archive path
@@ -435,7 +429,7 @@ def check():
     pass
 
 @check.command()
-@click.option('--module', prompt='Module name', help='Module name.')
+@click.option('--module', callback=get_module_name, help='Module name.')
 @click.option('-j', '--json', 'as_json', is_flag=True, help='Output format as json')
 def modcheckback(module, as_json):
     """
@@ -455,7 +449,7 @@ def modcheckback(module, as_json):
         sys.exit(1)
 
 @check.command()
-@click.option('--module', prompt='Module name', help='Module name.')
+@click.option('--module', callback=get_module_name, help='Module name.')
 @click.option('-j', '--json', 'as_json', is_flag=True, help='Output format as json')
 def modcheckfront(module, as_json):
     """
@@ -475,7 +469,7 @@ def modcheckfront(module, as_json):
         sys.exit(1)
 
 @check.command()
-@click.option('--module', prompt='Module name', help='Module name.')
+@click.option('--module', callback=get_module_name, help='Module name.')
 @click.option('-j', '--json', 'as_json', is_flag=True, help='Output format as json')
 def modcheckscripts(module, as_json):
     """
@@ -495,7 +489,7 @@ def modcheckscripts(module, as_json):
         sys.exit(1)
 
 @check.command()
-@click.option('--module', prompt='Module name', help='Module name.')
+@click.option('--module', callback=get_module_name, help='Module name.')
 @click.option('-j', '--json', 'as_json', is_flag=True, help='Output format as json')
 def modchecktests(module, as_json):
     """
@@ -515,7 +509,7 @@ def modchecktests(module, as_json):
         sys.exit(1)
 
 @check.command()
-@click.option('--module', prompt='Module name', help='Module name.')
+@click.option('--module', callback=get_module_name, help='Module name.')
 @click.option('-j', '--json', 'as_json', is_flag=True, help='Output format as json')
 def modcheckcode(module, as_json):
     """
@@ -541,7 +535,7 @@ def modcheckcode(module, as_json):
         sys.exit(1)
 
 @check.command()
-@click.option('--module', prompt='Module name', help='Module name.')
+@click.option('--module', callback=get_module_name, help='Module name.')
 @click.option('-j', '--json', 'as_json', is_flag=True, help='Output format as json')
 def modcheckchangelog(module, as_json):
     """
@@ -564,7 +558,7 @@ def modcheckchangelog(module, as_json):
 def ci():
     pass
 
-@ci.command()
+@ci.command(hidden=True)
 @click.option('--package', prompt='Package path', help='Package path.')
 def cimodinstall(package):
     """
@@ -579,7 +573,7 @@ def cimodinstall(package):
         logging.error(str(e))
         sys.exit(1)
 
-@ci.command()
+@ci.command(hidden=True)
 @click.option('--module', prompt='Module name', help='Module name.')
 def cimodcheck(module):
     """
@@ -594,8 +588,18 @@ def cimodcheck(module):
         logging.error(str(e))
         sys.exit(1)
 
+def print_version(ctx, param, value):
+    if not value or ctx.resilient_parsing:
+        return
+    click.echo('cleep-cli version %s' % VERSION)
+    ctx.exit()
 
-cli = click.CommandCollection(sources=[core, mod, watchdog, test, package, docs, check, ci])
+# https://github.com/pallets/click/issues/341
+@click.command(cls=click.CommandCollection, sources=[core, mod, watchdog, test, package, docs, check, ci])
+@click.option('--version', is_flag=True, callback=print_version, expose_value=False, is_eager=True)
+def cli():
+    pass
+
 if __name__ == '__main__':
 
     def is_raspbian():
@@ -611,5 +615,5 @@ if __name__ == '__main__':
     if is_raspbian():
         cli()
     else:
-        click.echo('Cleep-cli runs only on raspbian distribution')
+        click.echo('Cleep-cli runs only on RaspiOS distribution')
 

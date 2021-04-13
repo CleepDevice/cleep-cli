@@ -373,7 +373,8 @@ coverage run --omit="/usr/local/lib/python*/*","*test_*.py" --concurrency=thread
 
         # coverage
         if display_coverage:
-            self.core_test_coverage()
+            coverage = self.core_test_coverage()
+            logging.info(coverage)
 
         # display tests report
         duration = str(datetime.timedelta(seconds=(int(time.time()) - start)))

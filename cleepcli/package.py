@@ -349,24 +349,24 @@ sha256sum $DEB > $SHA256
         check = Check()
         data_backend = check.check_backend(module_name)
         if len(data_backend['errors']) > 0:
-            raise Exception('Error in backend. Fix it before packaging application')
+            raise Exception('Error in backend. Fix it before packaging application: %s' % data_backend['errors'])
         data_frontend = check.check_frontend(module_name)
         if len(data_frontend['errors']) > 0:
-            raise Exception('Error in frontend. Fix it before packaging application')
+            raise Exception('Error in frontend. Fix it before packaging application: %s' % data_frontend['errors'])
         data_scripts = check.check_scripts(module_name)
         if len(data_scripts['errors']) > 0:
-            raise Exception('Error in scripts. Fix it before packaging application')
+            raise Exception('Error in scripts. Fix it before packaging application: %s' % data_scripts['errors'])
         data_tests = check.check_tests(module_name)
         if len(data_tests['errors']) > 0:
-            raise Exception('Error in tests. Fix it before packaging application')
+            raise Exception('Error in tests. Fix it before packaging application: %s' % data_tests['errors'])
         data_code_quality = check.check_code_quality(module_name)
         if len(data_code_quality['errors']) > 0:
-            raise Exception('Error in code quality. Fix it before packaging application')
+            raise Exception('Error in code quality. Fix it before packaging application: %s' % data_code_quality['errors'])
         if data_code_quality['score'] < 7.0:
             raise Exception('Code quality for app "%s" is too low to be packaged (%s). Please improve it to be greater than 7.0' % (module_name, data_code_quality['score']))
         data_changelog = check.check_changelog(module_name)
         if data_changelog['version'] != data_backend['metadata']['version']:
-            raise Exception('Changelog does not seems to have been updated')
+            raise Exception('Changelog does not seems to have been updated (no version "%s" found)' % data_backend['metadata']['version'])
         data_test = {
             'score': 0.0
         }
