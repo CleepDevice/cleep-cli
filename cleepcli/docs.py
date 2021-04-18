@@ -97,7 +97,7 @@ class Docs():
         self.logger.info('=> Generating documentation...')
         cmd = """
 cd "%(DOCS_PATH)s"
-/bin/rm -rf "%(BUILD_DIR)s" "%(SOURCE_DIR)s"
+/usr/bin/rm -rf "%(BUILD_DIR)s" "%(SOURCE_DIR)s"
 /usr/local/bin/sphinx-apidoc -o "%(SOURCE_DIR)s/" "../backend"
 if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
 echo
