@@ -15,6 +15,7 @@ MODULES_REPO_URL = {
     'cleepbus': 'https://github.com/tangb/cleepmod-cleepbus.git',
     'audio': 'https://github.com/tangb/cleepmod-audio.git',
     'network': 'https://github.com/tangb/cleepmod-network.git',
+    'update': 'https://github.com/tangb/cleepmod-update.git',
 }
 
 PRIVATE_REPO = True
