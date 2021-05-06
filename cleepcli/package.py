@@ -436,7 +436,7 @@ sha256sum $DEB > $SHA256
 
         # close archive
         archive.close()
-        archive_path = os.path.join(os.path.dirname(module_archive), 'cleepmod_%s_v%s.zip' % (module_name, metadata['version']))
+        archive_path = os.path.join(os.path.dirname(module_archive), 'cleepapp_%s_v%s.zip' % (module_name, metadata['version']))
         os.rename(module_archive, archive_path)
 
         # clean some stuff
