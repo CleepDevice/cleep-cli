@@ -7,4 +7,6 @@ sphinxcontrib-napoleon>=0.7
 urllib3>=1.25.9
 CProfileV>=1.0.7
 PyGithub>=1.51.0,<2.0.0
-pylint>=2.0.0
+# fix pylint to 2.7.4 because 2.8.0 make 15-20 mins to build
+pylint==2.7.4
+
