@@ -329,9 +329,10 @@ def modtests(module, coverage):
 
 @test.command()
 @click.option('--module', callback=get_module_name, help='Module name.')
-@click.option('--missing', is_flag=True, help='display missing statements.')
+@click.option('--missing', is_flag=True, help='Display missing statements.')
+@click.option('--threshold', default=0, help='Reject threshold (0-10)')
 @click.option('-j', '--json', 'as_json', is_flag=True, help='Output format as json')
-def modtestscov(module, missing, as_json):
+def modtestscov(module, missing, threshold, as_json):
     """
     Display module tests coverage summary
     """
@@ -340,6 +341,9 @@ def modtestscov(module, missing, as_json):
         res = t.module_test_coverage(module, missing, as_json)
         if as_json:
             logging.info(json.dumps(res))
+            if threshold > 0 and res['score'] < threshold:
+                logging.info('Code confidence does not respect requirements (>=%s)' % threshold)
+                sys.exit(1)
         else:
             logging.info(res)
     except Exception as e:
@@ -430,18 +434,30 @@ def check():
 
 @check.command()
 @click.option('--module', callback=get_module_name, help='Module name.')
+@click.option('--author', help='Module author.')
 @click.option('-j', '--json', 'as_json', is_flag=True, help='Output format as json')
-def modcheckback(module, as_json):
+def modcheckbackend(module, author, as_json):
     """
     Check module backend
     """
     c = Check()
     try:
-        res = c.check_backend(module)
+        res = c.check_backend(module, author)
         if as_json:
             logging.info('%s' % json.dumps(res))
         else:
-            logging.info('%s' % res)
+            logging.info('Errors:')
+            for error in res['errors']:
+                logging.info('  - %s' % error)
+            logging.info('Warnings:')
+            for warn in res['warnings']:
+                logging.info('  - %s' % warn)
+            logging.info('Metadata:')
+            logging.info(json.dumps(res['metadata'], sort_keys=True, indent=4))
+            logging.info('Files:')
+            logging.info(json.dumps(res['files'], sort_keys=True, indent=4))
+        if len(res['errors']) > 0:
+            sys.exit(1)
     except Exception as e:
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             logging.exception('Check backend failed:')
@@ -451,7 +467,7 @@ def modcheckback(module, as_json):
 @check.command()
 @click.option('--module', callback=get_module_name, help='Module name.')
 @click.option('-j', '--json', 'as_json', is_flag=True, help='Output format as json')
-def modcheckfront(module, as_json):
+def modcheckfrontend(module, as_json):
     """
     Check module frontend
     """
@@ -461,7 +477,18 @@ def modcheckfront(module, as_json):
         if as_json:
             logging.info('%s' % json.dumps(res))
         else:
-            logging.info('%s' % res)
+            logging.info('Errors:')
+            for error in res['errors']:
+                logging.info('  - %s' % error)
+            logging.info('Warnings:')
+            for warn in res['warnings']:
+                logging.info('  - %s' % warn)
+            logging.info('Files:')
+            logging.info(json.dumps(res['files'], sort_keys=True, indent=4))
+            logging.info('Metadata:')
+            logging.info(json.dumps({'icon': res['icon']}, sort_keys=True, indent=4))
+        if len(res['errors']) > 0:
+            sys.exit(1)
     except Exception as e:
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             logging.exception('Check frontend failed:')
@@ -481,7 +508,16 @@ def modcheckscripts(module, as_json):
         if as_json:
             logging.info('%s' % json.dumps(res))
         else:
-            logging.info('%s' % res)
+            logging.info('Errors:')
+            for error in res['errors']:
+                logging.info('  - %s : %s' % (error['code'], error['msg']))
+            logging.info('Warnings:')
+            for warn in res['warnings']:
+                logging.info('  - %s : %s' % (warn['code'], warn['msg']))
+            logging.info('Files:')
+            logging.info(json.dumps(res['files'], sort_keys=True, indent=4))
+        if len(res['errors']) > 0:
+            sys.exit(1)
     except Exception as e:
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             logging.exception('Check scripts failed:')
@@ -501,7 +537,16 @@ def modchecktests(module, as_json):
         if as_json:
             logging.info('%s' % json.dumps(res))
         else:
-            logging.info('%s' % res)
+            logging.info('Errors:')
+            for error in res['errors']:
+                logging.info('  - %s : %s' % (error['code'], error['msg']))
+            logging.info('Warnings:')
+            for warn in res['warnings']:
+                logging.info('  - %s : %s' % (warn['code'], warn['msg']))
+            logging.info('Files:')
+            logging.info(json.dumps(res['files'], sort_keys=True, indent=4))
+        if len(res['errors']) > 0:
+            sys.exit(1)
     except Exception as e:
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             logging.exception('Check tests failed:')
@@ -510,8 +555,9 @@ def modchecktests(module, as_json):
 
 @check.command()
 @click.option('--module', callback=get_module_name, help='Module name.')
+@click.option('--threshold', default=0, help='Reject threshold (0-10)')
 @click.option('-j', '--json', 'as_json', is_flag=True, help='Output format as json')
-def modcheckcode(module, as_json):
+def modcheckcode(module, threshold, as_json):
     """
     Check module code
     """
@@ -528,6 +574,11 @@ def modcheckcode(module, as_json):
             for warn in res['warnings']:
                 logging.info('  - %s : %s' % (warn['code'], warn['msg']))
             logging.info('Score: %s' % res['score'])
+        if len(res['errors']) > 0:
+            sys.exit(1)
+        if threshold > 0 and res['score'] < threshold:
+            logging.info('Code quality does not respect requirements (>=%s)' % threshold)
+            sys.exit(1)
     except Exception as e:
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             logging.exception('Check code failed:')

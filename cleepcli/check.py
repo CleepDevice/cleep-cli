@@ -264,12 +264,13 @@ overgeneral-exceptions=Exception
     def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
 
-    def check_backend(self, module_name):
+    def check_backend(self, module_name, module_author=None):
         """
         Check backend
 
         Args:
             module_name (string): module name to check
+            module_author (string): if specified check if author is corresponding
 
         Returns:
             dict: backend informations::
@@ -307,7 +308,7 @@ overgeneral-exceptions=Exception
             raise Exception('Main class was not found for app "%s". Application class must have the same name than app name' % module_name)
 
         # build metadata and list of files
-        metadata = self.__build_metadata(class_)
+        metadata = self.__build_metadata(class_, module_author)
         files = self.__build_files_list(class_)
 
         return {
@@ -543,12 +544,13 @@ overgeneral-exceptions=Exception
 
         return out
 
-    def __build_metadata(self, class_):
+    def __build_metadata(self, class_, module_author=None):
         """
         Build module metadata from module constants
 
         Args:
             class_ (Class): loaded module class
+            module_author (string): module author to check
 
         Returns:
             dict: metadata::
@@ -560,7 +562,7 @@ overgeneral-exceptions=Exception
             }
 
         """
-        check = self.__check_backend_constants(class_)
+        check = self.__check_backend_constants(class_, module_author)
 
         return {
             'metadata': {
@@ -613,15 +615,15 @@ overgeneral-exceptions=Exception
 
         # check value
         if constant['value'] is None:
-            # nothing else to check, constant value is allowed as None
+            # nothing else to check, constant value is allowed as None above
             return None
 
         # check type
         if not isinstance(constant['value'], constant['type']):
-            return constant['message'] if 'message' in constant else 'Constant "%s" has wrong type ("%s" instead of "%s")' % (
+            return 'Constant "%s" has wrong type ("%s" instead of "%s")' % (
                 constant['name'],
-                type(constant['value']),
-                constant['type'],
+                type(constant['value']).__name__,
+                constant['type'].__name__,
             )
 
         # use validator if provided
@@ -642,13 +644,13 @@ overgeneral-exceptions=Exception
 
         return None
 
-    def __check_backend_constants(self, class_, full=False):
+    def __check_backend_constants(self, class_, module_author=None):
         """
         Check module constants
 
         Args:
             class_ (Class): loaded module class
-            full (bool): full constants check (useful only on Cleep CI)
+            module_author (string): module author to check
 
         Returns:
             dict: errors and warnings::
@@ -665,9 +667,12 @@ overgeneral-exceptions=Exception
         }
 
         # MODULE_AUTHOR
-        msg = self.__check_constant({'name': 'MODULE_AUTHOR', 'type': str, 'value': getattr(class_, 'MODULE_AUTHOR', None)})
+        author = getattr(class_, 'MODULE_AUTHOR', None)
+        msg = self.__check_constant({'name': 'MODULE_AUTHOR', 'type': str, 'value': author})
         if msg:
             out['errors'].append(msg)
+        if module_author and author and module_author.lower() != author.lower():
+            out['errors'].append('Application author must be the same than repository: %s != %s' % (author, module_author))
 
         # MODULE_DESCRIPTION
         msg = self.__check_constant({'name': 'MODULE_DESCRIPTION', 'type': str, 'value': getattr(class_, 'MODULE_DESCRIPTION', None)})
