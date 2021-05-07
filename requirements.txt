@@ -6,7 +6,8 @@ sphinx-rtd-theme>=0.4.3
 sphinxcontrib-napoleon>=0.7
 urllib3>=1.25.9
 CProfileV>=1.0.7
-PyGithub>=1.51.0,<2.0.0
-# fix pylint to 2.7.4 because 2.8.0 make 15-20 mins to build
-pylint==2.7.4
+# Force version due to pynacl package introduced in 1.55 that makes 15-20 mins to build on raspi
+# This package seems useful only for github actions we are not using.
+PyGithub==1.54.1
+pylint>=2.0.0
 
