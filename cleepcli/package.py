@@ -90,7 +90,6 @@ checkResult() {
             msg="see output log"
         fi
         echo -e "${RED}Error occured: $msg.${NOCOLOR}"
-        slackKo "Image preparation failed: $msg"
         exit 1
     fi
 }
@@ -143,7 +142,7 @@ cd ".."
 # collect variables
 DEB=`ls -A1 cleep* | grep \.deb`
 # ARCHIVE=cleep_$VERSION.deb
-SHA256=cleep_$VERSION.sha256
+SHA256=cleep_$VERSION_armhf.sha256
 # PREINST=cleep/scripts/preinst.sh
 # POSTINST=cleep/scripts/postinst.sh
 
@@ -212,7 +211,7 @@ sha256sum $DEB > $SHA256
 
         #check build existence
         archive = os.path.abspath(os.path.join(config.REPO_DIR, '..', 'cleep_%s_armhf.deb' % version))
-        sha256 = os.path.abspath(os.path.join(config.REPO_DIR, '..', 'cleep_%s.sha256' % version))
+        sha256 = os.path.abspath(os.path.join(config.REPO_DIR, '..', 'cleep_%s_armhf.sha256' % version))
         changes = os.path.abspath(os.path.join(config.REPO_DIR, '..', 'cleep_%s_armhf.changes' % version))
         if not os.path.exists(archive):
             self.logger.error('Archive file "%s" does not exist' % archive)
