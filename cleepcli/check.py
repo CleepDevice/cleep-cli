@@ -1220,7 +1220,7 @@ overgeneral-exceptions=Exception
         # launch pylint
         self.logger.debug('Launch pylint')
         cmd = 'cd "%s"; pylint *.py' % backend_path
-        pattern = r'^(.*?\.py):(\d+):(\d+): ([CRWEF]\d+): (.*)$|^.*(\d+\.\d+)\/10.*$'
+        pattern = r'^(.*?\.py):(\d+):(\d+): ([CRWEF]\d+): (.*)$|^.*at (\d+\.\d+)\/10.*$'
         console = AdvancedConsole()
         results = console.find(cmd, pattern, timeout=60, check_return_code=False)
         self.logger.debug('Results: %s' % results)
