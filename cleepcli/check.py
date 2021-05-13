@@ -752,14 +752,19 @@ overgeneral-exceptions=Exception
         msg = self.__check_constant({
             'name': 'MODULE_PRICE',
             'type': float,
-            'value': getattr(class_, 'MODULE_LABEL', None),
+            'value': getattr(class_, 'MODULE_PRICE', None),
             'none': True,
         })
         if msg:
             out['errors'].append(msg)
 
         # MODULE_LABEL
-        msg = self.__check_constant({'name': 'MODULE_LABEL', 'type': str, 'value': getattr(class_, 'MODULE_LABEL', None), 'none': True})
+        msg = self.__check_constant({
+            'name': 'MODULE_LABEL',
+            'type': str,
+            'value': getattr(class_, 'MODULE_LABEL', None),
+            'none': True
+        })
         if msg:
             out['errors'].append(msg)
 
