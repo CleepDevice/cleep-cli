@@ -24,7 +24,8 @@ from cleepcli.ci import Ci
 import cleepcli.config as config
 from cleepcli.version import VERSION
 
-logging.basicConfig(level=logging.INFO, format=u'%(message)s', stream=sys.stdout)
+logging.basicConfig(level=logging.DEBUG, format=u'%(asctime)s %(levelname)s [%(name)s:%(lineno)d]: %(message)s', stream=sys.stdout)
+#logging.basicConfig(level=logging.INFO, format=u'%(message)s', stream=sys.stdout)
 
 # install logging trace level
 level = logging.TRACE = logging.DEBUG - 5
@@ -321,6 +322,9 @@ def modtests(module, coverage):
     """
     Execute module tests
     """
+    # sync module
+    ctx.invoke(modsync, module=module)
+
     m = Test()
     res = m.module_test(module, coverage)
 
