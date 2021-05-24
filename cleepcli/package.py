@@ -358,14 +358,18 @@ sha256sum $DEB > $SHA256
         data_tests = check.check_tests(module_name)
         if len(data_tests['errors']) > 0:
             raise Exception('Error in tests. Fix it before packaging application: %s' % data_tests['errors'])
+        data_changelog = check.check_changelog(module_name)
+        logging.debug('Changelog: %s' % data_changelog)
+        if data_changelog['version'] != data_backend['metadata']['version']:
+            raise Exception('Changelog does not seems to have been updated (no version "%s" found)' % data_backend['metadata']['version'])
+        if data_changelog['unreleased']:
+            raise Exception('Changelog has UNRELEASED flag enabled, please remove it before publishing')
         data_code_quality = check.check_code_quality(module_name)
         if len(data_code_quality['errors']) > 0:
             raise Exception('Error in code quality. Fix it before packaging application: %s' % data_code_quality['errors'])
         if data_code_quality['score'] < 7.0:
             raise Exception('Code quality for app "%s" is too low to be packaged (%s). Please improve it to be greater than 7.0' % (module_name, data_code_quality['score']))
-        data_changelog = check.check_changelog(module_name)
-        if data_changelog['version'] != data_backend['metadata']['version']:
-            raise Exception('Changelog does not seems to have been updated (no version "%s" found)' % data_backend['metadata']['version'])
+
         data_test = {
             'score': 0.0
         }

@@ -261,6 +261,8 @@ overgeneral-exceptions=Exception
 
     """
 
+    VERSION_UNRELEASED = 'UNRELEASED'
+
     def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
 
@@ -1175,7 +1177,7 @@ overgeneral-exceptions=Exception
             # store file infos
             out['files'].append({
                 'fullpath': fullpath,
-                'filename': filename,
+                'filename': os.path.split(fullpath)[1],
                 'path': fullpath.split('modules/%s/' % module_name)[1],
             })
 
@@ -1329,6 +1331,14 @@ overgeneral-exceptions=Exception
             module_name (string): module name
 
         Returns:
+            dict: changelog metadata::
+
+            {
+                version (string): module version
+                changelog (string): latest version changelog
+                unreleased (bool): True if version unreleased
+            }
+
         """
         if not os.path.exists(os.path.join(config.MODULES_DST, module_name)):
             raise Exception('Module "%s" does not exist' % module_name)
@@ -1359,14 +1369,21 @@ overgeneral-exceptions=Exception
         # get first section and search for version
         first_section = sections[0] if len(sections) > 0 else []
         found_version = None
+        unreleased = False
         if len(first_section) > 0:
             pattern = re.compile(r'\d+\.\d+\.\d+')
             match = pattern.search(first_section[0])
             found_version = match.group() if match else None
+
+            pattern = re.compile(r'%s' % self.VERSION_UNRELEASED)
+            match = pattern.search(first_section[0].split('\n')[0])
+            unreleased = match is not None
         self.logger.debug('Found version: %s' % found_version)
+        self.logger.debug('Found unreleased: %s' % unreleased)
 
         return {
             'version': found_version,
             'changelog': ''.join(first_section).strip(),
+            'unreleased': unreleased,
         }
 
