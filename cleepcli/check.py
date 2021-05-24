@@ -1107,12 +1107,6 @@ overgeneral-exceptions=Exception
             'files': [],
         }
         for fullpath in fullpaths:
-            # drop some files
-            filename = os.path.split(fullpath)[1]
-            if filename not in ('preinst.sh', 'postinst.sh', 'preuninst.sh', 'postuninst.sh'):
-                out['warnings'].append('File "%s" in scripts folder won\'t be packaged' % filename)
-                continue
-
             # store file infos
             out['files'].append({
                 'fullpath': fullpath,

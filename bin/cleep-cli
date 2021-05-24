@@ -24,8 +24,7 @@ from cleepcli.ci import Ci
 import cleepcli.config as config
 from cleepcli.version import VERSION
 
-logging.basicConfig(level=logging.DEBUG, format=u'%(asctime)s %(levelname)s [%(name)s:%(lineno)d]: %(message)s', stream=sys.stdout)
-#logging.basicConfig(level=logging.INFO, format=u'%(message)s', stream=sys.stdout)
+logging.basicConfig(level=logging.INFO, format=u'%(message)s', stream=sys.stdout)
 
 # install logging trace level
 level = logging.TRACE = logging.DEBUG - 5
@@ -509,15 +508,16 @@ def modcheckscripts(module, as_json):
     c = Check()
     try:
         res = c.check_scripts(module)
+        logging.debug('res: %s' % res)
         if as_json:
             logging.info('%s' % json.dumps(res))
         else:
             logging.info('Errors:')
             for error in res['errors']:
-                logging.info('  - %s : %s' % (error['code'], error['msg']))
+                logging.info('  - %s' % error)
             logging.info('Warnings:')
             for warn in res['warnings']:
-                logging.info('  - %s : %s' % (warn['code'], warn['msg']))
+                logging.info('  - %s' % warn)
             logging.info('Files:')
             logging.info(json.dumps(res['files'], sort_keys=True, indent=4))
         if len(res['errors']) > 0:
