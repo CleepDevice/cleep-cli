@@ -20,7 +20,7 @@ class Check():
     """
     Handle module check:
         - check backend: variables, function
-        - check frontend: config, desc.json, image directive
+        - check frontend: config, desc.json, modImgSrc directive
         - run pylint on backend
     """
 
@@ -834,11 +834,66 @@ overgeneral-exceptions=Exception
 
         return out
 
+    def __check_modimgsrc_directive(self, module_name, js_files, all_files):
+        """
+        Check if developer uses mod-img-src directive to display its images
+
+        Args:
+            module_name (string): module name
+            js_files (list): list of js files
+            all_files (dict): list of all files
+
+        Returns:
+            tuple: list of warnings and list of found images::
+
+            (
+                ['warning1', 'warning2', ...],
+                ['mod/img1.png', 'mod/img2.jpg', ...]
+            )
+
+        """
+        # init
+        cacheds = []
+        warnings = []
+        founds = []
+
+        # get images
+        image_files = [a_file for a_file in all_files['files'] if a_file['extension'] in ('.jpg', '.jpeg', '.gif', '.png', '.webp')]
+        html_files = [a_file for a_file in all_files['files'] if a_file['extension'] == '.html']
+        logging.debug('Image files %s' % image_files)
+        logging.debug('Html files %s' % html_files)
+
+        # no image, no need to go further
+        if len(image_files) == 0:
+            return warnings
+
+        # cache html files content
+        for html_file in html_files:
+            with open(html_file['fullpath'], 'r') as fdesc:
+                cacheds.append('\n'.join(fdesc.readlines()))
+
+        # check directive usage for found images
+        for image_file in image_files:
+            pattern = r"mod-img-src\s*=\s*[\"']\s*%s\s*[\"']" % image_file['path'].replace(module_name+'/', '')
+            self.logger.debug('Mod-img-src pattern: %s' % pattern)
+            found = False
+            for cached in cacheds:
+                matches = re.finditer(pattern, cached, re.MULTILINE)
+                if len(list(matches)) > 0:
+                    logging.debug('Image "%s" found' % image_file['path'])
+                    found = True
+                    founds.append(image_file['path'])
+            if not found:
+                warnings.append('Image "%s" may not be displayed properly because mod-img-src directive wasn\'t used' % image_file['filename'])
+
+        return warnings, founds
+
     def __check_frontend_files(self, module_name, all_files, desc_json):
         """
         Check frontend files
 
         Args:
+            module_name (string): module name
             all_files (list): list of all frontend files
             desc_json (dict): desc.json analyze result
 
@@ -906,6 +961,10 @@ overgeneral-exceptions=Exception
             if os.path.splitext(a_file)[1] not in ('.png', '.jpg', '.jpeg', '.gif', '.webp'):
                 out['warnings'].append('File "%s" seems not to have a supported image format. Please convert it' % a_file)
 
+        # check images
+        warnings, found_images = self.__check_modimgsrc_directive(module_name, js_files, all_files)
+        out['warnings'] += warnings
+
         # give flags to files
         for a_file in out['files']:
             if a_file['filename'] in global_files:
@@ -918,6 +977,8 @@ overgeneral-exceptions=Exception
                 a_file['usage'] = 'RES'
             elif a_file['filename'] == 'desc.json':
                 a_file['usage'] = 'CORE'
+            elif a_file['path'] in found_images:
+                a_file['usage'] = 'CONFIG'
             else:
                 out['warnings'].append('File "%s" is unused' % a_file['path'])
                 a_file['usage'] = 'UNUSED'
@@ -1059,6 +1120,10 @@ overgeneral-exceptions=Exception
             # drop some files
             filename = os.path.split(fullpath)[1]
             if filename.startswith('.') or filename.startswith('~') or filename.endswith('.tmp'):
+                continue
+
+            # drop directories
+            if os.path.isdir(fullpath):
                 continue
 
             # store file infos
