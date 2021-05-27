@@ -39,7 +39,7 @@ class Test():
         }
 
         c = AdvancedConsole()
-        results = c.find_in_string(stdout, r'((?:/.*?)+\.py)\s+\d+\s+\d+\s+(\d+)%|^(TOTAL)\s+\d+\s+\d+\s+(\d+)%$')
+        results = c.find_in_string(stdout, r'((?:/.*?)+\.py)\s+(\d+)\s+\d+\s+(\d+)%|^(TOTAL)\s+\d+\s+\d+\s+(\d+)%$')
         for result in results:
             groups = list(filter(None, result[1]))
             if groups[0].startswith('TOTAL'):
@@ -47,7 +47,8 @@ class Test():
             else:
                 out['files'].append({
                     'file': groups[0],
-                    'coverage': int(groups[1]),
+                    'statements': int(groups[1]),
+                    'coverage': int(groups[2]),
                 })
 
         return out

@@ -12,6 +12,7 @@ import subprocess
 import shutil
 import click
 import json
+import re
 from cleepcli.git import Git
 from cleepcli.module import Module
 from cleepcli.file import File
@@ -36,6 +37,8 @@ def log_root(msg, *args, **kwargs):
     logging.log(level, msg, *args, **kwargs)
 logging.addLevelName(level, "TRACE")
 logging.trace = log_root
+
+PRAGMA_NO_COVER_PATTERN = r'#\s*pragma\s*:\s*no\s+cover'
 
 @click.group()
 def core():
@@ -232,7 +235,7 @@ def reset(ctx):
 def mod():
     pass
 
-def get_module_name(ctx, param, value):
+def get_module_name(param, value):
     module_name = value if value else None
     try:
         current_path = os.getcwd()
@@ -315,9 +318,10 @@ def test():
     pass
 
 @test.command()
+@click.pass_context
 @click.option('--module', callback=get_module_name, help='Module name.')
 @click.option('--coverage', is_flag=True, help='Display coverage report.')
-def modtests(module, coverage):
+def modtests(ctx, module, coverage):
     """
     Execute module tests
     """
@@ -329,6 +333,30 @@ def modtests(module, coverage):
 
     if not res:
         sys.exit(1)
+
+def is_file_coverage_valid(coverage_info):
+    """
+    Check if file is not respecting Cleep test practices
+    """
+    if coverage_info['file'].find('__init__.py') != -1:
+        # drop __init__.py
+        return True
+
+    if coverage_info['statements'] == 0 and coverage_info['coverage'] == 100:
+        # no statements covered
+        logging.error('File "%s" fully uncovered by tests' % coverage_info['file'])
+        return False
+
+    with open(coverage_info['file']) as fdesc:
+        lines = fdesc.readlines()
+    lines_count = len(lines)
+    max_pragma = max(int(lines_count / 150), 1)
+    count_pragma = len(re.findall(PRAGMA_NO_COVER_PATTERN, '\n'.join(lines)))
+    if count_pragma > max_pragma:
+        logging.error('Number of allowed "no cover" exceed max allowed (1 per 150 source lines) in "%s"' % coverage_info['file'])
+        return False
+
+    return True
 
 @test.command()
 @click.option('--module', callback=get_module_name, help='Module name.')
@@ -344,9 +372,16 @@ def modtestscov(module, missing, threshold, as_json):
         res = t.module_test_coverage(module, missing, as_json)
         if as_json:
             logging.info(json.dumps(res))
+
+            # threshold
             if threshold > 0 and res['score'] < threshold:
                 logging.info('Code confidence does not respect requirements (>=%s)' % threshold)
                 sys.exit(1)
+
+            # detect abused no cover usage
+            for info in res['files']:
+                if not is_file_coverage_valid(info):
+                    sys.exit(1)
         else:
             logging.info(res)
     except Exception as e:
