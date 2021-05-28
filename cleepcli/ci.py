@@ -75,7 +75,7 @@ class Ci():
         preinst_path = os.path.join(self.EXTRACT_DIR, 'scripts', 'preinst.sh')
         self.logger.debug('preinst.sh path "%s" exists? %s' % (preinst_path, os.path.exists(preinst_path)))
         if os.path.exists(preinst_path):
-            self.logger.info('Execute "%s" script' % preinst_path)
+            self.logger.info('Executing "%s" preinst script' % preinst_path)
             resp = console.command('cd "%(path)s" && chmod +x "%(script)s" && "%(script)s"' % {
                 'path': os.path.join(self.EXTRACT_DIR, 'scripts'),
                 'script': preinst_path,
@@ -85,7 +85,7 @@ class Ci():
                 raise Exception('Preinst.sh script failed (timeout=%s): %s' % (resp['killed'], resp['stderr']))
 
         # install source
-        self.logger.debug('Install source files:')
+        self.logger.info('Installing source files')
         os.makedirs(os.path.join(self.SOURCE_DIR, module_name), exist_ok=True)
         for filepath in glob.glob(self.EXTRACT_DIR + '/**/*.*', recursive=True):
             if filepath.startswith(os.path.join(self.EXTRACT_DIR, 'frontend')):
@@ -110,7 +110,7 @@ class Ci():
         postinst_path = os.path.join(self.SOURCE_DIR, module_name, 'scripts', 'postinst.sh')
         self.logger.debug('postinst.sh path "%s" exists? %s' % (postinst_path, os.path.exists(postinst_path)))
         if os.path.exists(postinst_path):
-            self.logger.info('Execute "%s" script' % postinst_path)
+            self.logger.info('Executing "%s" postint script' % postinst_path)
             resp = console.command('cd "%(path)s" && chmod +x "%(script)s" && "%(script)s"' % {
                 'path': os.path.join(self.EXTRACT_DIR, 'scripts'),
                 'script': postinst_path
@@ -120,6 +120,7 @@ class Ci():
                 raise Exception('Postinst.sh script failed (timeout=%s): %s' % (resp['killed'], resp['stderr']))
 
         # install module in cleep (it will also install deps)
+        self.logger.info('Installing application in Cleep')
         resp = requests.post(self.CLEEP_COMMAND_URL, json={
             'command': 'install_module',
             'to': 'update',
@@ -133,6 +134,7 @@ class Ci():
         if resp_json['error']:
             raise Exception('Install_module command failed')
         # wait until end of installation
+        self.logger.info('Waiting end of application installation')
         while True:
             time.sleep(5.0)
             resp = requests.post(self.CLEEP_COMMAND_URL, json={
@@ -150,12 +152,14 @@ class Ci():
             if not module_updates['processing']:
                 # installation terminated, stop statement here
                 break
+            self.logger.info(' => %s' % module_updates)
 
         # restart cleep
         console.command('pkill cleep && sleep 5 && cleep --noro &')
         time.sleep(20)
 
         # check module is installed and running
+        self.logger.info('Checking application is installed')
         resp = requests.post(self.CLEEP_CONFIG_URL)
         if resp.status_code != 200:
             raise Exception('Unable to get config from Cleep')
