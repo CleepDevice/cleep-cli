@@ -69,7 +69,7 @@ class Ci():
             raise Exception('Invalid package structure')
 
         # start cleep
-        console.command('systemctl start cleep')
+        console.command('cleep --noro &')
 
         # execute preinst script
         preinst_path = os.path.join(self.EXTRACT_DIR, 'scripts', 'preinst.sh')
@@ -152,7 +152,7 @@ class Ci():
                 break
 
         # restart cleep
-        console.command('systemctl restart cleep')
+        console.command('pkill cleep && sleep 5 && cleep --noro &')
         time.sleep(20)
 
         # check module is installed and running
@@ -165,7 +165,7 @@ class Ci():
             raise Exception('Module "%s" installation failed' % module_name)
 
         # stop cleep (necessary ?)
-        console.command('systemctl stop cleep')
+        console.command('pkill cleep')
 
     def mod_check(self, module_name):
         """
