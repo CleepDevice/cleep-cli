@@ -20,6 +20,7 @@ class Ci():
     EXTRACT_DIR = '/root/extract'
     SOURCE_DIR = '/root/cleep/modules'
     CLEEP_COMMAND_URL = 'http://127.0.0.1/command'
+    CLEEP_CONFIG_URL = 'http://127.0.0.1/config'
 
     def __init__(self):
         """
@@ -66,6 +67,9 @@ class Ci():
             raise Exception('Invalid package structure')
         if not os.path.exists(os.path.join(self.EXTRACT_DIR, 'module.json')):
             raise Exception('Invalid package structure')
+
+        # start cleep
+        console.command('systemctl start cleep')
 
         # execute preinst script
         preinst_path = os.path.join(self.EXTRACT_DIR, 'scripts', 'preinst.sh')
@@ -149,6 +153,19 @@ class Ci():
 
         # restart cleep
         console.command('systemctl restart cleep')
+        time.sleep(20)
+
+        # check module is installed and running
+        resp = requests.post(self.CLEEP_CONFIG_URL)
+        if resp.status_code != 200:
+            raise Exception('Unable to get config from Cleep')
+        resp_json = resp.json()
+        module_config = resp_json['modules'].get(module_name)
+        if not module_config or not module_config.get('started'):
+            raise Exception('Module "%s" installation failed' % module_name)
+
+        # stop cleep (necessary ?)
+        console.command('systemctl stop cleep')
 
     def mod_check(self, module_name):
         """
