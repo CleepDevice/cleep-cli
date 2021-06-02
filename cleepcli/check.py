@@ -870,7 +870,7 @@ overgeneral-exceptions=Exception
 
         # no image, no need to go further
         if len(image_files) == 0:
-            return warnings
+            return warnings, founds
 
         # cache html files content
         for html_file in html_files:

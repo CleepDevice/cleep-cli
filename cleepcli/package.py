@@ -142,7 +142,7 @@ cd ".."
 # collect variables
 DEB=`ls -A1 cleep* | grep \.deb`
 # ARCHIVE=cleep_$VERSION.deb
-SHA256=cleep_$VERSION_armhf.sha256
+SHA256="cleep_"$VERSION"_armhf.sha256"
 # PREINST=cleep/scripts/preinst.sh
 # POSTINST=cleep/scripts/postinst.sh
 
