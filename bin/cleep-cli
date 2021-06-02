@@ -596,13 +596,14 @@ def modchecktests(module, as_json):
 @click.option('--module', callback=get_module_name, help='Module name.')
 @click.option('--threshold', default=0, help='Reject threshold (0-10)')
 @click.option('-j', '--json', 'as_json', is_flag=True, help='Output format as json')
-def modcheckcode(module, threshold, as_json):
+@click.option('-p', '--pylintrc', 'rewrite_pylintrc', is_flag=True, help='Write default .pylintrc file')
+def modcheckcode(module, threshold, as_json, rewrite_pylintrc):
     """
     Check module code
     """
     c = Check()
     try:
-        res = c.check_code_quality(module)
+        res = c.check_code_quality(module, rewrite_pylintrc=rewrite_pylintrc)
         if as_json:
             logging.info('%s' % json.dumps(res))
         else:

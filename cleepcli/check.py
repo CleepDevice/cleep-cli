@@ -122,6 +122,7 @@ disable=print-statement,
         len-as-condition,
         logging-not-lazy,
         broad-except,
+        missing-module-docstring,
         relative-beyond-top-level, # to remove when pylint bug resolved
 enable=c-extension-no-member
 
@@ -137,7 +138,9 @@ never-returning-functions=optparse.Values,sys.exit
 
 [TYPECHECK]
 contextmanager-decorators=contextlib.contextmanager
-generated-members=
+# zmq.{LINGER,REQ,ROUTER,NOBLOCK} are dynamically generated and so pylint
+# doesn't see them, causing false positives.
+generated-members=PAIR,RCVHWM,SNDHWM,SNDTIMEO,RCVTIMEO,netifaces.*
 ignore-mixin-members=yes
 ignore-on-opaque-inference=yes
 ignored-classes=optparse.Values,thread._local,_thread._local
@@ -1246,9 +1249,13 @@ overgeneral-exceptions=Exception
 
         return out
 
-    def check_code_quality(self, module_name):
+    def check_code_quality(self, module_name, rewrite_pylintrc=False):
         """
         Check code quality running pylint on backend. Add .pylintrc if file is missing
+
+        Args:
+            module_name (string): module name
+            rewrite_pylintrc (bool): True to rewrite .pylintrc file
 
         Returns:
             dict: result of pylint::
@@ -1277,7 +1284,7 @@ overgeneral-exceptions=Exception
 
         backend_path = os.path.join(config.MODULES_SRC, module_name, 'backend')
         pylintrc_path = os.path.join(backend_path, '.pylintrc')
-        if not os.path.exists(pylintrc_path):
+        if not os.path.exists(pylintrc_path) or rewrite_pylintrc:
             self.logger.debug('Create default "%s" file' % pylintrc_path)
             with open(pylintrc_path, 'w') as pylintrc_file:
                 pylintrc_file.write(self.PYLINTRC)
