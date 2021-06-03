@@ -68,9 +68,6 @@ class Ci():
         if not os.path.exists(os.path.join(self.EXTRACT_DIR, 'module.json')):
             raise Exception('Invalid package structure')
 
-        # start cleep
-        os.system('cleep --noro &')
-
         # execute preinst script
         preinst_path = os.path.join(self.EXTRACT_DIR, 'scripts', 'preinst.sh')
         self.logger.debug('preinst.sh path "%s" exists? %s' % (preinst_path, os.path.exists(preinst_path)))
@@ -119,6 +116,10 @@ class Ci():
             if resp['returncode'] != 0:
                 raise Exception('Postinst.sh script failed (timeout=%s): %s' % (resp['killed'], resp['stderr']))
 
+        # start cleep
+        os.system('cleep --noro &')
+        time.sleep(10)
+
         # install module in cleep (it will also install deps)
         self.logger.info('Installing application in Cleep')
         resp = requests.post(self.CLEEP_COMMAND_URL, json={
@@ -136,7 +137,7 @@ class Ci():
         # wait until end of installation
         self.logger.info('Waiting end of application installation')
         while True:
-            time.sleep(5.0)
+            time.sleep(1.0)
             resp = requests.post(self.CLEEP_COMMAND_URL, json={
                 'command': 'get_modules_updates',
                 'to': 'update'
@@ -157,6 +158,7 @@ class Ci():
             self.logger.info('Updates: %s' % module_updates)
 
         # restart cleep
+        self.logger.info('Restarting cleep')
         os.system('pkill -f /usr/bin/cleep')
         os.system('cleep --noro &')
         time.sleep(20)
