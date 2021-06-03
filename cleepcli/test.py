@@ -10,6 +10,7 @@ from . import config
 import importlib
 import re
 import datetime
+import shutil
 
 class Test():
     """
@@ -192,10 +193,12 @@ cd "%(path)s"
             return False
 
         self.logger.info('Running unit tests...')
+        coverage_file_path = self.__get_coverage_file(module_name, module_version)
+        module_tests_path = self.__get_module_tests_path(module_name)
         cmd = """
 cd "%s"
-COVERAGE_FILE=%s coverage run --omit="/usr/local/lib/python*/*","test_*","../backend/*Event.py" --source="../backend" --concurrency=thread test_*.py
-        """ % (self.__get_module_tests_path(module_name), self.__get_coverage_file(module_name, module_version))
+COVERAGE_FILE=%s coverage run --omit="/usr/local/lib/python*/*","test_*" --source="../backend" --concurrency=thread test_*.py
+        """ % (module_tests_path, coverage_file_path)
         self.logger.debug('Test cmd: %s' % cmd)
         self.__endless_command_running = True
         self.__reset_stds()
@@ -209,6 +212,9 @@ COVERAGE_FILE=%s coverage run --omit="/usr/local/lib/python*/*","test_*","../bac
         if display_coverage:
             self.logger.debug('Display coverage')
             self.module_test_coverage(module_name)
+
+        # copy coverage file to standart location (in module tests directory) for coverage report tools
+        shutil.copyfile(coverage_file_path, os.path.join(module_tests_path, '.coverage'))
 
         self.logger.debug('Return code: %s' % self.__endless_command_return_code)
         if self.__endless_command_return_code!=0:
