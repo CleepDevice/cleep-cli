@@ -69,8 +69,7 @@ class Ci():
             raise Exception('Invalid package structure')
 
         # start cleep
-        # TODO need cleep v0.0.27
-        #os.system('cleep --noro &')
+        os.system('cleep --noro &')
 
         # execute preinst script
         preinst_path = os.path.join(self.EXTRACT_DIR, 'scripts', 'preinst.sh')
