@@ -170,7 +170,7 @@ cd "%(path)s"
 
         return res
 
-    def module_test(self, module_name, display_coverage=False):
+    def module_test(self, module_name, display_coverage=False, copy_to=None):
         """
         Execute module unit tests and display process output on stdout
 
@@ -214,7 +214,8 @@ COVERAGE_FILE=%s coverage run --omit="/usr/local/lib/python*/*","test_*" --sourc
             self.module_test_coverage(module_name)
 
         # copy coverage file to standart location (in module tests directory) for coverage report tools
-        shutil.copyfile(coverage_file_path, os.path.join(module_tests_path, '.coverage'))
+        if copy_to:
+            shutil.copyfile(coverage_file_path, os.path.join(copy_to, '.coverage'))
 
         self.logger.debug('Return code: %s' % self.__endless_command_return_code)
         if self.__endless_command_return_code!=0:

@@ -321,7 +321,8 @@ def test():
 @click.pass_context
 @click.option('--module', callback=get_module_name, help='Module name.')
 @click.option('--coverage', is_flag=True, help='Display coverage report.')
-def modtests(ctx, module, coverage):
+@click.option('--copyto', help='Copy .coverage file to specified dir.')
+def modtests(ctx, module, coverage, copyto):
     """
     Execute module tests
     """
@@ -329,7 +330,7 @@ def modtests(ctx, module, coverage):
     ctx.invoke(modsync, module=module)
 
     m = Test()
-    res = m.module_test(module, coverage)
+    res = m.module_test(module, coverage, copyto)
 
     if not res:
         sys.exit(1)
