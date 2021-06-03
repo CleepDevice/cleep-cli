@@ -111,7 +111,7 @@ class Ci():
         postinst_path = os.path.join(self.SOURCE_DIR, module_name, 'scripts', 'postinst.sh')
         self.logger.debug('postinst.sh path "%s" exists? %s' % (postinst_path, os.path.exists(postinst_path)))
         if os.path.exists(postinst_path):
-            self.logger.info('Executing "%s" postint script' % postinst_path)
+            self.logger.info('Executing "%s" postinst script' % postinst_path)
             resp = console.command('cd "%(path)s" && chmod +x "%(script)s" && "%(script)s"' % {
                 'path': os.path.join(self.EXTRACT_DIR, 'scripts'),
                 'script': postinst_path
@@ -121,60 +121,59 @@ class Ci():
                 raise Exception('Postinst.sh script failed (timeout=%s): %s' % (resp['killed'], resp['stderr']))
 
         # install module in cleep (it will also install deps)
-        # TODO need cleep v0.0.27
-        #self.logger.info('Installing application in Cleep')
-        #resp = requests.post(self.CLEEP_COMMAND_URL, json={
-        #    'command': 'install_module',
-        #    'to': 'update',
-        #    'params': {
-        #        'module_name': module_name,
-        #    }
-        #})
-        #if resp.status_code != 200:
-        #    raise Exception('Unable to send install_module command to Cleep')
-        #resp_json = resp.json()
-        #if resp_json['error']:
-        #    raise Exception('Install_module command failed')
-        ## wait until end of installation
-        #self.logger.info('Waiting end of application installation')
-        #while True:
-        #    time.sleep(5.0)
-        #    resp = requests.post(self.CLEEP_COMMAND_URL, json={
-        #        'command': 'get_modules_updates',
-        #        'to': 'update'
-        #    })
-        #    if resp.status_code != 200:
-        #        raise Exception('Unable to send get_modules_updates command to Cleep')
-        #    resp_json = resp.json()
-        #    if resp_json['error']:
-        #        raise Exception('Get_modules_updates command failed')
-        #    module_updates = resp_json['data'].get(module_name)
-        #    if not module_updates:
-        #        raise Exception('No "%s" application info in updates' % module_name)
-        #    if not module_updates['processing']:
-        #        # installation terminated, stop statement here
-        #        if module_updates['update']['failed']:
-        #            raise Exception('Application "%s" installation failed' % module_name)
-        #        break
-        #    self.logger.info('Updates: %s' % module_updates)
+        self.logger.info('Installing application in Cleep')
+        resp = requests.post(self.CLEEP_COMMAND_URL, json={
+            'command': 'install_module',
+            'to': 'update',
+            'params': {
+                'module_name': module_name,
+            }
+        })
+        if resp.status_code != 200:
+            raise Exception('Unable to send install_module command to Cleep')
+        resp_json = resp.json()
+        if resp_json['error']:
+            raise Exception('Install_module command failed')
+        # wait until end of installation
+        self.logger.info('Waiting end of application installation')
+        while True:
+            time.sleep(5.0)
+            resp = requests.post(self.CLEEP_COMMAND_URL, json={
+                'command': 'get_modules_updates',
+                'to': 'update'
+            })
+            if resp.status_code != 200:
+                raise Exception('Unable to send get_modules_updates command to Cleep')
+            resp_json = resp.json()
+            if resp_json['error']:
+                raise Exception('Get_modules_updates command failed')
+            module_updates = resp_json['data'].get(module_name)
+            if not module_updates:
+                raise Exception('No "%s" application info in updates' % module_name)
+            if not module_updates['processing']:
+                # installation terminated, stop statement here
+                if module_updates['update']['failed']:
+                    raise Exception('Application "%s" installation failed' % module_name)
+                break
+            self.logger.info('Updates: %s' % module_updates)
 
         # restart cleep
-        #os.system('pkill -f /usr/bin/cleep')
-        #os.system('cleep --noro &')
-        #time.sleep(20)
+        os.system('pkill -f /usr/bin/cleep')
+        os.system('cleep --noro &')
+        time.sleep(20)
 
         # check module is installed and running
-        #self.logger.info('Checking application is installed')
-        #resp = requests.post(self.CLEEP_CONFIG_URL)
-        #if resp.status_code != 200:
-        #    raise Exception('Unable to get config from Cleep')
-        #resp_json = resp.json()
-        #module_config = resp_json['modules'].get(module_name)
-        #if not module_config or not module_config.get('started'):
-        #    raise Exception('Application "%s" installation failed' % module_name)
+        self.logger.info('Checking application is installed')
+        resp = requests.post(self.CLEEP_CONFIG_URL)
+        if resp.status_code != 200:
+            raise Exception('Unable to get config from Cleep')
+        resp_json = resp.json()
+        module_config = resp_json['modules'].get(module_name)
+        if not module_config or not module_config.get('started'):
+            raise Exception('Application "%s" installation failed' % module_name)
 
         # stop cleep (necessary ?)
-        #os.system('pkill -f /usr/bin/cleep')
+        os.system('pkill -f /usr/bin/cleep')
 
     def mod_check(self, module_name):
         """
