@@ -171,7 +171,7 @@ class Ci():
         resp_json = resp.json()
         module_config = resp_json['modules'].get(module_name)
         if not module_config or not module_config.get('started'):
-            self.error('Config: %s' % module_config)
+            self.logger.error('Config: %s' % module_config)
             raise Exception('Application "%s" installation failed' % module_name)
 
         # stop cleep (necessary ?)
