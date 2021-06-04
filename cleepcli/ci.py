@@ -116,6 +116,9 @@ class Ci():
             if resp['returncode'] != 0:
                 raise Exception('Postinst.sh script failed (timeout=%s): %s' % (resp['killed'], resp['stderr']))
 
+        # before installing module, sync sources to install local package, not remote one
+        os.system('cleep-cli modsync --module=%s' % module_name)
+
         # start cleep
         os.system('cleep --noro &')
         time.sleep(10)
@@ -148,7 +151,7 @@ class Ci():
             if resp_json['error']:
                 raise Exception('Get_modules_updates command failed')
             module_updates = resp_json['data'].get(module_name)
-            self.logger.info('Updates: %s' % module_updates)
+            self.logger.debug('Updates: %s' % module_updates)
             if not module_updates:
                 raise Exception('No "%s" application info in updates' % module_name)
             if not module_updates['processing']:
@@ -161,7 +164,7 @@ class Ci():
         self.logger.info('Restarting cleep')
         os.system('pkill -f /usr/bin/cleep')
         os.system('cleep --noro &')
-        time.sleep(20)
+        time.sleep(10)
 
         # check module is installed and running
         self.logger.info('Checking application is installed')
@@ -171,7 +174,10 @@ class Ci():
         resp_json = resp.json()
         module_config = resp_json['modules'].get(module_name)
         if not module_config or not module_config.get('started'):
-            self.logger.error('Config: %s' % module_config)
+            self.logger.error('Found application config: %s' % module_config)
+            resp = console.command('tail -n 100 /var/log/cleep.log')
+            self.logger.info('cleep.log dump:')
+            self.logger.info('\n'.join(resp['stdout']))
             raise Exception('Application "%s" installation failed' % module_name)
 
         # stop cleep (necessary ?)
