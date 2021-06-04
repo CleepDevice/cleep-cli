@@ -142,6 +142,7 @@ class Ci():
                 'command': 'get_modules_updates',
                 'to': 'update'
             })
+            self.logger.info('Updates: %s' % module_updates)
             if resp.status_code != 200:
                 raise Exception('Unable to send get_modules_updates command to Cleep')
             resp_json = resp.json()
@@ -155,7 +156,6 @@ class Ci():
                 if module_updates['update']['failed']:
                     raise Exception('Application "%s" installation failed' % module_name)
                 break
-            self.logger.info('Updates: %s' % module_updates)
 
         # restart cleep
         self.logger.info('Restarting cleep')
@@ -171,6 +171,7 @@ class Ci():
         resp_json = resp.json()
         module_config = resp_json['modules'].get(module_name)
         if not module_config or not module_config.get('started'):
+            self.error('Config: %s' % module_config)
             raise Exception('Application "%s" installation failed' % module_name)
 
         # stop cleep (necessary ?)
