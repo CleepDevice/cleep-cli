@@ -142,13 +142,13 @@ class Ci():
                 'command': 'get_modules_updates',
                 'to': 'update'
             })
-            self.logger.info('Updates: %s' % module_updates)
             if resp.status_code != 200:
                 raise Exception('Unable to send get_modules_updates command to Cleep')
             resp_json = resp.json()
             if resp_json['error']:
                 raise Exception('Get_modules_updates command failed')
             module_updates = resp_json['data'].get(module_name)
+            self.logger.info('Updates: %s' % module_updates)
             if not module_updates:
                 raise Exception('No "%s" application info in updates' % module_name)
             if not module_updates['processing']:
