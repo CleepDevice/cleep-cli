@@ -211,7 +211,7 @@ COVERAGE_FILE=%s coverage run --omit="/usr/local/lib/python*/*","test_*" --sourc
         # display coverage report
         if display_coverage:
             self.logger.debug('Display coverage')
-            self.module_test_coverage(module_name)
+            self.logger.info(self.module_test_coverage(module_name))
 
         # copy coverage file to standart location (in module tests directory) for coverage report tools
         if copy_to:
