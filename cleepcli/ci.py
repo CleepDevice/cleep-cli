@@ -120,7 +120,7 @@ class Ci():
         tests_requirements_path = os.path.join(self.SOURCE_DIR, module_name, 'tests', 'requirements.txt')
         if os.path.exists(tests_requirements_path):
             self.logger.info('Install tests python dependencies')
-            resp = console.command('python3 -m pip install -r "%s"' % tests_requirements_path)
+            resp = console.command('python3 -m pip install --trusted-host pypi.org -r "%s"' % tests_requirements_path, 900)
             self.logger.debug('Resp: %s' % resp)
             if resp['returncode'] != 0:
                 raise Exception('Error installing tests python dependencies (killed=%s): %s' % (resp['killed'], resp['stderr']))
