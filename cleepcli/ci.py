@@ -79,7 +79,7 @@ class Ci():
             }, 900)
             self.logger.debug('Resp: %s' % resp)
             if resp['returncode'] != 0:
-                raise Exception('Preinst.sh script failed (timeout=%s): %s' % (resp['killed'], resp['stderr']))
+                raise Exception('Preinst.sh script failed (killed=%s): %s' % (resp['killed'], resp['stderr']))
 
         # install source
         self.logger.info('Installing source files')
@@ -114,7 +114,16 @@ class Ci():
             }, 900)
             self.logger.debug('Resp: %s' % resp)
             if resp['returncode'] != 0:
-                raise Exception('Postinst.sh script failed (timeout=%s): %s' % (resp['killed'], resp['stderr']))
+                raise Exception('Postinst.sh script failed (killed=%s): %s' % (resp['killed'], resp['stderr']))
+
+        # install tests python requirements
+        tests_requirements_path = os.path.join(self.SOURCE_DIR, module_name, 'tests', 'requirements.txt')
+        if os.path.exists(tests_requirements_path):
+            self.logger.info('Install tests python dependencies')
+            resp = console.command('python3 -m pip install -r "%s"' % tests_requirements_path)
+            self.logger.debug('Resp: %s' % resp)
+            if resp['returncode'] != 0:
+                raise Exception('Error installing tests python dependencies (killed=%s): %s' % (resp['killed'], resp['stderr']))
 
         ## before installing module, sync sources to install local package, not remote one
         #os.system('cleep-cli modsync --module=%s' % module_name)
