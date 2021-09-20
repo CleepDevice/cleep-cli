@@ -197,7 +197,7 @@ cd "%(path)s"
         module_tests_path = self.__get_module_tests_path(module_name)
         cmd = """
 cd "%s"
-COVERAGE_FILE=%s coverage run --omit="/usr/local/lib/python*/*","test_*" --source="../backend" --concurrency=thread test_*.py
+COVERAGE_FILE=%s coverage run --omit="*/lib/python*/*","test_*" --source="../backend" --concurrency=thread test_*.py
         """ % (module_tests_path, coverage_file_path)
         self.logger.debug('Test cmd: %s' % cmd)
         self.__endless_command_running = True
@@ -346,7 +346,7 @@ COVERAGE_FILE=%s coverage run --omit="/usr/local/lib/python*/*","test_*" --sourc
             self.logger.info('  Testing %s [%s]' % (filepath, test_filepath))
             cmd = """
 cd "%(core_tests_path)s"
-coverage run --omit="/usr/local/lib/python*/*","*test_*.py" --concurrency=thread --parallel-mode %(test_file)s
+coverage run --omit="*/lib/python*/*","*test_*.py" --concurrency=thread --parallel-mode %(test_file)s
             """ % {
                 'core_tests_path': self.__get_core_tests_path(),
                 'test_file': test_filepath,
