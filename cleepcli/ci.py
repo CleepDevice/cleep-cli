@@ -165,7 +165,6 @@ class Ci():
                 if not module_updates:
                     raise Exception('No "%s" application info in updates' % module_name)
                 if module_updates['processing'] == False:
-                    # installation terminated, stop statement here
                     if module_updates['update']['failed']:
                         raise Exception('Application "%s" installation failed' % module_name)
                     break
@@ -185,14 +184,8 @@ class Ci():
             module_config = resp_json['modules'].get(module_name)
             if not module_config or not module_config.get('started'):
                 self.logger.error('Found application config: %s' % module_config)
-                resp = console.command('tail -n 100 /var/log/cleep.log')
-                self.logger.info('cleep.log dump:')
-                self.logger.info('\n'.join(resp['stdout']))
                 raise Exception('Application "%s" installation failed' % module_name)
             self.logger.info('Application and its dependencies installed successfully')
-
-        except Exception:
-            self.logger.exception('Error occured:')
 
         finally:
             if cleep_proc:
