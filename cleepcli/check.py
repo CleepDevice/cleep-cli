@@ -1357,7 +1357,7 @@ overgeneral-exceptions=Exception
             if os.path.basename(fullpath).lower() == 'changelog.md':
                 changelog_path = fullpath
         if not changelog_path:
-            raise Exception('Changelog "%s" does not exist. Please create it' % changelog_path)
+            raise Exception('Application changelog "changelog.md" does not exist. Please create it following https://keepachangelog.com/en/1.0.0/')
         self.logger.debug('Using changelog "%s"' % changelog_path)
 
         with open(changelog_path) as changelog_file:

@@ -127,12 +127,23 @@ class Ci():
             if resp['returncode'] != 0:
                 raise Exception('Error installing tests python dependencies (killed=%s): %s' % (resp['killed'], resp['stderr']))
 
-        # start cleep (non blocking)
         try:
+            # start cleep (non blocking)
             self.logger.info('Starting Cleep...')
             cleep_proc = subprocess.Popen(['cleep', '--noro'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             time.sleep(15)
             self.logger.info('Done')
+
+            # make sure to have latest modules.json version
+            self.logger.info('Updating applications list in Cleep')
+            resp = requests.post(self.CLEEP_COMMAND_URL, json={
+                'command': 'check_modules_updates',
+                'to': 'update',
+            })
+            resp.raise_for_status()
+            resp_json = resp.json()
+            if resp_json['error']:
+                raise Exception('Check_modules_updates command failed: %s' % resp_json)
 
             # install module in cleep (it will also install deps)
             self.logger.info('Installing "%s" application in Cleep' % module_name)

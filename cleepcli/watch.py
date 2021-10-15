@@ -115,7 +115,8 @@ class CleepHandler(FileSystemEventHandler):
     REJECTED_DIRS = [
         u'.git',
         u'.vscode',
-        u'.editor'
+        u'.editor',
+        u'backend/__pycache__',
     ]
     DEBOUNCE = 0.25 #seconds
 
@@ -185,8 +186,8 @@ class CleepHandler(FileSystemEventHandler):
 
         #filter by dir
         parts = event.src_path.split(os.path.sep)
-        for dir in self.REJECTED_DIRS:
-            if dir in parts:
+        for folder in self.REJECTED_DIRS:
+            if folder in parts:
                 self.logger.debug('Filtered: directory')
                 return True
 
