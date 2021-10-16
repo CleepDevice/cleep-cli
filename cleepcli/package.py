@@ -341,7 +341,6 @@ sha256sum $DEB > $SHA256
             }
 
         """
-        self.logger.info('Building module "%s" package...' % module_name)
         module_archive = None
 
         # collect data

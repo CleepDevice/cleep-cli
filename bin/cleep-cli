@@ -80,11 +80,13 @@ def coresync():
     """
     Synchronize core content between source and execution folders
     """
+    logging.info('Synchronizing core sources...')
     f = File()
     res = f.core_sync()
 
     if not res:
         sys.exit(1)
+    logger.info('Done')
 
 @core.command()
 @click.option('--coverage', is_flag=True, help='Display coverage report.')
@@ -257,11 +259,13 @@ def modsync(module):
     """
     Synchronize core content between source and execution folders
     """
+    logging.info('Synchronizing module "%s" sources...' % module)
     f = File()
     res = f.module_sync(module)
 
     if not res:
         sys.exit(1)
+    logger.info('Done')
 
 @mod.command()
 @click.option('--module', prompt='Module name', help='Module name.')
@@ -427,11 +431,15 @@ def modbuild(ctx, module, ci):
     Build application package
     """
     # sync module
-    ctx.invoke(modsync, module=module)
+    f = File()
+    res = f.module_sync(module)
+    if not res:
+        sys.exit(1)
 
     p = Package()
     try:
-        logging.info(p.build_module(module, ci))
+        res = p.build_module(module, ci)
+        logging.info(json.dumps(res))
     except Exception as e:
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             logging.exception('Build module "%s" failed:' % module)

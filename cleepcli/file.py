@@ -19,8 +19,6 @@ class File():
         """
         Synchronize core content between source and execution folders
         """
-        self.logger.info('Synchronizing core files...')
-
         # check vars
         if not config.CORE_DST:
             raise Exception('Cleep needs to be installed before using this command')
@@ -42,14 +40,12 @@ class File():
             self.logger.error('Error occured while sync core content: %s' % ('killed' if resp['killed'] else resp['stderr']))
             return False
 
-        self.logger.info('Done')
         return True
 
     def module_sync(self, module_name):
         """ 
         Copy specified module content to valid execution location
         """
-        self.logger.info('Synchronizing module "%s" files...' % module_name)
         if not os.path.exists(os.path.join(config.MODULES_SRC, module_name)):
             sys.exit('Module "%s" doesn\'t exist [%s]' % (module_name, os.path.join(config.MODULES_SRC, module_name)))
     
@@ -92,6 +88,5 @@ fi
             self.logger.error(u'Error occured while sync module content: %s' % (u'killed' if resp[u'killed'] else resp[u'stderr']))
             return False
 
-        self.logger.info('Done')
         return True
 
