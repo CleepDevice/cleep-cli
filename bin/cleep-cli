@@ -86,7 +86,7 @@ def coresync():
 
     if not res:
         sys.exit(1)
-    logger.info('Done')
+    logging.info('Done')
 
 @core.command()
 @click.option('--coverage', is_flag=True, help='Display coverage report.')
@@ -177,7 +177,7 @@ def memprof(interval):
         import psutil
         import matplotlib
     except:
-        logger.error('Profiling libraries are not installed by cleep-cli. Please run following command: "python3 -m pip install memory-profiler>=0.55.0,psutil>=5.4.6,matplotlib>=2.2.4"')
+        logging.error('Profiling libraries are not installed by cleep-cli. Please run following command: "python3 -m pip install memory-profiler>=0.55.0,psutil>=5.4.6,matplotlib>=2.2.4"')
         sys.exit(1)
 
     try:
@@ -265,7 +265,7 @@ def modsync(module):
 
     if not res:
         sys.exit(1)
-    logger.info('Done')
+    logging.info('Done')
 
 @mod.command()
 @click.option('--module', prompt='Module name', help='Module name.')
