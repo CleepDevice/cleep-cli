@@ -23,7 +23,8 @@ class Module():
     },
     \\"config\\": {
         \\"js\\": [\\"%(MODULE_NAME)s.config.js\\"],
-        \\"html\\": [\\"%(MODULE_NAME)s.config.html\\"]
+        \\"html\\": [\\"%(MODULE_NAME)s.config.html\\"],
+        \\"css\\": []
     }
 }
     """
@@ -40,24 +41,28 @@ function(\$rootScope, rpcService) {
     var self = this;
 
     /**
-     * Call backend function
+     * Call backend execute_command command
      */
-    self.callAction = function() {
-        return rpcService.sendCommand('call_action', '%(MODULE_NAME)s');
+    self.executeCommand = function() {
+        return rpcService.sendCommand('execute_command', '%(MODULE_NAME)s');
     };
 
-    self.setValue = function(value) {
-        return rpcService.sendCommand('set_value', '%(MODULE_NAME)s', {
+    /**
+     * Call backend configure_value command
+     */
+    self.configureValue = function(value) {
+        return rpcService.sendCommand('configure_value', '%(MODULE_NAME)s', {
             'value': value,
         });
     };
 
     /**
-     * Catch x.x.x events
+     * Catch an.app.event event
      */
-    /*\$rootScope.\$on('x.x.x', function(event, uuid, params) {
+    /*\$rootScope.\$on('an.app.event', function(event, uuid, params) {
+        console.log('Event an.app.event received with parameters:', parameters);
     });*/
-}])"""
+}]);"""
     ANGULAR_CONTROLLER_SKEL = """/**
  * %(MODULE_NAME_CAPITALIZED)s config component
  * Handle %(MODULE_NAME)s application configuration
@@ -65,12 +70,12 @@ function(\$rootScope, rpcService) {
  */
 angular
 .module('Cleep')
-.directive('%(MODULE_NAME)sConfigComponent', ['\$rootScope', 'cleepService', '%(MODULE_NAME)sService',
-function(\$rootScope, cleepService, %(MODULE_NAME)sService) {
+.directive('%(MODULE_NAME)sConfigComponent', ['\$rootScope', 'cleepService', 'toastService', '%(MODULE_NAME)sService',
+function(\$rootScope, cleepService, toastService, %(MODULE_NAME)sService) {
 
     var %(MODULE_NAME)sConfigController = function() {
         var self = this;
-        // use this variable in all your application (controller and view)
+        // use this config variable in all your app (controller and view) to always have up-to-date config values
         self.config = {};
         self.message = 'message';
         self.checkbox = true;
@@ -96,22 +101,39 @@ function(\$rootScope, cleepService, %(MODULE_NAME)sService) {
         });
 
         self.setMessage = function() {
-            %(MODULE_NAME)sService.setValue(self.message)
+            %(MODULE_NAME)sService.configureValue(self.message)
+                .then(function(response) {
+                    console.log('Response:', response);
+                    if (response.error) {
+                        toastService.error('Command failed: ' + response.message);
+                        return;
+                    }
+                    toastService.success('Command succeed');
+                })
                 .finally(function() {
                     cleepService.reloadModuleConfig('%(MODULE_NAME)s');
                 });
         };
 
-        self.callAction = function() {
-            %(MODULE_NAME)sService.callAction();
+        self.executeCommand = function() {
+            %(MODULE_NAME)sService.executeCommand()
+                .finally(function() {
+                    cleepService.reloadModuleConfig('%(MODULE_NAME)s');
+                });
         };
 
         self.updateCheckbox = function() {
-            %(MODULE_NAME)sService.setValue(self.checkbox);
+            %(MODULE_NAME)sService.configureValue(self.checkbox)
+                .finally(function() {
+                    cleepService.reloadModuleConfig('%(MODULE_NAME)s');
+                });
         };
 
         self.setSlider = function() {
-            %(MODULE_NAME)sService.setValue(self.slider);
+            %(MODULE_NAME)sService.configureValue(self.slider)
+                .finally(function() {
+                    cleepService.reloadModuleConfig('%(MODULE_NAME)s');
+                });
         };
     };
 
@@ -122,25 +144,25 @@ function(\$rootScope, cleepService, %(MODULE_NAME)sService) {
         controller: %(MODULE_NAME)sConfigController,
         controllerAs: '%(MODULE_NAME)sCtl',
     };
-}])"""
+}]);"""
     ANGULAR_CONTROLLER_TEMPLATE_SKEL = """<div layout=\\"column\\" layout-padding ng-cloak>
 
     <md-list ng-cloak>
 
         <!-- A configuration section. It is a good way to make separation between different kind of parameters -->
-        <md-subheader class="md-no-sticky">A section header</md-subheader>
+        <md-subheader class=\\"md-no-sticky\\">A section header</md-subheader>
 
         <!-- list item with single line description -->
         <md-list-item>
             <!-- generic cleep icon, use it as default line icon -->
-            <md-icon md-svg-icon="chevron-right"></md-icon>
+            <md-icon md-svg-icon=\\"chevron-right\\"></md-icon>
             <p>One line description</p>
         </md-list-item>
 
         <!-- list item with double line description -->
-        <md-list-item class="md-2-line">
-            <md-icon md-svg-icon="chevron-right"></md-icon>
-            <div class="md-list-item-text">
+        <md-list-item class=\\"md-2-line\\">
+            <md-icon md-svg-icon=\\"chevron-right\\"></md-icon>
+            <div class=\\"md-list-item-text\\">
                 <h3>Two line description</h3>
                 <p>Sub line uses smallest font</p>
             </div>
@@ -148,53 +170,53 @@ function(\$rootScope, cleepService, %(MODULE_NAME)sService) {
 
         <!-- list item with button -->
         <md-list-item>
-            <md-icon md-svg-icon="chevron-right"></md-icon>
-            <p>Checkbox</p>
-            <md-button ng-click="%(MODULE_NAME)sCtl.callAction()" class="md-raised md-primary md-secondary">
-                <md-icon md-svg-icon="cog"></md-icon>
+            <md-icon md-svg-icon=\\"chevron-right\\"></md-icon>
+            <p>Button</p>
+            <md-button ng-click=\\"%(MODULE_NAME)sCtl.executeCommand()\\" class=\\"md-raised md-primary md-secondary\\">
+                <md-icon md-svg-icon=\\"cog\\"></md-icon>
                 Button label
             </md-button>
         </md-list-item>
 
         <!-- list item with text input -->
         <md-list-item>
-            <md-icon md-svg-icon="chevron-right"></md-icon>
+            <md-icon md-svg-icon=\\"chevron-right\\"></md-icon>
             <p>Text input</p>
-            <md-input-container md-no-float class="md-secondary no-margin" layout="row" layout-align="start center" layout-padding>
-                <div class="no-md-error">
-                    <input ng-model="%(MODULE_NAME)sCtl.message" placeholder="message" aria-label="Message" class="no-margin">
+            <md-input-container md-no-float class=\\"md-secondary no-margin\\" layout=\\"row\\" layout-align=\\"start center\\" layout-padding>
+                <div class=\\"no-md-error\\">
+                    <input ng-model=\\"%(MODULE_NAME)sCtl.message\\" placeholder=\\"message\\" aria-label=\\"Message\\" class=\\"no-margin\\">
                 </div>
-                <md-button ng-click="%(MODULE_NAME)sCtl.setMessage()" class="md-raised md-primary">
-                    <md-icon md-svg-icon="pencil"></md-icon>
+                <md-button ng-click=\\"%(MODULE_NAME)sCtl.setMessage()\\" class=\\"md-raised md-primary\\">
+                    <md-icon md-svg-icon=\\"pencil\\"></md-icon>
                 </md-button>
             </md-input-container>
         </md-list-item>
 
         <!-- list item with checkbox -->
         <md-list-item>
-            <md-icon md-svg-icon="chevron-right"></md-icon>
+            <md-icon md-svg-icon=\\"chevron-right\\"></md-icon>
             <p>Checkbox</p>
             <md-checkbox
-                class="md-secondary"
-                ng-model="%(MODULE_NAME)sCtl.checkbox"
-                ng-change="%(MODULE_NAME)sCtl.updateCheckbox()"
-                aria-label="Checkbox"
+                class=\\"md-secondary\\"
+                ng-model=\\"%(MODULE_NAME)sCtl.checkbox\\"
+                ng-change=\\"%(MODULE_NAME)sCtl.updateCheckbox()\\"
+                aria-label=\\"Checkbox\\"
             >
             </md-checkbox>
         </md-list-item>
 
         <!-- list item with slider -->
         <md-list-item>
-            <md-icon md-svg-icon="chevron-right"></md-icon>
+            <md-icon md-svg-icon=\\"chevron-right\\"></md-icon>
             <p>Slider</p>
-            <div class="md-secondary">
+            <div class=\\"md-secondary\\">
                 <md-slider
-                    ng-model="%(MODULE_NAME)sCtl.slider"
-                    ng-model-options="{debounce: 1000}"
-                    ng-change="%(MODULE_NAME)sCtl.setSlider()"
-                    min="0"
-                    max="100"
-                    aria-label="Slider"
+                    ng-model=\\"%(MODULE_NAME)sCtl.slider\\"
+                    ng-model-options=\\"{debounce: 1000}\\"
+                    ng-change=\\"%(MODULE_NAME)sCtl.setSlider()\\"
+                    min=\\"0\\"
+                    max=\\"100\\"
+                    aria-label=\\"Slider\\"
                     md-discrete
                 >
                 </md-slider>
@@ -222,8 +244,7 @@ class %(MODULE_NAME_CAPITALIZED)s(CleepModule):
     MODULE_LONGDESCRIPTION = 'TODO'
     MODULE_TAGS = []
     MODULE_CATEGORY = 'TODO'
-    MODULE_COUNTRY = None
-    MODULE_URLINFO = None
+    MODULE_URLINFO = 'https://www.google.com'
     MODULE_URLHELP = None
     MODULE_URLSITE = None
     MODULE_URLBUGS = None
@@ -245,7 +266,7 @@ class %(MODULE_NAME_CAPITALIZED)s(CleepModule):
         \\"\\"\\"
         Configure module.
         Use this function to configure your variables and local stuff that is not blocking.
-        At this time other modules are not started and all your command requests will fail.
+        At this time other applications are not started and all your command requests will fail.
         \\"\\"\\"
         pass
 
@@ -253,7 +274,7 @@ class %(MODULE_NAME_CAPITALIZED)s(CleepModule):
         \\"\\"\\"
         Start module.
         Use this function to start your tasks.
-        At this time all modules are started and should respond to your command requests.
+        At this time all applications are started and should respond to your command requests.
         \\"\\"\\"
         pass
 
@@ -271,31 +292,44 @@ class %(MODULE_NAME_CAPITALIZED)s(CleepModule):
         Args:
             event (MessageRequest): event data
         \\"\\"\\"
-        # execute here actions when you receive an event:
+        # execute here actions when you receive a specific event:
         #  - on time event => cron task
         #  - on alert event => send email or push message
         #  - ...
         pass
 
-    def call_action(self):
+    def execute_command(self):
         \\"\\"\\"
-        This is a simple function call on frontend event
+        This is a simple command execution
 
         Returns:
             bool: returns always True
         \\"\\"\\"
-        self.logger.info('call_action called')
+        self.logger.info('execute_command called')
         return True
 
-    def set_value(self):
+    def configure_value(self, value):
         \\"\\"\\"
         This function is an example of how to pass value from frontend to backend
 
         Args:
             value (any): a value
         \\"\\"\\"
-        self.logger.info('set_value called with param value=%s' % value)
-    """
+        self.logger.info('set_value called with param value=%%s' %% value)
+
+    def _unexposed_command(self):
+        \\"\\"\\"
+        A function that starts with _ if not exposed to outside. But it can be used inherited class
+        \\"\\"\\"
+        self.logger.info('Unexposed function')
+
+    def __another_unexposed_command(self):
+        \\"\\"\\"
+        A function that starts with __ if not exposed to outside. This kind of function is also declared as private in Python
+        and cannot be used elsewhere than in this class itself.
+        \\"\\"\\"
+        self.logger.info('Another unexposed function')
+"""
     TEST_DEFAULT = """#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import unittest
@@ -476,7 +510,7 @@ a:hover.icon.icon-home {
 /bin/echo "%(DOCS_INDEX_RST)s" > %(MODULE_DIR)s/docs/index.rst
 /bin/mkdir -p "%(MODULE_DIR)s/docs/_static"
 /bin/echo "%(DOCS_CLEEP_CSS)s" > %(MODULE_DIR)s/docs/_static/cleep.css
-        """ % {
+""" % {
             'MODULE_DIR': path,
             'MODULE_NAME': module_name,
             'DESC': templates['DESC'],
@@ -490,7 +524,7 @@ a:hover.icon.icon-home {
             'DOCS_CLEEP_CSS': templates['DOCS_CLEEP_CSS'],
         }, 10)
         if resp['error'] or resp['killed']:
-            self.logger.error('Error occured while pulling repository: %s' % ('killed' if resp['killed'] else resp['stderr']))
+            self.logger.error('Error occured while creating application: %s' % ('killed' if resp['killed'] else resp['stderr']))
             shutil.rmtree(path)
             return False
         
