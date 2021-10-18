@@ -51,7 +51,7 @@ The cli clone repository on `/root/cleep` folder. Modules are in `/root/cleep/mo
 So if you develop on Cleep core, your editor must sync to `/root/cleep` remote directory while if you're developping only on a module your editor must sync to `/root/cleep/modules/<your module name>` remote directory.
 
 ### Visual studio code
-Install Visual studio code [sftp](https://marketplace.visualstudio.com/items?itemName=liximomo.sftp) plugin and configure it to access your raspberry pi:
+Install Visual studio code [sftp](https://marketplace.visualstudio.com/items?itemName=Natizyskunk.sftp) plugin and configure it to access your raspberry pi:
 * Open VSCode command palette pressing CTRL-SHIFT-P
 * Type "sftp: config"
 * Fill opened file with:
