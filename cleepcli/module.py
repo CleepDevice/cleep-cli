@@ -339,24 +339,56 @@ sys.path.append('../')
 from backend.%(MODULE_NAME)s import %(MODULE_NAME_CAPITALIZED)s
 from cleep.exception import InvalidParameter, MissingParameter, CommandError, Unauthorized
 from cleep.libs.tests import session
+from mock import Mock, patch
 
+# You can launch all your tests manually using this command
+# python3 -m unittest test_%(MODULE_NAME)s.Test%(MODULE_NAME_CAPITALIZED)s
+# or a specific test with command
+# python3 -m unittest test_%(MODULE_NAME)s.Test%(MODULE_NAME_CAPITALIZED)s.test__on_configure
+# you can get tests coverage with command
+# coverage run --omit="*/lib/python*/*","test_*" --concurrency=thread test_%(MODULE_NAME)s.py; coverage report -m -i
+# or you can simply use developer application that allows you to perform all tests and coverage directly from web interface
 class Test%(MODULE_NAME_CAPITALIZED)s(unittest.TestCase):
 
     def setUp(self):
-        self.session = session.Session(logging.CRITICAL)
-        # next line instanciates your module, overwriting all useful stuff to isolate your module for tests
-        self.module = self.session.setup(%(MODULE_NAME_CAPITALIZED)s)
+        # change here logging.CRITICAL to logging.DEBUG to enable logging during tests writings
+        logging.basicConfig(level=logging.CRITICAL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
+        self.session = session.TestSession(self)
 
     def tearDown(self):
         #clean session
         self.session.clean()
 
+    def init(self, start=True):
+        \\"\\"\\"
+        Call this function at beginning of every test case. By default it starts your app, but if you specify start=False,
+        the application must be started manually which is useful in some cases like testing _on_configure app function.
+        \\"\\"\\"
+        # next line instanciates your module, overwriting all useful stuff to isolate your module for tests
+        self.module = self.session.setup(%(MODULE_NAME_CAPITALIZED)s)
+        if start:
+            self.session.start_module(self.module)
+
     # write your tests here defining functions starting with \\"test_\\"
     # see official documentation https://docs.python.org/2.7/library/unittest.html
-    # def test_my_test(self):
-    #   ...
+    # def test__on_configure(self):
+    #   self.init(start=False)
+    #   # create your mocks...
+    #
+    #   self.module._on_configure()
+    #
+    #   # check your mocks
 
-#do not remove code below, otherwise test won't run
+    # write another test. A test case always starts with 'test_'
+    # def test_my_function(self):
+    #   self.init()
+    #   # create your mocks
+    #
+    #   result = self.module.my_function()
+    #
+    #   # checks your mock or function result
+
+# do not remove code below, otherwise test won't run
 if __name__ == '__main__':
     unittest.main()
     """
