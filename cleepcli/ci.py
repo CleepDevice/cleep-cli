@@ -116,7 +116,7 @@ class Ci():
             }, 900)
             self.logger.debug('Resp: %s' % resp)
             if resp['returncode'] != 0:
-                raise Exception('Postinst.sh script failed (killed=%s): %s' % (resp['killed'], resp['stderr']))
+                raise Exception('Postinst.sh script failed (killed=%s): %s || %s' % (resp['killed'], resp['stdout'], resp['stderr']))
 
         # install tests python requirements
         tests_requirements_path = os.path.join(self.SOURCE_DIR, module_name, 'tests', 'requirements.txt')
