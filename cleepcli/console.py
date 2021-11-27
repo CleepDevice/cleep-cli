@@ -303,6 +303,13 @@ class Console():
 
         """
         self.logger.trace('Launch command "%s"' % command)
+        result = {
+            'returncode': 0,
+            'error': False,
+            'killed': False,
+            'stdout': [],
+            'stderr': []
+        }
         # check params
         if timeout is None or timeout <= 0.0:
             raise Exception('Timeout is mandatory and must be greater than 0')
@@ -325,6 +332,13 @@ class Console():
         killed = False
         return_code = None
         while not done:
+            # read stds to avoid deadlocks
+            (stdout, stderr) = proc.communicate()
+            if stdout:
+                result['stdout'] += self.__process_lines(stdout.split(b'\n'))
+            if stderr:
+                result['stderr'] += self.__process_lines(stderr.split(b'\n'))
+
             # check if command has finished
             proc.poll()
             if proc.returncode is not None:
@@ -354,17 +368,9 @@ class Console():
             time.sleep(0.125)
 
         # prepare result
-        result = {
-            'returncode': return_code,
-            'error': False,
-            'killed': killed,
-            'stdout': [],
-            'stderr': []
-        }
+        result['returncode'] = return_code
         if not killed:
-            result['stderr'] = self.__process_lines(proc.stderr.readlines())
             result['error'] = len(result['stderr']) > 0
-            result['stdout'] = self.__process_lines(proc.stdout.readlines())
         self.logger.trace('Result: %s' % result)
 
         # make sure all stds are closed
