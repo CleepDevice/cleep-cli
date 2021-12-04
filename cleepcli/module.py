@@ -14,6 +14,24 @@ class Module():
     Module class
     """
 
+    GIT_IGNORE = """**/*.pyc
+**/.coverage
+**/.coveralls.yml
+docs/*.zip
+docs/*.txt
+docs/*.xml
+docs/source
+docs/_build
+.vscode
+**/*.swp
+"""
+    CHANGELOG = """# Changelog
+
+## [UNRELEASED] - YYYY-MM-DD
+### Added
+- First release
+
+    """
     DESC_SKEL = """{
     \\"icon\\": \\"help-circle-outline\\",
     \\"global\\": {
@@ -341,27 +359,27 @@ from cleep.exception import InvalidParameter, MissingParameter, CommandError, Un
 from cleep.libs.tests import session
 from mock import Mock, patch
 
-# You can launch all your tests manually using this command
-# python3 -m unittest test_%(MODULE_NAME)s.Test%(MODULE_NAME_CAPITALIZED)s
-# or a specific test with command
-# python3 -m unittest test_%(MODULE_NAME)s.Test%(MODULE_NAME_CAPITALIZED)s.test__on_configure
-# you can get tests coverage with command
-# coverage run --omit="*/lib/python*/*","test_*" --concurrency=thread test_%(MODULE_NAME)s.py; coverage report -m -i
+# You can launch all your tests manually using this command:
+#   python3 -m unittest test_%(MODULE_NAME)s.Test%(MODULE_NAME_CAPITALIZED)s
+# or a specific test with command:
+#   python3 -m unittest test_%(MODULE_NAME)s.Test%(MODULE_NAME_CAPITALIZED)s.test__on_configure
+# You can get tests coverage with command:
+#   coverage run --omit="*/lib/python*/*","test_*" --concurrency=thread test_%(MODULE_NAME)s.py; coverage report -m -i
 # or you can simply use developer application that allows you to perform all tests and coverage directly from web interface
 class Test%(MODULE_NAME_CAPITALIZED)s(unittest.TestCase):
 
     def setUp(self):
         # change here logging.CRITICAL to logging.DEBUG to enable logging during tests writings
-        logging.basicConfig(level=logging.CRITICAL, format=u'%(asctime)s %(name)s:%(lineno)d %(levelname)s : %(message)s')
+        logging.basicConfig(level=logging.FATAL, format='%%(asctime)s %%(name)s:%%(lineno)d %%(levelname)s : %%(message)s')
         self.session = session.TestSession(self)
 
     def tearDown(self):
-        #clean session
+        # clean session
         self.session.clean()
 
     def init(self, start=True):
         \\"\\"\\"
-        Call this function at beginning of every test case. By default it starts your app, but if you specify start=False,
+        Call this function at beginning of every test cases. By default it starts your app, but if you specify start=False,
         the application must be started manually which is useful in some cases like testing _on_configure app function.
         \\"\\"\\"
         # next line instanciates your module, overwriting all useful stuff to isolate your module for tests
@@ -369,8 +387,8 @@ class Test%(MODULE_NAME_CAPITALIZED)s(unittest.TestCase):
         if start:
             self.session.start_module(self.module)
 
-    # write your tests here defining functions starting with \\"test_\\"
-    # see official documentation https://docs.python.org/2.7/library/unittest.html
+    # Write your tests here defining functions starting with \\"test_\\"
+    # See official documentation https://docs.python.org/3/library/unittest.html
     # def test__on_configure(self):
     #   self.init(start=False)
     #   # create your mocks...
@@ -379,14 +397,14 @@ class Test%(MODULE_NAME_CAPITALIZED)s(unittest.TestCase):
     #
     #   # check your mocks
 
-    # write another test. A test case always starts with 'test_'
+    # Write another test. A test case always starts with \\"test_\\"
     # def test_my_function(self):
     #   self.init()
     #   # create your mocks
     #
     #   result = self.module.my_function()
     #
-    #   # checks your mock or function result
+    #   # checks your mocks or function result
 
 # do not remove code below, otherwise test won't run
 if __name__ == '__main__':
@@ -522,6 +540,8 @@ a:hover.icon.icon-home {
             'DOCS_CONF_PY': self.DOCS_CONF_PY % {'MODULE_NAME': module_name, 'MODULE_NAME_CAPITALIZED': module_name.capitalize()},
             'DOCS_INDEX_RST': self.DOCS_INDEX_RST % {'MODULE_NAME': module_name, 'MODULE_NAME_CAPITALIZED': module_name.capitalize(), 'TITLE': title, 'LINE': '='*len(title)},
             'DOCS_CLEEP_CSS': self.DOCS_CLEEP_CSS,
+            'CHANGELOG': self.CHANGELOG,
+            'GIT_IGNORE': self.GIT_IGNORE,
         }
 
         c = Console()
@@ -542,6 +562,8 @@ a:hover.icon.icon-home {
 /bin/echo "%(DOCS_INDEX_RST)s" > %(MODULE_DIR)s/docs/index.rst
 /bin/mkdir -p "%(MODULE_DIR)s/docs/_static"
 /bin/echo "%(DOCS_CLEEP_CSS)s" > %(MODULE_DIR)s/docs/_static/cleep.css
+/bin/echo "%(CHANGELOG)s" > %(MODULE_DIR)s/CHANGELOG.md
+/bin/echo "%(GIT_IGNORE)s" > %(MODULE_DIR)s/.gitignore
 """ % {
             'MODULE_DIR': path,
             'MODULE_NAME': module_name,
@@ -554,6 +576,8 @@ a:hover.icon.icon-home {
             'DOCS_CONF_PY': templates['DOCS_CONF_PY'],
             'DOCS_INDEX_RST': templates['DOCS_INDEX_RST'],
             'DOCS_CLEEP_CSS': templates['DOCS_CLEEP_CSS'],
+            'CHANGELOG': templates['CHANGELOG'],
+            'GIT_IGNORE': templates['GIT_IGNORE'],
         }, 10)
         if resp['error'] or resp['killed']:
             self.logger.error('Error occured while creating application: %s' % ('killed' if resp['killed'] else resp['stderr']))
