@@ -503,8 +503,8 @@ def modcheckbackend(module, author, as_json):
             logging.info(json.dumps(res['metadata'], sort_keys=True, indent=4))
             logging.info('Files:')
             logging.info(json.dumps(res['files'], sort_keys=True, indent=4))
-        if len(res['errors']) > 0:
-            sys.exit(1)
+            if len(res['errors']) > 0:
+                sys.exit(1)
     except Exception as e:
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             logging.exception('Check backend failed:')
@@ -534,8 +534,8 @@ def modcheckfrontend(module, as_json):
             logging.info(json.dumps(res['files'], sort_keys=True, indent=4))
             logging.info('Metadata:')
             logging.info(json.dumps({'icon': res['icon']}, sort_keys=True, indent=4))
-        if len(res['errors']) > 0:
-            sys.exit(1)
+            if len(res['errors']) > 0:
+                sys.exit(1)
     except Exception as e:
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             logging.exception('Check frontend failed:')
@@ -564,8 +564,8 @@ def modcheckscripts(module, as_json):
                 logging.info('  - %s' % warn)
             logging.info('Files:')
             logging.info(json.dumps(res['files'], sort_keys=True, indent=4))
-        if len(res['errors']) > 0:
-            sys.exit(1)
+            if len(res['errors']) > 0:
+                sys.exit(1)
     except Exception as e:
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             logging.exception('Check scripts failed:')
@@ -593,8 +593,8 @@ def modchecktests(module, as_json):
                 logging.info('  - %s : %s' % (warn['code'], warn['msg']))
             logging.info('Files:')
             logging.info(json.dumps(res['files'], sort_keys=True, indent=4))
-        if len(res['errors']) > 0:
-            sys.exit(1)
+            if len(res['errors']) > 0:
+                sys.exit(1)
     except Exception as e:
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             logging.exception('Check tests failed:')
@@ -623,11 +623,12 @@ def modcheckcode(module, threshold, as_json, rewrite_pylintrc):
             for warn in res['warnings']:
                 logging.info('  - %s : %s' % (warn['code'], warn['msg']))
             logging.info('Score: %s' % res['score'])
-        if len(res['errors']) > 0:
-            sys.exit(1)
-        if threshold > 0 and res['score'] < threshold:
-            logging.info('Code quality does not respect requirements (>=%s)' % threshold)
-            sys.exit(1)
+
+            if len(res['errors']) > 0:
+                sys.exit(1)
+            if threshold > 0 and res['score'] < threshold:
+                logging.info('Code quality does not respect requirements (>=%s)' % threshold)
+                sys.exit(1)
     except Exception as e:
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             logging.exception('Check code failed:')
