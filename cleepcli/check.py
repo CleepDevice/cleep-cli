@@ -1229,9 +1229,6 @@ overgeneral-exceptions=Exception
                 continue
             if '__pycache__' in fullpath:
                 continue
-            if filename.startswith('test_') and filename != 'test_%s.py' % module_name:
-                out['warnings'].append('Only one test file "test_%s.py" is allowed for now. File "%s" in tests folder won\'t be packaged.' % (module_name, filename))
-                continue
 
             # store file infos
             out['files'].append({
