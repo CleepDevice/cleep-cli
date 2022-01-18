@@ -250,6 +250,7 @@ function(\$rootScope, cleepService, toastService, %(MODULE_NAME)sService) {
 
 from cleep.exception import MissingParameter, InvalidParameter, CommandError
 from cleep.core import CleepModule
+from cleep.common import CATEGORIES
 
 class %(MODULE_NAME_CAPITALIZED)s(CleepModule):
     \\"\\"\\"
@@ -261,7 +262,7 @@ class %(MODULE_NAME_CAPITALIZED)s(CleepModule):
     MODULE_DESCRIPTION = 'TODO'
     MODULE_LONGDESCRIPTION = 'TODO'
     MODULE_TAGS = []
-    MODULE_CATEGORY = 'TODO'
+    MODULE_CATEGORY = CATEGORIES.APPLICATION
     MODULE_URLINFO = 'https://www.google.com'
     MODULE_URLHELP = None
     MODULE_URLSITE = None
