@@ -197,7 +197,7 @@ cd "%(path)s"
         module_tests_path = self.__get_module_tests_path(module_name)
         cmd = """
 cd "%s"
-COVERAGE_FILE=%s coverage run --omit="*/lib/python*/*","test_*" --source="../backend" --concurrency=thread test_*.py
+COVERAGE_FILE=%s coverage run --omit="*/lib/python*/*","test_*" --source="../backend" --concurrency=thread -m unittest discover
         """ % (module_tests_path, coverage_file_path)
         self.logger.debug('Test cmd: %s' % cmd)
         self.__endless_command_running = True
