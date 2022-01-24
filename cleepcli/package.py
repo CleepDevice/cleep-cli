@@ -10,13 +10,12 @@ from . import config
 from .check import Check
 from .test import Test
 from github import Github
-import urllib3
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 from zipfile import ZipFile, ZIP_DEFLATED
 from tempfile import NamedTemporaryFile
 import json
 import copy
 import hashlib
+import requests
 
 class Package():
     """
@@ -37,7 +36,6 @@ class Package():
         self.logger = logging.getLogger(self.__class__.__name__)
         self.__endless_command_running = False
         self.__endless_command_return_code = 0
-        self.http = urllib3.PoolManager(num_pools=1)
 
     def __compute_sha256(self, fullpath):
         """
@@ -184,10 +182,9 @@ sha256sum $DEB > $SHA256
         try:
             headers = {
                 'Authorization': 'token %s' % token,
-                'USer-Agent': 'PyGithub/Python',
+                'User-Agent': 'PyGithub/Python',
             }
-            resp = self.http.request(
-                'DELETE',
+            resp = requests.delete(
                 'https://api.github.com/repos/%s/%s/git/refs/tags/%s' % (self.GITHUB_USER, self.GITHUB_REPO, tag_name),
                 headers=headers,
             )

@@ -6,7 +6,7 @@ import os
 import logging
 from . import config
 from .console import Console
-import urllib3
+import requests
 import json
 
 class CleepApi():
@@ -18,8 +18,6 @@ class CleepApi():
 
     def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
-        logging.getLogger("urllib3").setLevel(logging.ERROR)
-        self.http = urllib3.PoolManager()
 
     def restart_backend(self):
         """
@@ -61,9 +59,8 @@ class CleepApi():
         resp_data = None
         try:
             data_json = json.dumps(data).encode('utf-8')
-            resp = self.http.request('POST', url, body=data_json, headers={'Content-Type': 'application/json'})
-            resp_data = json.loads(resp.data.decode('utf-8'))
-            self.logger.debug('Response[%s]: %s' % (resp.status, resp_data))
+            resp = requests.post(url, json=data_json)
+            self.logger.debug('Response[%s]: %s' % (resp.status_code, resp.json()))
         except Exception as e:
             if self.logger.getEffectiveLevel()==logging.DEBUG:
                 self.logger.exception('Error occured while requesting "%s"' % url)
