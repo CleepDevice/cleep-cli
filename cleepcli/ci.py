@@ -19,7 +19,6 @@ class Ci():
     """
 
     EXTRACT_DIR = '/root/extract'
-    SOURCE_DIR = '/root/cleep/modules'
     CLEEP_COMMAND_URL = 'http://127.0.0.1/command'
     CLEEP_CONFIG_URL = 'http://127.0.0.1/config'
 
@@ -84,29 +83,29 @@ class Ci():
 
         # install sources
         self.logger.info('Installing source files')
-        os.makedirs(os.path.join(self.SOURCE_DIR, module_name), exist_ok=True)
+        os.makedirs(os.path.join(config.MODULES_SRC, module_name), exist_ok=True)
         for filepath in glob.glob(self.EXTRACT_DIR + '/**/*.*', recursive=True):
             if filepath.startswith(os.path.join(self.EXTRACT_DIR, 'frontend')):
-                dest = filepath.replace(os.path.join(self.EXTRACT_DIR, 'frontend/js/modules/%s' % module_name), os.path.join(self.SOURCE_DIR, module_name, 'frontend'))
+                dest = filepath.replace(os.path.join(self.EXTRACT_DIR, 'frontend/js/modules/%s' % module_name), os.path.join(config.MODULES_SRC, module_name, 'frontend'))
                 self.logger.debug(' -> frontend: %s' % dest)
             elif filepath.startswith(os.path.join(self.EXTRACT_DIR, 'backend')):
-                dest = filepath.replace(os.path.join(self.EXTRACT_DIR, 'backend/modules/%s' % module_name), os.path.join(self.SOURCE_DIR, module_name, 'backend'))
+                dest = filepath.replace(os.path.join(self.EXTRACT_DIR, 'backend/modules/%s' % module_name), os.path.join(config.MODULES_SRC, module_name, 'backend'))
                 self.logger.debug(' -> backend: %s' % dest)
             elif filepath.startswith(os.path.join(self.EXTRACT_DIR, 'tests')):
-                dest = filepath.replace(os.path.join(self.EXTRACT_DIR, 'tests'), os.path.join(self.SOURCE_DIR, module_name, 'tests'))
+                dest = filepath.replace(os.path.join(self.EXTRACT_DIR, 'tests'), os.path.join(config.MODULES_SRC, module_name, 'tests'))
                 self.logger.debug(' -> tests: %s' % dest)
             elif filepath.startswith(os.path.join(self.EXTRACT_DIR, 'scripts')):
-                dest = filepath.replace(os.path.join(self.EXTRACT_DIR, 'scripts'), os.path.join(self.SOURCE_DIR, module_name, 'scripts'))
+                dest = filepath.replace(os.path.join(self.EXTRACT_DIR, 'scripts'), os.path.join(config.MODULES_SRC, module_name, 'scripts'))
                 self.logger.debug(' -> scripts: %s' % dest)
             else:
-                dest = filepath.replace(self.EXTRACT_DIR, os.path.join(self.SOURCE_DIR, module_name))
+                dest = filepath.replace(self.EXTRACT_DIR, os.path.join(config.MODULES_SRC, module_name))
                 self.logger.debug(' -> other: %s' % dest)
             os.makedirs(os.path.dirname(dest), exist_ok=True)
             os.rename(filepath, dest)
         os.system('cleep-cli modsync --module=%s' % module_name)
 
         # execute postinst script
-        postinst_path = os.path.join(self.SOURCE_DIR, module_name, 'scripts', 'postinst.sh')
+        postinst_path = os.path.join(config.MODULES_SRC, module_name, 'scripts', 'postinst.sh')
         self.logger.debug('postinst.sh path "%s" exists? %s' % (postinst_path, os.path.exists(postinst_path)))
         if os.path.exists(postinst_path):
             self.logger.info('Executing "%s" postinst script' % postinst_path)
@@ -119,7 +118,7 @@ class Ci():
                 raise Exception('Postinst.sh script failed (killed=%s): %s || %s' % (resp['killed'], resp['stdout'], resp['stderr']))
 
         # install tests python requirements
-        tests_requirements_path = os.path.join(self.SOURCE_DIR, module_name, 'tests', 'requirements.txt')
+        tests_requirements_path = os.path.join(config.MODULES_SRC, module_name, 'tests', 'requirements.txt')
         if os.path.exists(tests_requirements_path):
             self.logger.info('Install tests python dependencies')
             resp = console.command('python3 -m pip install --trusted-host pypi.org -r "%s"' % tests_requirements_path, 900)

@@ -21,7 +21,7 @@ MODULES_REPO_URL = {
 PRIVATE_REPO = True
 REPO_PRIVATE_URL = 'https://$GIT_USERNAME@bitbucket.org/tangb/cleep.git'
 REPO_PUBLIC_URL = 'https://github.com/tangb/cleep.git' # not available yet
-REPO_DIR = '/root/cleep'
+REPO_DIR = '/root/cleep-dev'
 
 CORE_SRC = '%s/cleep' % REPO_DIR
 CORE_DST = os.path.dirname(cleep.__file__) if cleep.__file__ else None
