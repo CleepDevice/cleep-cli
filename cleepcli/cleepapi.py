@@ -55,16 +55,15 @@ class CleepApi():
             url (string): request url
             data (dict): request data
         """
-        status = None
-        resp_data = None
         try:
             data_json = json.dumps(data).encode('utf-8')
             resp = requests.post(url, json=data_json)
-            self.logger.debug('Response[%s]: %s' % (resp.status_code, resp.json()))
+            resp_data = resp.json()
+            self.logger.debug('Response[%s]: %s', resp.status_code, resp_data)
+            return (resp.status_code, resp_data)
         except Exception as e:
             if self.logger.getEffectiveLevel()==logging.DEBUG:
                 self.logger.exception('Error occured while requesting "%s"' % url)
             else:
                 self.logger.error('Error occured while requesting "%s": %s' % (url, str(e)))
-        return (status, resp_data)
 

@@ -188,11 +188,11 @@ sha256sum $DEB > $SHA256
                 'https://api.github.com/repos/%s/%s/git/refs/tags/%s' % (self.GITHUB_USER, self.GITHUB_REPO, tag_name),
                 headers=headers,
             )
-            if resp.status>=200 and resp.status<300:
+            if resp.status_code >= 200 and resp.status_code < 300:
                 return True
             else:
                 self.logger.debug('Response data: %s' % resp.data.decode('utf-8'))
-                self.logger.error('Unable to delete tag [status=%s]' % resp.status)
+                self.logger.error('Unable to delete tag [status=%s]' % resp.status_code)
                 return False
         except:
             self.logger.exception('Error deleting tag "%s"' % tag_name)
