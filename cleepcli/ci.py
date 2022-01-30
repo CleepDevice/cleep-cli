@@ -18,9 +18,9 @@ class Ci():
     Continuous Integration helpers
     """
 
-    EXTRACT_DIR = '/root/extract'
     CLEEP_COMMAND_URL = 'http://127.0.0.1/command'
     CLEEP_CONFIG_URL = 'http://127.0.0.1/config'
+    TESTS_REQUIREMENTS_TXT = 'tests/requirements.txt'
 
     def __init__(self):
         """
@@ -28,12 +28,13 @@ class Ci():
         """
         self.logger = logging.getLogger(self.__class__.__name__)
 
-    def mod_install_source(self, package_path):
+    def mod_install_source(self, package_path, no_compatibility_check=False):
         """
         Install module package (zip archive) sources
 
         Args:
             package_path (string): package path
+            no_compatitiblity_check (bool): do not check module compatibility (but only deps compat)
 
         Raises:
             Exception if error occured
@@ -41,7 +42,7 @@ class Ci():
         # init
         (_, module_name, module_version) = os.path.basename(package_path).split('_')
         module_version = module_version.replace('.zip', '')[1:]
-        self.logger.debug('Installing application %s[%s]' % (module_name, module_version))
+        self.logger.debug('Installing application %s v%s...' % (module_name, module_version))
 
         # perform some checkings
         if not module_version:
@@ -56,75 +57,15 @@ class Ci():
         self.logger.debug('Filetype=%s' % filetype)
         if filetype != 'application/zip\\012- application/octet-stream':
             raise Exception('Invalid application package file')
-        
-        # unzip content
-        self.logger.debug('Extracting archive "%s" to "%s"' % (package_path, self.EXTRACT_DIR))
-        with zipfile.ZipFile(package_path, 'r') as package:
-            package.extractall(self.EXTRACT_DIR)
 
-        # check structure
-        if not os.path.exists(os.path.join(self.EXTRACT_DIR, 'backend/modules/%s' % module_name)):
-            raise Exception('Invalid package structure')
-        if not os.path.exists(os.path.join(self.EXTRACT_DIR, 'module.json')):
-            raise Exception('Invalid package structure')
-
-        # execute preinst script
-        preinst_path = os.path.join(self.EXTRACT_DIR, 'scripts', 'preinst.sh')
-        self.logger.debug('preinst.sh path "%s" exists? %s' % (preinst_path, os.path.exists(preinst_path)))
-        if os.path.exists(preinst_path):
-            self.logger.info('Executing "%s" preinst script' % preinst_path)
-            resp = console.command('cd "%(path)s" && chmod +x "%(script)s" && "%(script)s"' % {
-                'path': os.path.join(self.EXTRACT_DIR, 'scripts'),
-                'script': preinst_path,
-            }, 900)
-            self.logger.debug('Resp: %s' % resp)
-            if resp['returncode'] != 0:
-                raise Exception('Preinst.sh script failed (killed=%s): %s' % (resp['killed'], resp['stderr']))
-
-        # install sources
-        self.logger.info('Installing source files')
-        os.makedirs(os.path.join(config.MODULES_SRC, module_name), exist_ok=True)
-        for filepath in glob.glob(self.EXTRACT_DIR + '/**/*.*', recursive=True):
-            if filepath.startswith(os.path.join(self.EXTRACT_DIR, 'frontend')):
-                dest = filepath.replace(os.path.join(self.EXTRACT_DIR, 'frontend/js/modules/%s' % module_name), os.path.join(config.MODULES_SRC, module_name, 'frontend'))
-                self.logger.debug(' -> frontend: %s' % dest)
-            elif filepath.startswith(os.path.join(self.EXTRACT_DIR, 'backend')):
-                dest = filepath.replace(os.path.join(self.EXTRACT_DIR, 'backend/modules/%s' % module_name), os.path.join(config.MODULES_SRC, module_name, 'backend'))
-                self.logger.debug(' -> backend: %s' % dest)
-            elif filepath.startswith(os.path.join(self.EXTRACT_DIR, 'tests')):
-                dest = filepath.replace(os.path.join(self.EXTRACT_DIR, 'tests'), os.path.join(config.MODULES_SRC, module_name, 'tests'))
-                self.logger.debug(' -> tests: %s' % dest)
-            elif filepath.startswith(os.path.join(self.EXTRACT_DIR, 'scripts')):
-                dest = filepath.replace(os.path.join(self.EXTRACT_DIR, 'scripts'), os.path.join(config.MODULES_SRC, module_name, 'scripts'))
-                self.logger.debug(' -> scripts: %s' % dest)
-            else:
-                dest = filepath.replace(self.EXTRACT_DIR, os.path.join(config.MODULES_SRC, module_name))
-                self.logger.debug(' -> other: %s' % dest)
-            os.makedirs(os.path.dirname(dest), exist_ok=True)
-            os.rename(filepath, dest)
-        os.system('cleep-cli modsync --module=%s' % module_name)
-
-        # execute postinst script
-        postinst_path = os.path.join(config.MODULES_SRC, module_name, 'scripts', 'postinst.sh')
-        self.logger.debug('postinst.sh path "%s" exists? %s' % (postinst_path, os.path.exists(postinst_path)))
-        if os.path.exists(postinst_path):
-            self.logger.info('Executing "%s" postinst script' % postinst_path)
-            resp = console.command('cd "%(path)s" && chmod +x "%(script)s" && "%(script)s"' % {
-                'path': os.path.join(self.EXTRACT_DIR, 'scripts'),
-                'script': postinst_path
-            }, 900)
-            self.logger.debug('Resp: %s' % resp)
-            if resp['returncode'] != 0:
-                raise Exception('Postinst.sh script failed (killed=%s): %s || %s' % (resp['killed'], resp['stdout'], resp['stderr']))
-
-        # install tests python requirements
-        tests_requirements_path = os.path.join(config.MODULES_SRC, module_name, 'tests', 'requirements.txt')
-        if os.path.exists(tests_requirements_path):
-            self.logger.info('Install tests python dependencies')
-            resp = console.command('python3 -m pip install --trusted-host pypi.org -r "%s"' % tests_requirements_path, 900)
-            self.logger.debug('Resp: %s' % resp)
-            if resp['returncode'] != 0:
-                raise Exception('Error installing tests python dependencies (killed=%s): %s' % (resp['killed'], resp['stderr']))
+        # search for tests requirements.txt file
+        has_tests_requirements = False
+        with zipfile.ZipFile(package_path, 'r') as zp:
+            for zfile in zp.infolist():
+                if zfile.filename == self.TESTS_REQUIREMENTS_TXT:
+                    zp.extract('tests/requirements.txt', path='/tmp')
+                    has_tests_requirements = True
+                    break
 
         try:
             # start cleep (non blocking)
@@ -151,6 +92,8 @@ class Ci():
                 'to': 'update',
                 'params': {
                     'module_name': module_name,
+                    'package': package_path,
+                    'no_compatibility_check': no_compatibility_check,
                 }
             })
             resp.raise_for_status()
@@ -195,7 +138,17 @@ class Ci():
             if not module_config or not module_config.get('started'):
                 self.logger.error('Found application config: %s' % module_config)
                 raise Exception('Application "%s" installation failed' % module_name)
-            self.logger.info('Application and its dependencies installed successfully')
+            self.logger.info('Application and its dependencies successfully installed')
+
+            # install requirements.txt for tests
+            if has_tests_requirements:
+                self.logger.info('Install tests python dependencies')
+                resp = console.command('python3 -m pip install --trusted-host pypi.org -r "%s"' % os.path.join('/tmp', self.TESTS_REQUIREMENTS_TXT), 900)
+                self.logger.debug('Resp: %s' % resp)
+                if resp['returncode'] != 0:
+                    self.logger.error('Error installing tests requirements.txt: %s' , resp)
+                    raise Exception('Error installing tests requirements.txt (killed=%s)' % resp['killed'])
+
 
         finally:
             if cleep_proc:

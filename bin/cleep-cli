@@ -637,7 +637,7 @@ def modcheckcode(module, threshold, as_json, rewrite_pylintrc):
 
 @check.command()
 @click.option('--module', callback=get_module_name, help='Module name.')
-@click.option('-j', '--json', 'as_json', is_flag=True, help='Output format as json')
+@click.option('-j', '--json', 'as_json', is_flag=True, help='Output format as json.')
 def modcheckchangelog(module, as_json):
     """
     Check module changelog
@@ -661,13 +661,14 @@ def ci():
 
 @ci.command(hidden=True)
 @click.option('--package', prompt='Package path', help='Package path.')
-def cimodinstall(package):
+@click.option('--nocompat', is_flag=True, help='Do not check module compat but for deps only.')
+def cimodinstall(package, nocompat):
     """
     Install module. Useful for CI
     """
     c = Ci()
     try:
-        c.mod_install_source(package)
+        c.mod_install_source(package, nocompat)
     except Exception as e:
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             logging.exception('Module source installation failed:')

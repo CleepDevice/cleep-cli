@@ -1,5 +1,9 @@
 # Cleep-cli
 
+# [1.26.1] - 2022-01-30
+## Fixed
+- Better compatibility handling during install from CI
+
 # [1.26.0] - 2022-01-24
 ## Changed
 - Replace urllib3 by requests to remove incompatibility warnings with Cleep
