@@ -1,5 +1,9 @@
 # Cleep-cli
 
+# [1.26.3] - 2022-01-31
+## Fixed
+- Fix issue in command cimodinstall
+
 # [1.26.2] - 2022-01-31
 ## Added
 - Copy sources files during CI module install

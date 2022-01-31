@@ -668,7 +668,9 @@ def cimodinstall(package, nocompat):
     """
     c = Ci()
     try:
-        c.mod_install_source(package, nocompat)
+        package_infos = c.mod_check_package(package)
+        c.mod_extract_sources(package, package_infos)
+        c.mod_install_source(package, package_infos, nocompat)
     except Exception as e:
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             logging.exception('Module source installation failed:')
