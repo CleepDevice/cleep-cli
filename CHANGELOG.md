@@ -1,5 +1,10 @@
 # Cleep-cli
 
+# [1.26.2] - 2022-01-31
+## Added
+- Copy sources files during CI module install
+- Improve package installation (more checkings, use health route)
+
 # [1.26.1] - 2022-01-30
 ## Fixed
 - Better compatibility handling during install from CI

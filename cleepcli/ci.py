@@ -19,8 +19,9 @@ class Ci():
     """
 
     CLEEP_COMMAND_URL = 'http://127.0.0.1/command'
-    CLEEP_CONFIG_URL = 'http://127.0.0.1/config'
+    CLEEP_HEALTH_URL = 'http://127.0.0.1/health'
     TESTS_REQUIREMENTS_TXT = 'tests/requirements.txt'
+    EXTRACT_DIR = '/tmp/extract'
 
     def __init__(self):
         """
@@ -28,23 +29,30 @@ class Ci():
         """
         self.logger = logging.getLogger(self.__class__.__name__)
 
-    def mod_install_source(self, package_path, no_compatibility_check=False):
+    def mod_check_package(self, package_path):
         """
-        Install module package (zip archive) sources
+        Check specified package content
 
         Args:
             package_path (string): package path
-            no_compatitiblity_check (bool): do not check module compatibility (but only deps compat)
+            
+        Returns:
+            dict: package informations::
+
+            {
+                module_name (str): module name
+                module_version (str): module version
+                has_tests_requirements (bool): True if tests/requirements.txt exists
+            }
 
         Raises:
-            Exception if error occured
+            Exception if something bad detected
         """
-        # init
+        self.logger.info('Checking application package "%s"' % package_path)
         (_, module_name, module_version) = os.path.basename(package_path).split('_')
         module_version = module_version.replace('.zip', '')[1:]
-        self.logger.debug('Installing application %s v%s...' % (module_name, module_version))
 
-        # perform some checkings
+        # check raw file
         if not module_version:
             raise Exception('Invalid package filename')
         if not re.match('\d+\.\d+\.\d+', module_version):
@@ -58,24 +66,67 @@ class Ci():
         if filetype != 'application/zip\\012- application/octet-stream':
             raise Exception('Invalid application package file')
 
-        # search for tests requirements.txt file
+        # check package structure
         has_tests_requirements = False
+        checks = {
+            'dir_backend': False,
+            'dir_frontend': False,
+            'dir_tests': False,
+            'file_module_json': False,
+            'file_desc_json': False,
+            'file_module_py': False,
+        }
         with zipfile.ZipFile(package_path, 'r') as zp:
             for zfile in zp.infolist():
+                if zfile.filename.startswith('backend/modules/%s' % module_name):
+                    checks['dir_backend'] = True
+                if zfile.filename.startswith('frontend/js/modules/%s' % module_name):
+                    checks['dir_frontend'] = True
+                if zfile.filename.startswith('tests'):
+                    checks['dir_tests'] = True
+                if zfile.filename == 'backend/modules/%s/%s.py' % (module_name, module_name):
+                    checks['file_module_py'] = True
+                if zfile.filename == 'frontend/js/modules/%s/desc.json' % module_name:
+                    checks['file_desc_json'] = True
+                if zfile.filename == 'module.json':
+                    checks['file_module_json'] = True
                 if zfile.filename == self.TESTS_REQUIREMENTS_TXT:
-                    zp.extract('tests/requirements.txt', path='/tmp')
+                    # zp.extract('tests/requirements.txt', path='/tmp')
                     has_tests_requirements = True
-                    break
+
+        self.logger.debug('Checks results: %s' % checks)
+        if not all(checks.values()):
+            raise Exception('Invalid package structure. Make sure to build it with developer application')
+
+        return {
+            'module_name': module_name,
+            'module_version': module_version,
+            'has_test_requirements': has_tests_requirements,
+        }
+
+    def mod_install_source(self, package_path, package_infos, no_compatibility_check=False):
+        """
+        Install module package (zip archive) sources
+
+        Args:
+            package_path (string): package path
+            package_infos (dict): infos returned by mod_check_package function
+            no_compatitiblity_check (bool): do not check module compatibility (but only deps compat)
+
+        Raises:
+            Exception if error occured
+        """
+        module_name, module_version, has_tests_requirements = package_infos.values()
+        self.logger.info('Installing application %s v%s...' % (module_name, module_version))
 
         try:
             # start cleep (non blocking)
-            self.logger.info('Starting Cleep...')
+            self.logger.info('  Starting Cleep...')
             cleep_proc = subprocess.Popen(['cleep', '--noro'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             time.sleep(15)
-            self.logger.info('Done')
 
             # make sure to have latest modules.json version
-            self.logger.info('Updating applications list in Cleep')
+            self.logger.info('  Updating applications list in Cleep')
             resp = requests.post(self.CLEEP_COMMAND_URL, json={
                 'command': 'check_modules_updates',
                 'to': 'update',
@@ -86,7 +137,7 @@ class Ci():
                 raise Exception('Check_modules_updates command failed: %s' % resp_json)
 
             # install module in cleep (it will also install deps)
-            self.logger.info('Installing "%s" application in Cleep' % module_name)
+            self.logger.info('  Installing "%s" application in Cleep' % module_name)
             resp = requests.post(self.CLEEP_COMMAND_URL, json={
                 'command': 'install_module',
                 'to': 'update',
@@ -102,7 +153,7 @@ class Ci():
                 raise Exception('Install_module command failed: %s' % resp_json)
 
             # wait until end of installation
-            self.logger.info('Waiting end of application installation')
+            self.logger.info('  Waiting for end of application installation')
             while True:
                 time.sleep(1.0)
                 resp = requests.post(self.CLEEP_COMMAND_URL, json={
@@ -123,36 +174,71 @@ class Ci():
                     break
 
             # restart cleep
-            self.logger.info('Restarting cleep...')
+            self.logger.info('  Restarting cleep...')
             cleep_proc.kill()
             cleep_proc = subprocess.Popen(['cleep', '--noro'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             time.sleep(15)
-            self.logger.info('Done')
 
             # check module is installed and running
-            self.logger.info('Checking application is installed')
-            resp = requests.post(self.CLEEP_CONFIG_URL)
+            self.logger.info('  Checking application is installed...')
+            resp = requests.get(self.CLEEP_HEALTH_URL)
+            self.logger.info('Health response: %s', resp.json())
             resp.raise_for_status()
-            resp_json = resp.json()
-            module_config = resp_json['modules'].get(module_name)
-            if not module_config or not module_config.get('started'):
-                self.logger.error('Found application config: %s' % module_config)
-                raise Exception('Application "%s" installation failed' % module_name)
             self.logger.info('Application and its dependencies successfully installed')
 
             # install requirements.txt for tests
             if has_tests_requirements:
-                self.logger.info('Install tests python dependencies')
+                self.logger.info('Installing tests python dependencies...')
+                console = Console()
                 resp = console.command('python3 -m pip install --trusted-host pypi.org -r "%s"' % os.path.join('/tmp', self.TESTS_REQUIREMENTS_TXT), 900)
                 self.logger.debug('Resp: %s' % resp)
                 if resp['returncode'] != 0:
                     self.logger.error('Error installing tests requirements.txt: %s' , resp)
                     raise Exception('Error installing tests requirements.txt (killed=%s)' % resp['killed'])
 
-
         finally:
             if cleep_proc:
                 cleep_proc.kill()
+
+    def mod_extract_sources(self, package_path, package_infos):
+        """
+        Extract module package (zip archive) in dev directory
+
+        Args:
+            package_path (string): package path
+            package_infos (dict): infos returned by mod_check_package function
+
+        Raises:
+            Exception if error occured
+        """
+        module_name, module_version, _ = package_infos.values()
+
+        # unzip content
+        self.logger.debug('Extracting archive "%s" to "%s"' % (package_path, self.EXTRACT_DIR))
+        with zipfile.ZipFile(package_path, 'r') as package:
+            package.extractall(self.EXTRACT_DIR)
+
+        # install sources
+        self.logger.info('Installing source files')
+        os.makedirs(os.path.join(config.MODULES_SRC, module_name), exist_ok=True)
+        for filepath in glob.glob(self.EXTRACT_DIR + '/**/*.*', recursive=True):
+            if filepath.startswith(os.path.join(self.EXTRACT_DIR, 'frontend')):
+                dest = filepath.replace(os.path.join(self.EXTRACT_DIR, 'frontend/js/modules/%s' % module_name), os.path.join(config.MODULES_SRC, module_name, 'frontend'))
+                self.logger.debug(' -> frontend: %s' % dest)
+            elif filepath.startswith(os.path.join(self.EXTRACT_DIR, 'backend')):
+                dest = filepath.replace(os.path.join(self.EXTRACT_DIR, 'backend/modules/%s' % module_name), os.path.join(config.MODULES_SRC, module_name, 'backend'))
+                self.logger.debug(' -> backend: %s' % dest)
+            elif filepath.startswith(os.path.join(self.EXTRACT_DIR, 'tests')):
+                dest = filepath.replace(os.path.join(self.EXTRACT_DIR, 'tests'), os.path.join(config.MODULES_SRC, module_name, 'tests'))
+                self.logger.debug(' -> tests: %s' % dest)
+            elif filepath.startswith(os.path.join(self.EXTRACT_DIR, 'scripts')):
+                dest = filepath.replace(os.path.join(self.EXTRACT_DIR, 'scripts'), os.path.join(config.MODULES_SRC, module_name, 'scripts'))
+                self.logger.debug(' -> scripts: %s' % dest)
+            else:
+                dest = filepath.replace(self.EXTRACT_DIR, os.path.join(config.MODULES_SRC, module_name))
+                self.logger.debug(' -> other: %s' % dest)
+            os.makedirs(os.path.dirname(dest), exist_ok=True)
+            os.rename(filepath, dest)
 
     def mod_check(self, module_name):
         """
