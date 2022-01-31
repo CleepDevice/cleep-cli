@@ -4,6 +4,7 @@
 ## Added
 - Copy sources files during CI module install
 - Improve package installation (more checkings, use health route)
+- Update "update" application before app installation if necessary
 
 # [1.26.1] - 2022-01-30
 ## Fixed

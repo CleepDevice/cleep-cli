@@ -136,6 +136,27 @@ class Ci():
             if resp_json['error']:
                 raise Exception('Check_modules_updates command failed: %s' % resp_json)
 
+            # update "update" module to enjoy bug fixes
+            self.logger.info('  Updating "update" application...')
+            resp = requests.post(self.CLEEP_COMMAND_URL, json={
+                'command': 'update_module',
+                'to': 'update',
+                'params': {
+                    'module_name': 'update',
+                }
+            })
+            resp.raise_for_status()
+            resp_json = resp.json()
+            self.logger.debug('Update "update" resp: %s' % resp_json)
+            if resp_json['error']:
+                raise Exception('Updating app "update" failed: %s' % resp_json)
+            if resp_json['data']:
+                self.__wait_for_cleep_process('update')
+                self.logger.info('  Restarting cleep...')
+                cleep_proc.kill()
+                cleep_proc = subprocess.Popen(['cleep', '--noro'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                time.sleep(15)
+
             # install module in cleep (it will also install deps)
             self.logger.info('  Installing "%s" application in Cleep' % module_name)
             resp = requests.post(self.CLEEP_COMMAND_URL, json={
@@ -150,28 +171,8 @@ class Ci():
             resp.raise_for_status()
             resp_json = resp.json()
             if resp_json['error']:
-                raise Exception('Install_module command failed: %s' % resp_json)
-
-            # wait until end of installation
-            self.logger.info('  Waiting for end of application installation')
-            while True:
-                time.sleep(1.0)
-                resp = requests.post(self.CLEEP_COMMAND_URL, json={
-                    'command': 'get_modules_updates',
-                    'to': 'update'
-                })
-                resp.raise_for_status()
-                resp_json = resp.json()
-                if resp_json['error']:
-                    raise Exception('Get_modules_updates command failed')
-                module_updates = resp_json['data'].get(module_name)
-                self.logger.debug('Updates: %s' % module_updates)
-                if not module_updates:
-                    raise Exception('No "%s" application info in updates' % module_name)
-                if module_updates['processing'] == False:
-                    if module_updates['update']['failed']:
-                        raise Exception('Application "%s" installation failed' % module_name)
-                    break
+                raise Exception('Installing "%s" app failed: %s' % (module_name, resp_json))
+            self.__wait_for_cleep_process(module_name)
 
             # restart cleep
             self.logger.info('  Restarting cleep...')
@@ -199,6 +200,29 @@ class Ci():
         finally:
             if cleep_proc:
                 cleep_proc.kill()
+
+    def __wait_for_cleep_process(self, module_name):
+        """
+        Wait for end of current Cleep process (install, update...)
+        """
+        while True:
+            time.sleep(1.0)
+            resp = requests.post(self.CLEEP_COMMAND_URL, json={
+                'command': 'get_modules_updates',
+                'to': 'update'
+            })
+            resp.raise_for_status()
+            resp_json = resp.json()
+            if resp_json['error']:
+                raise Exception('Get_modules_updates command failed')
+            module_updates = resp_json['data'].get(module_name)
+            self.logger.debug('Updates: %s' % module_updates)
+            if not module_updates:
+                raise Exception('No "%s" application info in updates data' % module_name)
+            if module_updates['processing'] == False:
+                if module_updates['update']['failed']:
+                    raise Exception('Application "%s" installation failed' % module_name)
+                break
 
     def mod_extract_sources(self, package_path, package_infos):
         """
