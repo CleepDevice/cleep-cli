@@ -22,6 +22,7 @@ class Ci():
     CLEEP_HEALTH_URL = 'http://127.0.0.1/health'
     TESTS_REQUIREMENTS_TXT = 'tests/requirements.txt'
     EXTRACT_DIR = '/tmp/extract'
+    APP_FILENAME_PATTERN = 'APP_FILENAME=[\'"](.*)[\'"]'
 
     def __init__(self):
         """
@@ -75,6 +76,8 @@ class Ci():
             'file_module_json': False,
             'file_desc_json': False,
             'file_module_py': False,
+            'file_backend_init_py': False,
+            'file_tests_init_py': False,
         }
         with zipfile.ZipFile(package_path, 'r') as zp:
             for zfile in zp.infolist():
@@ -91,8 +94,18 @@ class Ci():
                 if zfile.filename == 'module.json':
                     checks['file_module_json'] = True
                 if zfile.filename == self.TESTS_REQUIREMENTS_TXT:
-                    # zp.extract('tests/requirements.txt', path='/tmp')
                     has_tests_requirements = True
+                if zfile.filename == 'backend/modules/%s/__init__.py' % module_name:
+                    checks['file_backend_init_py'] = True
+                if zfile.filename == 'tests/__init__.py':
+                    checks['file_tests_init_py'] = True
+
+            # special case for custom main module filename
+            if checks['file_backend_init_py'] and not checks['file_module_py']:
+                content = zp.read('backend/modules/%s/__init__.py' % module_name).decode('utf8').strip()
+                matches = re.findall(self.APP_FILENAME_PATTERN, content)
+                if len(matches) == 1 and 'backend/modules/%s/%s.py' % (module_name, matches[0]) in zp.namelist():
+                    checks['file_module_py'] = True
 
         self.logger.debug('Checks results: %s' % checks)
         if not all(checks.values()):

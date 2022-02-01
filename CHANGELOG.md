@@ -1,5 +1,9 @@
 # Cleep-cli
 
+# [1.26.4] - 2022-02-01
+## Fixed
+- Fix issue with custom app name
+
 # [1.26.3] - 2022-01-31
 ## Fixed
 - Fix issue in command cimodinstall
