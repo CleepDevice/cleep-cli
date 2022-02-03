@@ -56,8 +56,7 @@ class CleepApi():
             data (dict): request data
         """
         try:
-            data_json = json.dumps(data).encode('utf-8')
-            resp = requests.post(url, json=data_json)
+            resp = requests.post(url, json=data)
             resp_data = resp.json()
             self.logger.debug('Response[%s]: %s', resp.status_code, resp_data)
             return (resp.status_code, resp_data)
