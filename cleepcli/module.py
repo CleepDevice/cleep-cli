@@ -74,6 +74,12 @@ function(\$rootScope, rpcService) {
         });
     };
 
+    self.addFile = function(file) {
+        // it uses provided rpcservice upload function
+        // add_file refers to your python function that will be called
+        return rpcService.upload('add_file', '%(MODULE_NAME)s', file);
+    };
+
     /**
      * Catch an.app.event event
      */
@@ -91,13 +97,14 @@ angular
 .directive('%(MODULE_NAME)sConfigComponent', ['\$rootScope', 'cleepService', 'toastService', '%(MODULE_NAME)sService',
 function(\$rootScope, cleepService, toastService, %(MODULE_NAME)sService) {
 
-    var %(MODULE_NAME)sConfigController = function() {
+    var %(MODULE_NAME)sConfigController = function(\$scope) {
         var self = this;
         // use this config variable in all your app (controller and view) to always have up-to-date config values
         self.config = {};
         self.message = 'message';
         self.checkbox = true;
         self.slider = 25;
+        self.addFile = null;
 
         /**
          * Init component
@@ -153,6 +160,25 @@ function(\$rootScope, cleepService, toastService, %(MODULE_NAME)sService) {
                     cleepService.reloadModuleConfig('%(MODULE_NAME)s');
                 });
         };
+
+        /**
+         * Handle file upload. Please don't forget to declare self.addFile (see above)
+         */
+        \$scope.\$watch(function() {
+            return self.addFile;
+        }, function(file) {
+            if (!file) {
+                return;
+            }
+
+            %(MODULE_NAME)sService.addFile(file)
+                .then((response) => {
+                    if (!response.error) {
+                        toastService.success('File added');
+                        // surely need to refresh something ;-)
+                    }
+                });
+        });
     };
 
     return {
@@ -202,7 +228,7 @@ function(\$rootScope, cleepService, toastService, %(MODULE_NAME)sService) {
             <p>Text input</p>
             <md-input-container md-no-float class=\\"md-secondary no-margin\\" layout=\\"row\\" layout-align=\\"start center\\" layout-padding>
                 <div class=\\"no-md-error\\">
-                    <input ng-model=\\"%(MODULE_NAME)sCtl.message\\" placeholder=\\"message\\" aria-label=\\"Message\\" class=\\"no-margin\\">
+                    <input ng-model=\\"%(MODULE_NAME)sCtl.message\\" placeholder=\\"message\\" class=\\"no-margin\\">
                 </div>
                 <md-button ng-click=\\"%(MODULE_NAME)sCtl.setMessage()\\" class=\\"md-raised md-primary\\">
                     <md-icon md-svg-icon=\\"pencil\\"></md-icon>
@@ -218,7 +244,6 @@ function(\$rootScope, cleepService, toastService, %(MODULE_NAME)sService) {
                 class=\\"md-secondary\\"
                 ng-model=\\"%(MODULE_NAME)sCtl.checkbox\\"
                 ng-change=\\"%(MODULE_NAME)sCtl.updateCheckbox()\\"
-                aria-label=\\"Checkbox\\"
             >
             </md-checkbox>
         </md-list-item>
@@ -234,11 +259,35 @@ function(\$rootScope, cleepService, toastService, %(MODULE_NAME)sService) {
                     ng-change=\\"%(MODULE_NAME)sCtl.setSlider()\\"
                     min=\\"0\\"
                     max=\\"100\\"
-                    aria-label=\\"Slider\\"
                     md-discrete
                 >
                 </md-slider>
             </div>
+        </md-list-item>
+
+        <!-- list item with multiple actions -->
+        <md-list-item>
+            <md-icon md-svg-icon=\\"chevron-right\\"></md-icon>
+            <p>Multiple actions on the same line</p>
+            <md-input-container md-no-float class=\\"md-secondary no-margin\\" layout=\\"row\\" layout-align=\\"start center\\" layout-padding>
+                <md-button class=\\"md-raised md-primary\\" ng-click=\\"\\">
+                    <md-icon md-svg-icon=\\"delete\\"></md-icon>
+                    <md-tooltip>Delete item</md-tooltip>
+                </md-button>
+                <md-button class=\\"md-raised md-primary\\" ng-click=\\"\\">
+                    <md-icon md-svg-icon=\\"pencil\\"></md-icon>
+                    <md-tooltip>Edit item</md-tooltip>
+                </md-button>
+            </md-input-container>
+        </md-list-item>
+
+        <!-- upload file example -->
+        <md-list-item>
+            <md-icon md-svg-icon=\\"chevron-right\\"></md-icon>
+            <p>Upload a file to your application</p>
+            <md-input-container md-no-float class=\\"md-secondary no-margin\\">
+                <div upload-file selected-file=\\"%(MODULE_NAME)sCtl.addFile\\" label=\\"Add file\\"></div>
+            </md-input-container>
         </md-list-item>
 
     </md-list>
@@ -348,6 +397,14 @@ class %(MODULE_NAME_CAPITALIZED)s(CleepModule):
         and cannot be used elsewhere than in this class itself.
         \\"\\"\\"
         self.logger.info('Another unexposed function')
+
+    def add_file(self, filepath):
+        \\"\\"\\"
+        Handle upload from your frontend service
+        Parameter filepath gives you path to uploaded file.
+        Charge to you to move or delete file after processing it.
+        \\"\\"\\"
+        self.logger.info('File %%s uploaded', filepath)
 """
     TEST_DEFAULT = """#!/usr/bin/env python
 # -*- coding: utf-8 -*-
@@ -360,6 +417,12 @@ from cleep.exception import InvalidParameter, MissingParameter, CommandError, Un
 from cleep.libs.tests import session
 from mock import Mock, patch
 
+# Unit testing is part of a development, it's why Cleep requires to have application code tested to
+# guarantee a certain source code quality.
+#
+# If you new to unit testing, you can find a good introduction here https://realpython.com/python-testing/
+# Cleep uses unittest framework for which you can find documentation here https://docs.python.org/3/library/unittest.html
+#
 # You can launch all your tests manually using this command:
 #   python3 -m unittest test_%(MODULE_NAME)s.Test%(MODULE_NAME_CAPITALIZED)s
 # or a specific test with command:
@@ -370,8 +433,9 @@ from mock import Mock, patch
 class Test%(MODULE_NAME_CAPITALIZED)s(unittest.TestCase):
 
     def setUp(self):
-        # change here logging.CRITICAL to logging.DEBUG to enable logging during tests writings
-        logging.basicConfig(level=logging.FATAL, format='%%(asctime)s %%(name)s:%%(lineno)d %%(levelname)s : %%(message)s')
+        # Change here logging.DEBUG to logging.FATAL to disable logging during tests writings
+        # Note that coverage command does not display logging
+        logging.basicConfig(level=logging.DEBUG, format='%%(asctime)s %%(name)s:%%(lineno)d %%(levelname)s : %%(message)s')
         self.session = session.TestSession(self)
 
     def tearDown(self):
@@ -407,7 +471,7 @@ class Test%(MODULE_NAME_CAPITALIZED)s(unittest.TestCase):
     #
     #   # checks your mocks or function result
 
-# do not remove code below, otherwise test won't run
+# do not remove code below, otherwise tests won't run
 if __name__ == '__main__':
     unittest.main()
     """
