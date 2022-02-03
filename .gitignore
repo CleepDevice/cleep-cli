@@ -103,6 +103,7 @@ venv.bak/
 # mypy
 .mypy_cache/
 
-#cleep
+# cleep stuff
 /cleep-cli
+**/cleepapp_*.zip
 
