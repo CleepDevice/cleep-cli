@@ -204,7 +204,9 @@ class Ci():
             if has_tests_requirements:
                 self.logger.info('Installing tests python dependencies...')
                 console = Console()
-                resp = console.command('python3 -m pip install --trusted-host pypi.org -r "%s"' % os.path.join('/tmp', self.TESTS_REQUIREMENTS_TXT), 900)
+                requirements_txt_path = os.path.join(config.MODULES_SRC, module_name, self.TESTS_REQUIREMENTS_TXT)
+                self.logger.debug('Tests requirements.txt path "%s"', requirements_txt_path)
+                resp = console.command('python3 -m pip install --trusted-host pypi.org -r "%s"' % requirements_txt_path, 900)
                 self.logger.debug('Resp: %s' % resp)
                 if resp['returncode'] != 0:
                     self.logger.error('Error installing tests requirements.txt: %s' , resp)
@@ -251,12 +253,11 @@ class Ci():
         module_name, module_version, _ = package_infos.values()
 
         # unzip content
-        self.logger.debug('Extracting archive "%s" to "%s"' % (package_path, self.EXTRACT_DIR))
+        self.logger.info('Extracting archive "%s" to "%s"' % (package_path, self.EXTRACT_DIR))
         with zipfile.ZipFile(package_path, 'r') as package:
             package.extractall(self.EXTRACT_DIR)
 
         # install sources
-        self.logger.info('Installing source files')
         os.makedirs(os.path.join(config.MODULES_SRC, module_name), exist_ok=True)
         for filepath in glob.glob(self.EXTRACT_DIR + '/**/*.*', recursive=True):
             if filepath.startswith(os.path.join(self.EXTRACT_DIR, 'frontend')):
