@@ -407,7 +407,7 @@ overgeneral-exceptions=Exception
 
     def __get_files_for_kind(self, all_files, kind):
         """
-        Return files infos according to specified type
+        Return files infos according to specified kind
 
         Args:
             all_files (list): list of files in module folder
