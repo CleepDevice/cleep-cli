@@ -1,10 +1,10 @@
 # Cleep-cli
 
-# [1.26.6] - 2023-01-14
+# [1.26.7] - 2023-01-14
 ## Fixed
 - Remove code that depends of Cleep module
 
-# [1.26.5] - 2023-01-14
+# [1.26.6] - 2023-01-14
 ## Fixed
 - Typo core_tests
 - Add missing passlib dependency
