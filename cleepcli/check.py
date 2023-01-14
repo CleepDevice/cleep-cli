@@ -8,7 +8,12 @@ import logging
 from . import config
 from . import tools as Tools
 import importlib
-from cleep.common import CATEGORIES
+try:
+    from cleep.common import CATEGORIES
+    APP_CATEGORIES_CHECK_DISABLED = False
+except:
+    APP_CATEGORIES_CHECK_DISABLED = True
+    logging.warn('Cleep module is not installed. Cleep application CATEGORIES validation is disabled')
 import re
 import inspect
 import glob
@@ -690,15 +695,16 @@ overgeneral-exceptions=Exception
             out['errors'].append(msg)
 
         # MODULE_CATEGORY
-        msg = self.__check_constant({
-            'name': 'MODULE_CATEGORY',
-            'type': str,
-            'value': getattr(class_, 'MODULE_CATEGORY', None),
-            'validator': lambda val: val in CATEGORIES.ALL,
-            'message': 'MODULE_CATEGORY must be filled with existing categories. See cleep.common.CATEGORIES'
-        })
-        if msg:
-            out['errors'].append(msg)
+        if not APP_CATEGORIES_CHECK_DISABLED:
+            msg = self.__check_constant({
+                'name': 'MODULE_CATEGORY',
+                'type': str,
+                'value': getattr(class_, 'MODULE_CATEGORY', None),
+                'validator': lambda val: val in CATEGORIES.ALL,
+                'message': 'MODULE_CATEGORY must be filled with existing categories. See cleep.common.CATEGORIES'
+            })
+            if msg:
+                out['errors'].append(msg)
 
         # MODULE_DEPS
         msg = self.__check_constant({'name': 'MODULE_DEPS', 'type': list, 'value': getattr(class_, 'MODULE_DEPS', None), 'empty': True})

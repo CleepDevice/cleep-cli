@@ -1,5 +1,9 @@
 # Cleep-cli
 
+# [1.26.8] - 2023-01-14
+## Fixed
+- Handle last Cleep module imports
+
 # [1.26.7] - 2023-01-14
 ## Fixed
 - Remove code that depends of Cleep module
