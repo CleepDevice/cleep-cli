@@ -1,5 +1,9 @@
 # Cleep-cli
 
+# [1.26.11] - 2023-01-14
+## Changed
+- Configure logging as soon as possible
+
 # [1.26.9] - 2023-01-14
 ## Changed
 - Add way to configure REPO_DIR from env var

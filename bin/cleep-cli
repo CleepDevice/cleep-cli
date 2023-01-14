@@ -5,6 +5,7 @@
 #   Python profiling article: http://www.marinamele.com/7-tips-to-time-python-scripts-and-control-memory-and-cpu-usage
 
 import logging
+logging.basicConfig(level=logging.INFO, format=u'%(message)s', stream=sys.stdout)
 import os
 import sys
 import platform
@@ -24,8 +25,6 @@ from cleepcli.check import Check
 from cleepcli.ci import Ci
 import cleepcli.config as config
 from cleepcli.version import VERSION
-
-logging.basicConfig(level=logging.INFO, format=u'%(message)s', stream=sys.stdout)
 
 # install logging trace level
 level = logging.TRACE = logging.DEBUG - 5
