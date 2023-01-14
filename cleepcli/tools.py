@@ -10,11 +10,6 @@ import logging
 import sys
 import subprocess
 
-from cleep.libs.internals import __all__ as internals_libs
-from cleep.libs.drivers import __all__ as drivers_libs
-from cleep.libs.configs import __all__ as configs_libs
-from cleep.libs.commands import __all__ as commands_libs
-
 #from https://elinux.org/RPi_HardwareHistory
 RASPBERRY_PI_REVISIONS = {
     u'unknown':{u'date': u'?',        u'model': u'?',                                u'pcbrevision': u'?',   u'ethernet': False, u'wireless': False, u'audio':False, u'gpiopins': 0,  u'memory': '?',              u'notes': u'Unknown model'},
@@ -276,43 +271,6 @@ def full_split_path(path):
             allparts.insert(0, parts[1])
     
     return list(filter(lambda p: len(p)>0, allparts))
-
-def is_core_lib(path):
-    """ 
-    Check if specified lib is a core library (provided by cleep)
-
-    Args:
-        path (string): lib path
-
-    Returns:
-        bool: True if lib is core lib, False otherwise
-    """
-    #split path
-    parts = full_split_path(path)
-    if len(parts)<=2:
-        #invalid path specified, cannot be a library
-        return False
-
-    #get useful infos (supposing libs path is ../../libs/**/*.py
-    filename_wo_ext = os.path.splitext(parts[len(parts)-1])[0]
-    libs_part = parts[len(parts)-3]
-    sublibs_part = parts[len(parts)-2]
-
-    #check
-    if libs_part!=u'libs':
-        return False
-    if sublibs_part not in (u'internals', u'drivers', u'commands', u'configs'):
-        return False
-    if sublibs_part==u'internals' and filename_wo_ext not in internals_libs:
-        return False
-    elif sublibs_part==u'drivers' and filename_wo_ext not in drivers_libs:
-        return False
-    elif sublibs_part==u'commands' and filename_wo_ext not in commands_libs:
-        return False
-    elif sublibs_part==u'configs' and filename_wo_ext not in configs_libs:
-        return False
-
-    return True
 
 def netmask_to_cidr(netmask):
     """ 

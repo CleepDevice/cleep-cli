@@ -1,5 +1,14 @@
 # Cleep-cli
 
+# [1.26.6] - 2023-01-14
+## Fixed
+- Remove code that depends of Cleep module
+
+# [1.26.5] - 2023-01-14
+## Fixed
+- Typo core_tests
+- Add missing passlib dependency
+
 # [1.26.4] - 2022-02-01
 ## Fixed
 - Fix issue with custom app name
