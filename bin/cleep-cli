@@ -95,7 +95,7 @@ def coretests(coverage):
     Execute core tests
     """
     m = Test()
-    res = m.core_test(coverage)
+    res = m.core_tests(coverage)
 
     if not res:
         sys.exit(1)

@@ -317,7 +317,7 @@ COVERAGE_FILE=%s coverage run --omit="*/lib/python*/*","test_*" --source="../bac
 
         return files
 
-    def core_test(self, display_coverage=False):
+    def core_tests(self, display_coverage=False):
         """
         Execute core unit tests and display process output on stdout
 
