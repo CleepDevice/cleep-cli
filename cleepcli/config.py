@@ -8,7 +8,7 @@ except:
     class cleep:
         __file__ = None
 
-DEFAULT_MODULES = ['system', 'parameters', 'cleepbus', 'audio', 'network']
+DEFAULT_MODULES = ['system', 'parameters', 'cleepbus', 'audio', 'network', 'update']
 MODULES_REPO_URL = {
     'system': 'https://github.com/tangb/cleepmod-system.git',
     'parameters': 'https://github.com/tangb/cleepmod-parameters.git',
@@ -21,7 +21,7 @@ MODULES_REPO_URL = {
 PRIVATE_REPO = True
 REPO_PRIVATE_URL = 'https://$GIT_USERNAME@bitbucket.org/tangb/cleep.git'
 REPO_PUBLIC_URL = 'https://github.com/tangb/cleep.git' # not available yet
-REPO_DIR = '/root/cleep-dev'
+REPO_DIR = os.environ('REPO_DIR', '/root/cleep-dev')
 
 CORE_SRC = '%s/cleep' % REPO_DIR
 CORE_DST = os.path.dirname(cleep.__file__) if cleep.__file__ else None
