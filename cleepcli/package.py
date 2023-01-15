@@ -58,8 +58,8 @@ class Package():
         self.logger.info((stdout if stdout is not None else '') + (stderr if stderr is not None else ''))
 
     def __console_end_callback(self, return_code, killed):
+        self.__endless_command_return_code = return_code
         self.__endless_command_running = False
-        self.__endless_comand_return_code = return_code
 
     def build_cleep(self):
         """
@@ -164,7 +164,7 @@ sha256sum $DEB > $SHA256
             time.sleep(0.25)
 
         self.logger.debug('Return code: %s' % self.__endless_command_return_code)
-        if self.__endless_command_return_code!=0:
+        if self.__endless_command_return_code != 0:
             return False
 
         return True

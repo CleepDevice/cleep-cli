@@ -1,6 +1,10 @@
 # Cleep-cli
 
-# [1.26.1i2] - 2023-01-15
+# [1.26.13] - 2023-01-15
+## Fixed
+- Fix issue in package module (typo)
+
+# [1.26.12] - 2023-01-15
 ## Fixed
 - Fix issue in bin
 
