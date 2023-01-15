@@ -5,9 +5,9 @@
 #   Python profiling article: http://www.marinamele.com/7-tips-to-time-python-scripts-and-control-memory-and-cpu-usage
 
 import logging
+import sys
 logging.basicConfig(level=logging.INFO, format=u'%(message)s', stream=sys.stdout)
 import os
-import sys
 import platform
 import subprocess
 import shutil

@@ -1,5 +1,9 @@
 # Cleep-cli
 
+# [1.26.1i2] - 2023-01-15
+## Fixed
+- Fix issue in bin
+
 # [1.26.11] - 2023-01-14
 ## Changed
 - Configure logging as soon as possible
