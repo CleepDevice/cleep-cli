@@ -1,0 +1,58 @@
+kind: pipeline
+type: docker
+name: check-branch
+
+platform:
+  arch: arm
+
+trigger:
+  branch:
+    - master
+  event:
+    - pull_request
+
+concurrency:
+  limit: 1
+
+clone:
+  disable: true
+
+steps:
+  - name: clone
+    image: 192.168.1.125:5000/cleep-git:latest
+    network_mode: host
+    privileged: true
+    commands:
+      - git clone $DRONE_REMOTE_URL cleep-dev
+      - ls -la
+      - cd cleep-dev
+      - git checkout $DRONE_SOURCE_BRANCH
+
+  - name: build
+    image: 192.168.1.125:5000/raspberrypios/buster:20211202
+    network_mode: host
+    privileged: true
+    commands:
+      - python3 --version
+      - wget -O get-pip.py https://bootstrap.pypa.io/get-pip.py 
+      - python3 get-pip.py
+      - python3 -m pip install setuptools
+      - python3 setup.py clean
+      - python3 setup.py sdist bdist_wheel --universal
+
+  - name: publish
+    image: 192.168.1.125:5000/raspberrypios/buster:20211202
+    network_mode: host
+    privileged: true
+    environment:
+      USERNAME:
+        from_secret: PYPI_USERNAME
+      PASSWORD:
+        from_secret: PYPI_PASSWORD
+    commands:
+      - ls -la
+      - wget -O get-pip.py https://bootstrap.pypa.io/get-pip.py 
+      - python3 get-pip.py
+      - python3 -m pip install twine
+      - python3 -m twine upload -u $USERNAME -p $PASSWORD -r https://upload.pypi.org/legacy/ dist/*
+
