@@ -8,8 +8,6 @@ platform:
 trigger:
   branch:
     - master
-  event:
-    - pull_request
 
 concurrency:
   limit: 1
