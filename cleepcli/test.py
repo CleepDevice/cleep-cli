@@ -58,12 +58,14 @@ class Test():
         self.__stderr.clear()
 
     def __quiet_console_callback(self, stdout, stderr):
-        # self.logger.debug((stdout if stdout is not None else '') + (stderr if stderr is not None else ''))
         if stderr:
             self.__stderr.append(stderr)
 
     def __console_callback(self, stdout, stderr):
-        self.logger.info((stdout if stdout is not None else '') + (stderr if stderr is not None else ''))
+        if stdout and stdout.find('----------------------------------------------------------------------') < 0:
+            self.logger.info("  |  " + stdout)
+        if stderr and stderr.find('----------------------------------------------------------------------') < 0:
+            self.logger.info("  | " + stderr)
         if stderr:
             self.__stderr.append(stderr)
 
@@ -317,12 +319,13 @@ COVERAGE_FILE=%s coverage run --omit="*/lib/python*/*","test_*" --source="../bac
 
         return files
 
-    def core_tests(self, display_coverage=False):
+    def core_tests(self, display_coverage=False, display_test_output=False):
         """
         Execute core unit tests and display process output on stdout
 
         Args:
             display_coverage (bool): display coverage report (default False)
+            display_test_output (bool): display unit test output (default True)
 
         Returns:
             bool: True if process succeed.
@@ -342,8 +345,10 @@ COVERAGE_FILE=%s coverage run --omit="*/lib/python*/*","test_*" --source="../bac
         self.logger.info('Running unit tests...')
         files_on_error = []
         files_on_success = []
+        console_callback = self.__console_callback if display_test_output else self.__quiet_console_callback
         for filepath, test_filepath in files:
-            self.logger.info('  Testing %s [%s]' % (filepath, test_filepath))
+            self.logger.info('')
+            self.logger.info('Testing %s using %s...' % (filepath.replace(core_path+'/', ''), test_filepath.replace(core_path+'/', '')))
             cmd = """
 cd "%(core_tests_path)s"
 coverage run --omit="*/lib/python*/*","*test_*.py" --concurrency=thread --parallel-mode %(test_file)s
@@ -354,7 +359,7 @@ coverage run --omit="*/lib/python*/*","*test_*.py" --concurrency=thread --parall
             self.logger.trace('Test cmd: %s' % cmd)
             self.__endless_command_running = True
             self.__reset_stds()
-            c = EndlessConsole(cmd, self.__quiet_console_callback, self.__console_end_callback)
+            c = EndlessConsole(cmd, console_callback, self.__console_end_callback)
             c.start()
 
             single_start = int(time.time())
@@ -362,7 +367,7 @@ coverage run --omit="*/lib/python*/*","*test_*.py" --concurrency=thread --parall
                 time.sleep(0.25)
 
             single_duration = str(datetime.timedelta(seconds=(int(time.time()) - single_start)))
-            self.logger.info('  Duration %s' % single_duration)
+            self.logger.info('Duration %s' % single_duration)
 
             if self.__endless_command_return_code!=0:
                 self.logger.debug('Command output:\n%s' % '\n'.join(self.__stderr))

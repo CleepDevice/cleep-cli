@@ -1,5 +1,12 @@
 # Cleep-cli
 
+# [1.27.0] - 2023-01-16
+## Changed
+- Improve core tests command adding new option to display tests output
+
+## Added
+- Introduce CI
+
 # [1.26.13] - 2023-01-15
 ## Fixed
 - Fix issue in package module (typo)

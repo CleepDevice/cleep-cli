@@ -26,6 +26,7 @@ from cleepcli.ci import Ci
 import cleepcli.config as config
 from cleepcli.version import VERSION
 
+
 # install logging trace level
 level = logging.TRACE = logging.DEBUG - 5
 def log_logger(self, message, *args, **kwargs):
@@ -89,12 +90,13 @@ def coresync():
 
 @core.command()
 @click.option('--coverage', is_flag=True, help='Display coverage report.')
-def coretests(coverage):
+@click.option('--output', is_flag=True, help='Display tests output.')
+def coretests(coverage, output):
     """
     Execute core tests
     """
     m = Test()
-    res = m.core_tests(coverage)
+    res = m.core_tests(coverage, output)
 
     if not res:
         sys.exit(1)
