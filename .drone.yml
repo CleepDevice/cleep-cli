@@ -23,7 +23,7 @@ steps:
     commands:
       - git clone $DRONE_REMOTE_URL cleep-cli
       - ls -la
-      - cd cleep-dev
+      - cd cleep-cli
       - git checkout $DRONE_SOURCE_BRANCH
 
   - name: build
