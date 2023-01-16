@@ -27,22 +27,22 @@ steps:
       - git checkout $DRONE_SOURCE_BRANCH
 
   - name: build
-    image: 192.168.1.125:5000/raspberrypios/buster:20211202
+    image: python:3.7.16-slim-bullseye
     network_mode: host
     privileged: true
     commands:
       - python3 --version
-      - apt-get -y update
-      - apt-get -y install python3-distutils
-      - wget -q -O get-pip.py https://bootstrap.pypa.io/get-pip.py 
-      - python3 get-pip.py
-      - python3 -m pip install setuptools
+      - #apt-get -y update
+      - #apt-get -y install python3-distutils
+      - #wget -q -O get-pip.py https://bootstrap.pypa.io/get-pip.py 
+      - #python3 get-pip.py
+      - #python3 -m pip install setuptools
       - cd cleep-cli
       - python3 setup.py clean
       - python3 setup.py sdist bdist_wheel --universal
 
   - name: publish
-    image: 192.168.1.125:5000/raspberrypios/buster:20211202
+    image: python:3.7.16-slim-bullseye
     network_mode: host
     privileged: true
     environment:
@@ -52,13 +52,13 @@ steps:
         from_secret: PYPI_PASSWORD
     commands:
       - ls -la
-      - apt-get -y update
-      - apt-get -y install curl python3-distutils libffi-dev python3-dev build-essential libssl-dev
-      - wget -q -O get-pip.py https://bootstrap.pypa.io/get-pip.py
-      - python3 get-pip.py
-      - curl https://sh.rustup.rs -sSf | sh -s -- -y
-      - . "$HOME/.cargo/env"
+      - #apt-get -y update
+      - #apt-get -y install curl python3-distutils libffi-dev python3-dev build-essential libssl-dev
+      - #wget -q -O get-pip.py https://bootstrap.pypa.io/get-pip.py
+      - #python3 get-pip.py
+      - #curl https://sh.rustup.rs -sSf | sh -s -- -y
+      - #. "$HOME/.cargo/env"
       - python3 -m pip install twine
       - cd cleep-cli
-      - python3 -m twine upload -u $USERNAME -p $PASSWORD -r https://upload.pypi.org/legacy/ dist/*
+      - python3 -m twine upload -u $USERNAME -p $PASSWORD dist/*
 
