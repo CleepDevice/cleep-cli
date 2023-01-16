@@ -57,6 +57,7 @@ steps:
       - wget -q -O get-pip.py https://bootstrap.pypa.io/get-pip.py
       - python3 get-pip.py
       - curl https://sh.rustup.rs -sSf | sh -s -- -y
+      - source "$HOME/.cargo/env"
       - python3 -m pip install twine
       - cd cleep-cli
       - python3 -m twine upload -u $USERNAME -p $PASSWORD -r https://upload.pypi.org/legacy/ dist/*
