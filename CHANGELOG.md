@@ -1,5 +1,10 @@
 # Cleep-cli
 
+# [1.28.1] - 2023-01-25
+## Fixed
+- Add -o options to unzip command during coredocs publication
+- Fix coredocs script error (command rf not found)
+
 # [1.28.0] - 2023-01-25
 ## Changed
 - Change paths to fit to CleepDevice github organization

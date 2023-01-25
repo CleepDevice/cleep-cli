@@ -220,7 +220,7 @@ cd "%(DOCS_PATH)s"
 # /usr/local/bin/sphinx-apidoc -o "%(SOURCE_DIR)s/" "../cleep" "../cleep/tests/**" "../cleep/modules/**"
 # if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
 # echo
-/bin/rf -f "%(CORE)s-docs.zip"
+/bin/rm -f "%(CORE)s-docs.zip"
 echo "=> Building html documentation..."
 /bin/rm -rf "%(BUILD_DIR)s" "%(SOURCE_DIR)s"
 /usr/local/bin/sphinx-build -M html "." "%(BUILD_DIR)s" -D project="%(PROJECT)s" -D copyright="%(YEAR)s %(AUTHOR)s" -D author="%(AUTHOR)s" -D version="%(VERSION)s" -D release="%(VERSION)s"
@@ -303,7 +303,7 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
 
         # add docs
         self.logger.debug('Updating docs...')
-        cmd = 'unzip "%s" -d "%s" && rm -rf "%s" && mv "%s" "%s"' % (
+        cmd = 'unzip -o "%s" -d "%s" && rm -rf "%s" && mv "%s" "%s"' % (
             docs_archive_path,
             self.DOCS_TEMP_PATH,
             os.path.join(self.DOCS_TEMP_PATH, 'docs'),
