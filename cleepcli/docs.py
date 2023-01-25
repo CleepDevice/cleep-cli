@@ -16,8 +16,6 @@ class Docs():
     @see https://samnicholls.net/2016/06/15/how-to-sphinx-readthedocs/
     """
 
-    GITHUB_REPO = 'git@github.com:tangb/cleep.git'
-    GITHUB_DOCS_BRANCH = 'docs'
     DOCS_TEMP_PATH = '/tmp/cleep-docs'
     DOCS_ARCHIVE_NAME = 'cleep-core-docs.zip'
     DOCS_COMMIT_MESSAGE = 'API documentation update'
@@ -284,7 +282,8 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
 
         # clone repo
         self.logger.debug('Cloning core repository...')
-        cmd = 'rm -rf "%s"; git clone -q "%s" "%s"' % (self.DOCS_TEMP_PATH, self.GITHUB_REPO, self.DOCS_TEMP_PATH)
+        repo = 'git@github.com:%s/%s.git' % (config.GITHUB_ORG, config.GITHUB_REPO)
+        cmd = 'rm -rf "%s"; git clone -q "%s" "%s"' % (self.DOCS_TEMP_PATH, repo, self.DOCS_TEMP_PATH)
         self.logger.debug('cmd: %s' % cmd)
         resp = c.command(cmd, 60) 
         self.logger.debug('Clone resp: %s' % resp)
@@ -293,8 +292,8 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
             return False
     
         # switch to branch
-        self.logger.debug('Switching to %s branch' % self.GITHUB_DOCS_BRANCH)
-        cmd = 'cd "%s" && git checkout "%s"' % (self.DOCS_TEMP_PATH, self.GITHUB_DOCS_BRANCH)
+        self.logger.debug('Switching to %s branch' % config.GITHUB_DOCS_BRANCH)
+        cmd = 'cd "%s" && git checkout "%s"' % (self.DOCS_TEMP_PATH, config.GITHUB_DOCS_BRANCH)
         self.logger.debug('cmd: %s' % cmd)
         resp = c.command(cmd, 60) 
         self.logger.debug('Switch branch resp: %s' % resp)
@@ -332,5 +331,4 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
             return False
 
         return True
-        
 

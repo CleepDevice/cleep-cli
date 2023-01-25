@@ -10,17 +10,19 @@ except:
 
 DEFAULT_MODULES = ['system', 'parameters', 'cleepbus', 'audio', 'network', 'update']
 MODULES_REPO_URL = {
-    'system': 'https://github.com/tangb/cleepmod-system.git',
-    'parameters': 'https://github.com/tangb/cleepmod-parameters.git',
-    'cleepbus': 'https://github.com/tangb/cleepmod-cleepbus.git',
-    'audio': 'https://github.com/tangb/cleepmod-audio.git',
-    'network': 'https://github.com/tangb/cleepmod-network.git',
-    'update': 'https://github.com/tangb/cleepmod-update.git',
+    'system': 'https://github.com/CleepDevice/cleepapp-system.git',
+    'parameters': 'https://github.com/CleepDevice/cleepapp-parameters.git',
+    'cleepbus': 'https://github.com/CleepDevice/cleepapp-cleepbus.git',
+    'audio': 'https://github.com/CleepDevice/cleepapp-audio.git',
+    'network': 'https://github.com/CleepDevice/cleepapp-network.git',
+    'update': 'https://github.com/CleepDevice/cleepapp-update.git',
 }
 
-PRIVATE_REPO = True
-REPO_PRIVATE_URL = 'https://$GIT_USERNAME@bitbucket.org/tangb/cleep.git'
-REPO_PUBLIC_URL = 'https://github.com/tangb/cleep.git' # not available yet
+GITHUB_ORG = 'CleepDevice'
+GITHUB_REPO = 'cleep'
+GITHUB_DOCS_BRANCH = 'docs'
+
+REPO_URL = 'https://github.com/CleepDevice/cleep.git'
 REPO_DIR = os.environ.get('REPO_DIR', '/root/cleep-dev')
 
 CORE_SRC = '%s/cleep' % REPO_DIR

@@ -24,9 +24,6 @@ class Package():
      * application .zip package
     """
 
-    GITHUB_USER = 'tangb'
-    GITHUB_REPO = 'cleep'
-
     FRONTEND_DIR = 'frontend/'
     BACKEND_DIR = 'backend/'
     SCRIPTS_DIR = 'scripts/'
@@ -177,15 +174,15 @@ sha256sum $DEB > $SHA256
             tag_name (string): tag name to delete
             token (string): github authorization token
         """
-        #curl request
-        #curl -X DELETE -H "Authorization: token <token>" -H "User-Agent: PyGithub/Python" https://api.github.com/repos/tangb/cleep/git/refs/tags/<tag_name>
+        # curl request
+        # curl -X DELETE -H "Authorization: token <token>" -H "User-Agent: PyGithub/Python" https://api.github.com/repos/tangb/cleep/git/refs/tags/<tag_name>
         try:
             headers = {
                 'Authorization': 'token %s' % token,
                 'User-Agent': 'PyGithub/Python',
             }
             resp = requests.delete(
-                'https://api.github.com/repos/%s/%s/git/refs/tags/%s' % (self.GITHUB_USER, self.GITHUB_REPO, tag_name),
+                'https://api.github.com/repos/%s/%s/git/refs/tags/%s' % (config.GITHUB_ORG, config.GITHUB_REPO, tag_name),
                 headers=headers,
             )
             if resp.status_code >= 200 and resp.status_code < 300:
@@ -204,9 +201,9 @@ sha256sum $DEB > $SHA256
         """
         token = os.environ['GITHUB_ACCESS_TOKEN']
         github = Github(token)
-        repo = github.get_repo('%s/%s' % (self.GITHUB_USER, self.GITHUB_REPO))
+        repo = github.get_repo('%s/%s' % (config.GITHUB_ORG, self.GITHUB_REPO))
 
-        #check build existence
+        # check build existence
         archive = os.path.abspath(os.path.join(config.REPO_DIR, '..', 'cleep_%s_armhf.deb' % version))
         sha256 = os.path.abspath(os.path.join(config.REPO_DIR, '..', 'cleep_%s_armhf.sha256' % version))
         changes = os.path.abspath(os.path.join(config.REPO_DIR, '..', 'cleep_%s_armhf.changes' % version))
@@ -217,7 +214,7 @@ sha256sum $DEB > $SHA256
         if not os.path.exists(changes):
             self.logger.error('Changes file "%s" does not exist' % changes)
 
-        #get changelog
+        # get changelog
         cmd = 'sed -n "/cleep (%(version)s)/,/Checksums-Sha1:/{/cleep (%(version)s)/b;/Checksums-Sha1:/b;p}" %(changes)s | tail -n +2' % {'version': version, 'changes': changes}
         self.logger.debug('Cmd = %s' % cmd)
         c = Console()
@@ -227,7 +224,7 @@ sha256sum $DEB > $SHA256
         changelog = '\n'.join([line.strip() for line in result['stdout']])
         self.logger.debug('Changelog:\n%s' % changelog)
 
-        #search existing release
+        # search existing release
         release_found = None
         releases = repo.get_releases()
         for release in releases:
@@ -238,9 +235,9 @@ sha256sum $DEB > $SHA256
                 break
 
         if release_found and (release_found.prerelease or release_found.draft):
-            #due to github limitation (bug or limitation?), draft assets are not downloadable
-            #so we create prerelease version instead of draft and delete it before creating it
-            #again when pushing version
+            # due to github limitation (bug or limitation?), draft assets are not downloadable
+            # so we create prerelease version instead of draft and delete it before creating it
+            # again when pushing version
             self.logger.info('Deleting existing release "%s"...' % release_found.tag_name)
             try:
                 release_found.delete_release()
@@ -248,11 +245,11 @@ sha256sum $DEB > $SHA256
                 self.logger.exception('Error deleting existing release:')
                 return False
 
-            #delete tag
+            # delete tag
             if not self.__delete_github_tag(release_found.tag_name, token):
                 return False
         
-        #create release
+        # create release
         self.logger.info('Creating new release "%s"...' % version)
         try:
             commits = repo.get_commits()
@@ -267,7 +264,7 @@ sha256sum $DEB > $SHA256
             self.logger.exception('Error occured creating new release:')
             return False
 
-        #upload assets
+        # upload assets
         try:
             self.logger.info('Uploading asset "%s"...' % archive)
             release_found.upload_asset(archive)

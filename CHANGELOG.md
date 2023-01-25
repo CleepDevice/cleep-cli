@@ -1,5 +1,9 @@
 # Cleep-cli
 
+# [1.28.0] - 2023-01-25
+## Changed
+- Change paths to fit to CleepDevice github organization
+
 # [1.27.0] - 2023-01-16
 ## Changed
 - Improve core tests command adding new option to display tests output

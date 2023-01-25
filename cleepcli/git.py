@@ -15,19 +15,13 @@ class Git():
     def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
 
-    def __get_private_repo_git_command(self):
-        if not config.PRIVATE_REPO:
-            return ''
-        dir_name = os.path.dirname(os.path.realpath(__file__))
-        return 'GIT_ASKPASS=%s' % os.path.join(dir_name, 'git_password.sh')
-
     def pull_core(self):
         """
         Pull core content
         """
         self.logger.info('Pulling core repository...')
         c = Console()
-        cmd = 'cd "%s"; %s git pull -q' % (config.REPO_DIR, self.__get_private_repo_git_command())
+        cmd = 'cd "%s"; git pull -q' % config.REPO_DIR
         self.logger.debug('cmd: %s' % cmd)
         resp = c.command(cmd, 60)
         self.logger.debug('Pull resp: %s' % resp)
@@ -45,11 +39,11 @@ class Git():
         """
         Clone core content from official repository
         """
-        #clone repo
+        # clone repo
         self.logger.info('Cloning core repository...')
         c = Console()
-        url = config.REPO_PRIVATE_URL if config.PRIVATE_REPO else config.REPO_PUBLIC_URL
-        cmd = '%s git clone -q "%s" "%s"' % (self.__get_private_repo_git_command(), url, config.REPO_DIR)
+        url = config.REPO_URL
+        cmd = 'git clone -q "%s" "%s"' % (url, config.REPO_DIR)
         self.logger.debug('cmd: %s' % cmd)
         resp = c.command(cmd, 60)
         self.logger.debug('Clone resp: %s' % resp)
@@ -91,7 +85,6 @@ class Git():
         Args:
             module (string): module name
         """
-        #clone repo
         self.logger.info('Cloning "%s" module repository...' % module)
         c = Console()
         url = config.MODULES_REPO_URL[module]
