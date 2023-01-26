@@ -2,11 +2,19 @@
 # -*- coding: utf-8 -*-
 
 import os
+from importlib.machinery import SourceFileLoader
 try:
     import cleep
 except:
     class cleep:
         __file__ = None
+
+def get_core_version_from_sources(repo_dir):
+    try:
+        cleep_sources = SourceFileLoader("cleep_sources", os.path.join(repo_dir, 'cleep', '__init__.py')).load_module()
+        return cleep_sources.__version__
+    except:
+        return None
 
 DEFAULT_MODULES = ['system', 'parameters', 'cleepbus', 'audio', 'network', 'update']
 MODULES_REPO_URL = {
@@ -41,4 +49,9 @@ BIN_DST = '/usr/bin'
 
 MEDIA_SRC = '%s/medias' % REPO_DIR
 MEDIA_DST = '/opt/cleep'
+
+DOCS_AUTHOR = 'CleepDevice'
+DOCS_PROJECT_NAME = 'Cleep core'
+
+CORE_VERSION = get_core_version_from_sources(REPO_DIR)
 

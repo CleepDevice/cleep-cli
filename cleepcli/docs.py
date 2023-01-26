@@ -17,8 +17,9 @@ class Docs():
     """
 
     DOCS_TEMP_PATH = '/tmp/cleep-docs'
+    DOCS_EXTRACT_PATH = '/tmp/docs'
     DOCS_ARCHIVE_NAME = 'cleep-core-docs.zip'
-    DOCS_COMMIT_MESSAGE = 'API documentation update'
+    DOCS_COMMIT_MESSAGE = 'Update doc Cleep v%(version)s'
 
     def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -172,43 +173,15 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
         self.logger.info('DOC_ARCHIVE=%s' % zip_path)
         return True
 
-    def __get_core_data(self):
-        """
-        Return useful core data
-
-        Returns:
-            dict of data::
-
-                {
-                    author (string): author
-                    version (string): version
-                }
-
-        """
-        try:
-            from cleep import __version__
-            return {
-                'author': 'Tanguy Bonneau',
-                'version': __version__
-            }
-        except:
-            self.logger.exception('Unable to get core infos')
-            return None
-
     def generate_core_docs(self, publish=False):
         """
         Generate core documentation
         """
-        #checking core path
+        # checking core path
         path = os.path.join(config.CORE_SRC, '../docs')
         self.logger.debug('Core docs path: %s' % path)
         if not os.path.exists(path):
             self.logger.error('Docs directory for core does not exist')
-            return False
-
-        core_data = self.__get_core_data()
-        self.logger.debug('Core data: %s' % core_data)
-        if core_data is None:
             return False
 
         today = datetime.today()
@@ -216,13 +189,13 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
         self.logger.info('=> Generating documentation...')
         cmd = """
 cd "%(DOCS_PATH)s"
-# disable source generation because it is customized
-# /usr/local/bin/sphinx-apidoc -o "%(SOURCE_DIR)s/" "../cleep" "../cleep/tests/**" "../cleep/modules/**"
-# if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
-# echo
+echo "=> Generating documentation sources..."
+/bin/rm -rf "%(BUILD_DIR)s" "%(SOURCE_DIR)s"
+/usr/local/bin/sphinx-apidoc -o "%(SOURCE_DIR)s/" "../cleep" "../cleep/tests/**" "../cleep/modules/**"
+if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
+echo
 /bin/rm -f "%(CORE)s-docs.zip"
 echo "=> Building html documentation..."
-/bin/rm -rf "%(BUILD_DIR)s" "%(SOURCE_DIR)s"
 /usr/local/bin/sphinx-build -M html "." "%(BUILD_DIR)s" -D project="%(PROJECT)s" -D copyright="%(YEAR)s %(AUTHOR)s" -D author="%(AUTHOR)s" -D version="%(VERSION)s" -D release="%(VERSION)s"
 if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
 echo
@@ -243,10 +216,10 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
             'SOURCE_DIR': 'source',
             'BUILD_DIR': '_build',
             'CORE': 'cleep-core',
-            'PROJECT': 'Cleep core API',
+            'PROJECT': config.DOCS_PROJECT_NAME,
             'YEAR': today.year,
-            'AUTHOR': core_data['author'],
-            'VERSION': core_data['version']
+            'AUTHOR': config.DOCS_AUTHOR,
+            'VERSION': config.CORE_VERSION,
         }
 
         self.logger.debug('Docs cmd: %s' % cmd)
@@ -263,7 +236,7 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
 
         # publish docs
         if publish:
-            self.logger.info('=> Publishing documentation...')
+            self.logger.info('=> Publishing documentation for Cleep v%s...', config.CORE_VERSION)
             return self.publish_core_docs()
 
         return True
@@ -293,7 +266,7 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
     
         # switch to branch
         self.logger.debug('Switching to %s branch' % config.GITHUB_DOCS_BRANCH)
-        cmd = 'cd "%s" && git checkout "%s"' % (self.DOCS_TEMP_PATH, config.GITHUB_DOCS_BRANCH)
+        cmd = 'cd "%s" && git checkout -t "origin/%s"' % (self.DOCS_TEMP_PATH, config.GITHUB_DOCS_BRANCH)
         self.logger.debug('cmd: %s' % cmd)
         resp = c.command(cmd, 60) 
         self.logger.debug('Switch branch resp: %s' % resp)
@@ -303,11 +276,11 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
 
         # add docs
         self.logger.debug('Updating docs...')
-        cmd = 'unzip -o "%s" -d "%s" && rm -rf "%s" && mv "%s" "%s"' % (
+        cmd = 'unzip "%s" -d "%s" && rm -rf "%s" && mv "%s" "%s"' % (
             docs_archive_path,
-            self.DOCS_TEMP_PATH,
+            self.DOCS_EXTRACT_PATH,
             os.path.join(self.DOCS_TEMP_PATH, 'docs'),
-            os.path.join(self.DOCS_TEMP_PATH, 'html'),
+            os.path.join(self.DOCS_EXTRACT_PATH, 'html'),
             os.path.join(self.DOCS_TEMP_PATH, 'docs'),
         )
         self.logger.debug('cmd: %s' % cmd)
@@ -321,7 +294,7 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
         self.logger.debug('Commiting changes...')
         cmd = 'cd "%s" && git add . && git commit -m "%s" && git push' % (
             self.DOCS_TEMP_PATH,
-            self.DOCS_COMMIT_MESSAGE,
+            self.DOCS_COMMIT_MESSAGE % { 'version': config.CORE_VERSION },
         )
         self.logger.debug('cmd: %s' % cmd)
         resp = c.command(cmd, 60) 

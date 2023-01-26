@@ -1,5 +1,9 @@
 # Cleep-cli
 
+# [1.28.2] - 2023-01-26
+## Fixed
+- Core docs generation
+
 # [1.28.1] - 2023-01-25
 ## Fixed
 - Add -o options to unzip command during coredocs publication
