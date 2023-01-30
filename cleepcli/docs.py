@@ -266,7 +266,7 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
     
         # switch to branch
         self.logger.debug('Switching to %s branch' % config.GITHUB_DOCS_BRANCH)
-        cmd = 'cd "%s" && git checkout -t "origin/%s"' % (self.DOCS_TEMP_PATH, config.GITHUB_DOCS_BRANCH)
+        cmd = 'cd "%s" && git fetch --all && git checkout -b "%s" "origin/%s"' % (self.DOCS_TEMP_PATH, config.GITHUB_DOCS_BRANCH, config.GITHUB_DOCS_BRANCH)
         self.logger.debug('cmd: %s' % cmd)
         resp = c.command(cmd, 60) 
         self.logger.debug('Switch branch resp: %s' % resp)
