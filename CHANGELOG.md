@@ -1,5 +1,9 @@
 # Cleep-cli
 
+# [1.28.4] - 2023-02-04
+## Fixed
+- Fix core package publish
+
 # [1.28.3] - 2023-01-30
 ## Fixed
 - Fix core docs publication

@@ -201,7 +201,7 @@ sha256sum $DEB > $SHA256
         """
         token = os.environ['GITHUB_ACCESS_TOKEN']
         github = Github(token)
-        repo = github.get_repo('%s/%s' % (config.GITHUB_ORG, self.GITHUB_REPO))
+        repo = github.get_repo('%s/%s' % (config.GITHUB_ORG, config.GITHUB_REPO))
 
         # check build existence
         archive = os.path.abspath(os.path.join(config.REPO_DIR, '..', 'cleep_%s_armhf.deb' % version))
