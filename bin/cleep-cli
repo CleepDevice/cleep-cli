@@ -44,26 +44,18 @@ PRAGMA_NO_COVER_PATTERN = r'#\s*pragma\s*:\s*no\s+cover'
 def core():
     pass
 
-@core.command()
-def coreget():
-    """ 
-    Get or update core content from official repository
+def get_core_mods(git=None):
     """
-    #core
-    g = Git()
-    if not os.path.exists(config.CORE_SRC):
-        res = g.clone_core()
-    else:
-        res = g.pull_core()
+    Get all core modules from their repos
 
-    if not res:
-        sys.exit(1)
+    Args:
+        git (Git): Git instance. Create new instance if not provided
 
-    #force coresync to synchronize installation with repo
-    f = File()
-    res = f.core_sync()
+    Returns:
+        bool: True if modules installed successfully
+    """
+    g = git or Git()
 
-    #default modules
     for module in config.DEFAULT_MODULES:
         module_path = os.path.join(config.MODULES_SRC, module)
         if not os.path.exists(module_path):
@@ -73,7 +65,31 @@ def coreget():
 
         if not res:
             logging.error('Error getting "%s" default module' % module)
-            sys.exit(1)
+            return False
+
+    return True
+
+@core.command()
+def coreget():
+    """ 
+    Get or update core content from official repository
+    """
+    g = Git()
+    if not os.path.exists(config.CORE_SRC):
+        res = g.clone_core()
+    else:
+        res = g.pull_core()
+
+    if not res:
+        sys.exit(1)
+
+    # force coresync to synchronize installation with repo
+    f = File()
+    res = f.core_sync()
+
+    # core modules
+    if not get_core_mods():
+        sys.exit(1)
 
 @core.command()
 def coresync():
@@ -143,7 +159,7 @@ def cpuprof():
         public_ip = socket.gethostbyname(socket.gethostname())
         port = 4000
 
-        #stop running process
+        # stop running process
         cmd = '/bin/systemctl stop cleep'
         subprocess.call(cmd, shell=True)
 
@@ -160,7 +176,7 @@ def cpuprof():
             logging.exception('Error occured during cpuprof:')
 
     finally:
-        #restart process
+        # restart process
         cmd = '/bin/systemctl start cleep'
         subprocess.call(cmd, shell=True)
 
@@ -173,7 +189,7 @@ def memprof(interval):
     MPROF = '/usr/local/bin/mprof'
 
     try:
-        # Memory profiling libraries are not installed because it is long to install.
+        # memory profiling libraries are not installed because it is long to install.
         import memory_profiler
         import psutil
         import matplotlib
@@ -182,7 +198,7 @@ def memprof(interval):
         sys.exit(1)
 
     try:
-        #stop running process
+        # stop running process
         cmd = '/bin/systemctl stop cleep'
         subprocess.call(cmd, shell=True)
 
@@ -192,7 +208,7 @@ def memprof(interval):
         subprocess.call(cmd, shell=True)
 
     except KeyboardInterrupt:
-        #generate output graph
+        # generate output graph
         graph = '/tmp/cleep_memprof.png'
         logging.info('Generating memory graph "%s"...' % graph)
         cmd = 'cd /tmp; "%(BIN)s" plot --output "%(OUTPUT)s"' % {'BIN': MPROF, 'OUTPUT': graph}
@@ -205,7 +221,7 @@ def memprof(interval):
             logging.exception('Error occured during memprof:')
 
     finally:
-        #restart process
+        # restart process
         cmd = '/bin/systemctl start cleep'
         subprocess.call(cmd, shell=True)
 
@@ -305,7 +321,7 @@ def watch(quiet, loglevel):
     Start watchdog that monitors filesystem changes on Cleep sources
     """
     if logging.getLogger().getEffectiveLevel()==logging.DEBUG:
-        #do not overwrite root logger level if configured to DEBUG (dev mode)
+        # do not overwrite root logger level if configured to DEBUG (dev mode)
         pass
     elif quiet:
         logging.disable(logging.CRITICAL)
@@ -691,6 +707,14 @@ def cimodcheck(module):
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             logging.exception('Module checking failed:')
         logging.error(str(e))
+        sys.exit(1)
+
+@ci.command(hidden=True)
+def cigetmods():
+    """
+    Get all core modules from git repos
+    """
+    if not get_core_mods():
         sys.exit(1)
 
 def print_version(ctx, param, value):

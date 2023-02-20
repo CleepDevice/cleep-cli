@@ -16,7 +16,6 @@ def get_core_version_from_sources(repo_dir):
     except:
         return None
 
-DEFAULT_MODULES = ['system', 'parameters', 'cleepbus', 'audio', 'network', 'update']
 MODULES_REPO_URL = {
     'system': 'https://github.com/CleepDevice/cleepapp-system.git',
     'parameters': 'https://github.com/CleepDevice/cleepapp-parameters.git',
@@ -25,6 +24,7 @@ MODULES_REPO_URL = {
     'network': 'https://github.com/CleepDevice/cleepapp-network.git',
     'update': 'https://github.com/CleepDevice/cleepapp-update.git',
 }
+DEFAULT_MODULES = list(MODULES_REPO_URL.keys())
 
 GITHUB_ORG = 'CleepDevice'
 GITHUB_REPO = 'cleep'

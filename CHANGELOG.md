@@ -1,5 +1,9 @@
 # Cleep-cli
 
+# [1.29.0] - 2023-02-20
+## Added
+- Add cigetmods command
+
 # [1.28.4] - 2023-02-04
 ## Fixed
 - Fix core package publish
