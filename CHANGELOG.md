@@ -1,5 +1,9 @@
 # Cleep-cli
 
+# [1.29.1] - 2023-02-20
+## Added
+- Add cigetmods sync option
+
 # [1.29.0] - 2023-02-20
 ## Added
 - Add cigetmods command

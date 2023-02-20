@@ -710,12 +710,18 @@ def cimodcheck(module):
         sys.exit(1)
 
 @ci.command(hidden=True)
-def cigetmods():
+@click.pass_context
+@click.option('--nosync', is_flag=True, default=False, help='Sync mods.')
+def cigetmods(ctx, nosync):
     """
     Get all core modules from git repos
     """
     if not get_core_mods():
         sys.exit(1)
+
+    if not nosync:
+        for module in config.DEFAULT_MODULES:
+            ctx.invoke(modsync, module=module)
 
 def print_version(ctx, param, value):
     if not value or ctx.resilient_parsing:
@@ -740,7 +746,7 @@ if __name__ == '__main__':
             return False
         return True
 
-    #execute only on raspbian
+    # execute only on raspbian
     if is_raspbian():
         cli()
     else:
