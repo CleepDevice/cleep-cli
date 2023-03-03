@@ -191,7 +191,7 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
 cd "%(DOCS_PATH)s"
 echo "=> Generating documentation sources..."
 /bin/rm -rf "%(BUILD_DIR)s" "%(SOURCE_DIR)s"
-/usr/local/bin/sphinx-apidoc -o "%(SOURCE_DIR)s/" "../cleep" "../cleep/tests/**" "../cleep/modules/**"
+/usr/local/bin/sphinx-apidoc -t templates -o "%(SOURCE_DIR)s/" "../cleep" "../cleep/tests/**" "../cleep/modules/**"
 if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
 echo
 /bin/rm -f "%(CORE)s-docs.zip"

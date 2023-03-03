@@ -1,5 +1,9 @@
 # Cleep-cli
 
+# [1.29.2] - 2023-03-03
+## Changed
+- Generate core docs from template
+
 # [1.29.1] - 2023-02-20
 ## Added
 - Add cigetmods sync option
