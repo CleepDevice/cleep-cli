@@ -255,7 +255,7 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
 
         # clone repo
         self.logger.debug('Cloning core repository...')
-        repo = 'git@github.com:%s/%s.git' % (config.GITHUB_ORG, config.GITHUB_REPO)
+        repo = 'git@github.com:%s/%s.git' % (config.GITHUB_ORG, config.GITHUB_REPO_DOCS)
         cmd = 'rm -rf "%s"; git clone -q "%s" "%s"' % (self.DOCS_TEMP_PATH, repo, self.DOCS_TEMP_PATH)
         self.logger.debug('cmd: %s' % cmd)
         resp = c.command(cmd, 60) 
@@ -264,24 +264,13 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
             self.logger.error('Error occured while cloning repository: %s' % ('killed' if resp['killed'] else resp['stderr']))
             return False
     
-        # switch to branch
-        self.logger.debug('Switching to %s branch' % config.GITHUB_DOCS_BRANCH)
-        cmd = 'cd "%s" && git fetch --all && git checkout -b "%s" "origin/%s"' % (self.DOCS_TEMP_PATH, config.GITHUB_DOCS_BRANCH, config.GITHUB_DOCS_BRANCH)
-        self.logger.debug('cmd: %s' % cmd)
-        resp = c.command(cmd, 60) 
-        self.logger.debug('Switch branch resp: %s' % resp)
-        if resp['returncode'] != 0 or resp['killed']:
-            self.logger.error('Error occured while switching repository branch: %s' % ('killed' if resp['killed'] else resp['stderr']))
-            return False
-
         # add docs
         self.logger.debug('Updating docs...')
-        cmd = 'unzip "%s" -d "%s" && rm -rf "%s" && mv "%s" "%s"' % (
+        cmd = 'unzip "%s" -d "%s" && cp -fr %s %s' % (
             docs_archive_path,
             self.DOCS_EXTRACT_PATH,
-            os.path.join(self.DOCS_TEMP_PATH, 'docs'),
-            os.path.join(self.DOCS_EXTRACT_PATH, 'html'),
-            os.path.join(self.DOCS_TEMP_PATH, 'docs'),
+            os.path.join(self.DOCS_EXTRACT_PATH, 'html', '*'),
+            self.DOCS_TEMP_PATH,
         )
         self.logger.debug('cmd: %s' % cmd)
         resp = c.command(cmd, 60) 

@@ -1,5 +1,9 @@
 # Cleep-cli
 
+# [1.29.3] - 2023-03-03
+## Changed
+- Publish docs to cleep-docs repo
+
 # [1.29.2] - 2023-03-03
 ## Changed
 - Generate core docs from template

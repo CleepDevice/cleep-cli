@@ -1,5 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-VERSION = '1.29.2'
+VERSION = '1.29.3'
 
