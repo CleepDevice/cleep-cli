@@ -281,7 +281,7 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
 
         # commit changes
         self.logger.debug('Commiting changes...')
-        cmd = 'cd "%s" && git add . && git commit -m "%s" && git push' % (
+        cmd = 'cd "%s" && git add . && git commit -m "%s" | true && git push | true' % (
             self.DOCS_TEMP_PATH,
             self.DOCS_COMMIT_MESSAGE % { 'version': config.CORE_VERSION },
         )

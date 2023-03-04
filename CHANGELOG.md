@@ -1,5 +1,9 @@
 # Cleep-cli
 
+# [1.29.4] - 2023-03-04
+## Fixed
+- Fix docs publishing when there is no changes
+
 # [1.29.3] - 2023-03-03
 ## Changed
 - Publish docs to cleep-docs repo
