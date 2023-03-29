@@ -29,7 +29,7 @@ class ActionsExecutor(Thread):
     Actions executor
     Implements queue to execute sequentially actions
     """
-    def __init__(self):
+    def __init__(self, rpc_url):
         Thread.__init__(self)
         Thread.daemon = True
 
@@ -37,7 +37,7 @@ class ActionsExecutor(Thread):
         self.running = True
         self.__queue = deque(maxlen=200)
         self.file = File()
-        self.cleep = CleepApi()
+        self.cleep = CleepApi(rpc_url)
 
     def stop(self):
         """
@@ -93,30 +93,30 @@ class CleepHandler(FileSystemEventHandler):
     Watchdog handler for Cleep
     """
     REJECTED_FILENAMES = [
-        u'4913', #vim furtive temp file to check user permissions
-        u'.gitignore'
+        '4913', #vim furtive temp file to check user permissions
+        '.gitignore'
     ]
     REJECTED_EXTENSIONS = [
-        u'.swp', #vim
-        u'.swpx', #vim
-        u'.swx', #vim
-        u'.tmp', #generic?
-        u'.offset', #pygtail
-        u'.pyc', #python compiled
-        u'.log' #log file
+        '.swp', #vim
+        '.swpx', #vim
+        '.swx', #vim
+        '.tmp', #generic?
+        '.offset', #pygtail
+        '.pyc', #python compiled
+        '.log' #log file
     ]
     REJECTED_PREFIXES = [
-        u'.',
-        u'~'
+        '.',
+        '~'
     ]
     REJECTED_SUFFIXES = [
-        u'~'
+        '~'
     ]
     REJECTED_DIRS = [
-        u'.git',
-        u'.vscode',
-        u'.editor',
-        u'backend/__pycache__',
+        '.git',
+        '.vscode',
+        '.editor',
+        'backend/__pycache__',
     ]
     DEBOUNCE = 0.25 #seconds
 
@@ -145,12 +145,12 @@ class CleepHandler(FileSystemEventHandler):
             return True
 
         #filter event on current script
-        if event.src_path == u'.%s' % __file__:
+        if event.src_path == '.%s' % __file__:
             self.logger.debug('Filtered: event on current script')
             return True
 
         #filter root event
-        if event.src_path == u'.':
+        if event.src_path == '.':
             self.logger.debug('Filtered: root event')
             return True
 
@@ -165,7 +165,7 @@ class CleepHandler(FileSystemEventHandler):
             if event.src_path.startswith(prefix):
                 self.logger.debug('Filtered: source prefix')
                 return True
-            if getattr(event, u'dest_path', None) and event.dest_path.startswith(prefix):
+            if getattr(event, 'dest_path', None) and event.dest_path.startswith(prefix):
                 self.logger.debug('Filtered: destination prefix')
                 return True
 
@@ -174,7 +174,7 @@ class CleepHandler(FileSystemEventHandler):
             if event.src_path.endswith(suffix):
                 self.logger.debug('Filtered: source suffix')
                 return True
-            if getattr(event, u'dest_path', None) and event.dest_path.endswith(prefix):
+            if getattr(event, 'dest_path', None) and event.dest_path.endswith(prefix):
                 self.logger.debug('Filtered: destination suffix')
                 return True
 
@@ -323,9 +323,15 @@ class CleepWatchdog():
     """
     Cleep core and module watchdog
     """
-    def __init__(self):
+    def __init__(self, rpc_url):
+        """
+        Constructor
+
+        Args:
+            rpc_url (str): Cleep RPC url
+        """
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.actions_executor = ActionsExecutor()
+        self.actions_executor = ActionsExecutor(rpc_url)
 
     def watch(self):
         """

@@ -1,5 +1,9 @@
 # Cleep-cli
 
+# [1.30.0] - 2023-03-29
+## Added
+- Handle auth on Cleep
+
 # [1.29.4] - 2023-03-04
 ## Fixed
 - Fix docs publishing when there is no changes

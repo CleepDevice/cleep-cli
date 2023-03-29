@@ -316,7 +316,8 @@ def watchdog():
 @watchdog.command()
 @click.option('--quiet', is_flag=True, help='Disable logging.')
 @click.option('--loglevel', default=logging.INFO, help='Logging level (10=DEBUG, 20=INFO, 30=WARN, 40=ERROR).')
-def watch(quiet, loglevel):
+@click.option('--rpc-url', default='https://127.0.0.1:443', help='Cleep RPC url (ex https://ip|host:port')
+def watch(quiet, loglevel, rpc_url):
     """
     Start watchdog that monitors filesystem changes on Cleep sources
     """
@@ -328,7 +329,7 @@ def watch(quiet, loglevel):
     else:
         logging.getLogger().setLevel(loglevel)
         
-    w = CleepWatchdog()
+    w = CleepWatchdog(rpc_url)
     res = w.watch()
 
     if not res:

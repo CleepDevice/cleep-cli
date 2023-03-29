@@ -8,26 +8,22 @@ from . import config
 from .console import Console
 import requests
 import json
+import urllib.parse
 
 class CleepApi():
     """
     Cleep api helper
     """
 
-    COMMAND_URL = 'http://localhost/command'
-
-    def __init__(self):
+    def __init__(self, rpc_url):
         self.logger = logging.getLogger(self.__class__.__name__)
+        self.command_url = urllib.parse.urljoin(rpc_url, "/command")
 
     def restart_backend(self):
         """
         Send command to restart backend
         """
         self.logger.info('Restarting backend')
-
-        #/!\ old way to restart cleep is not sure if core is broken
-        #data = {'to':'system', 'command':'restart', 'delay':0.0}
-        #self.__post(self.COMMAND_URL, data)
 
         cmd = '/bin/systemctl restart cleep'
         c = Console()
@@ -45,7 +41,7 @@ class CleepApi():
         """
         self.logger.info('Restarting frontend')
         data = {'to':'developer', 'command':'restart_frontend'}
-        self.__post(self.COMMAND_URL, data)
+        self.__post(self.command_url, data)
 
     def __post(self, url, data):
         """
@@ -56,7 +52,7 @@ class CleepApi():
             data (dict): request data
         """
         try:
-            resp = requests.post(url, json=data)
+            resp = requests.post(url, json=data, verify=False)
             resp_data = resp.json()
             self.logger.debug('Response[%s]: %s', resp.status_code, resp_data)
             return (resp.status_code, resp_data)
