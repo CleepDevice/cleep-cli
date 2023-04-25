@@ -1,5 +1,9 @@
 # Cleep-cli
 
+# [1.30.1] - 2023-04-25
+## Fixed
+- Remove useless git_password file
+
 # [1.30.0] - 2023-03-29
 ## Added
 - Handle auth on Cleep
