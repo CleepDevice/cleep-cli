@@ -1,5 +1,14 @@
 # Cleep-cli
 
+# [1.31.0] - 2023-04-25
+## Added
+- Add moddoc command to generate module documentation
+- Add modcheckdoc command to check module documentation
+
+## Changed
+- Rename moddocs to modapidoc
+- Rename moddocspath to modapidocpath
+
 # [1.30.1] - 2023-04-25
 ## Fixed
 - Remove useless git_password file

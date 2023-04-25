@@ -55,3 +55,4 @@ DOCS_PROJECT_NAME = 'Cleep core'
 
 CORE_VERSION = get_core_version_from_sources(REPO_DIR)
 
+DEFAULT_RPC_URL = "https://127.0.0.1:443"

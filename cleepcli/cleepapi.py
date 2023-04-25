@@ -18,6 +18,8 @@ class CleepApi():
     def __init__(self, rpc_url):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.command_url = urllib.parse.urljoin(rpc_url, "/command")
+        self.get_doc_url = urllib.parse.urljoin(rpc_url, "/doc/")
+        self.check_doc_url = urllib.parse.urljoin(rpc_url, "/doc/check/")
 
     def restart_backend(self):
         """
@@ -43,6 +45,48 @@ class CleepApi():
         data = {'to':'developer', 'command':'restart_frontend'}
         self.__post(self.command_url, data)
 
+    def get_documentation(self, module_name):
+        """
+        Call endpoint to get documentation for specified application
+
+        Args:
+            module_name (str): module name
+
+        Returns:
+            dict: cleep command response
+        """
+        self.logger.info("Getting documentation %s", self.get_doc_url)
+        url = urllib.parse.urljoin(self.get_doc_url, module_name)
+
+        (status_code, resp) = self.__get(url)
+
+        if status_code != 200:
+            raise Exception("Unable to call cleep %s endpoint", url)
+        if resp["error"]:
+            raise Exception(resp["message"])
+        return resp["data"]
+
+    def check_documentation(self, module_name):
+        """
+        Call endpoint to check documentation for specified application
+
+        Args:
+            module_name (str): module name
+
+        Returns:
+            dict: cleep command response
+        """
+        self.logger.info("Checking documentation")
+        url = urllib.parse.urljoin(self.check_doc_url, module_name)
+
+        (status_code, resp) = self.__get(url)
+
+        if status_code != 200:
+            raise Exception("Unable to call cleep %s endpoint", url)
+        if resp["error"]:
+            raise Exception(resp["message"])
+        return resp["data"]
+
     def __post(self, url, data):
         """
         Post data to specified url
@@ -50,15 +94,48 @@ class CleepApi():
         Args:
             url (string): request url
             data (dict): request data
+
+        Returns:
+            tuple: post response::
+
+                (status code (int), data (any))
+        
+            None: if error occured
         """
         try:
+            self.logger.debug("POST url: %s", url)
             resp = requests.post(url, json=data, verify=False)
             resp_data = resp.json()
             self.logger.debug('Response[%s]: %s', resp.status_code, resp_data)
             return (resp.status_code, resp_data)
         except Exception as e:
             if self.logger.getEffectiveLevel()==logging.DEBUG:
-                self.logger.exception('Error occured while requesting "%s"' % url)
+                self.logger.exception('Error occured while requesting POST "%s"' % url)
             else:
-                self.logger.error('Error occured while requesting "%s": %s' % (url, str(e)))
+                self.logger.error('Error occured while requesting POST "%s": %s' % (url, str(e)))
 
+    def __get(self, url):
+        """
+        Get data to specified url
+
+        Args:
+            url (string): request url
+
+        Returns:
+            tuple: get response::
+
+                (status code (int), data (any))
+
+            None: if error occured
+        """
+        try:
+            self.logger.debug("GET url: %s", url)
+            resp = requests.get(url, verify=False)
+            resp_data = resp.json()
+            self.logger.debug('Response[%s]: %s', resp.status_code, resp_data)
+            return (resp.status_code, resp_data)
+        except Exception as e:
+            if self.logger.getEffectiveLevel()==logging.DEBUG:
+                self.logger.exception('Error occured while requesting GET "%s"' % url)
+            else:
+                self.logger.error('Error occured while requesting GET "%s": %s' % (url, str(e)))

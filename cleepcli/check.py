@@ -7,6 +7,7 @@ from .console import AdvancedConsole
 import logging
 from . import config
 from . import tools as Tools
+from .cleepapi import CleepApi
 import importlib
 try:
     from cleep.common import CATEGORIES
@@ -273,6 +274,7 @@ overgeneral-exceptions=Exception
 
     def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
+        self.cleepapi = CleepApi(config.DEFAULT_RPC_URL)
 
     def check_backend(self, module_name, module_author=None):
         """
@@ -1397,3 +1399,11 @@ overgeneral-exceptions=Exception
             'unreleased': unreleased,
         }
 
+    def check_documentation(self, module_name):
+        """
+        Check module documentation
+
+        Args:
+            module_name (str): module name
+        """
+        return self.cleepapi.check_documentation(module_name)

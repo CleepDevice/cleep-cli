@@ -23,6 +23,7 @@ from cleepcli.package import Package
 from cleepcli.docs import Docs
 from cleepcli.check import Check
 from cleepcli.ci import Ci
+from cleepcli.cleepapi import CleepApi
 import cleepcli.config as config
 from cleepcli.version import VERSION
 
@@ -470,10 +471,10 @@ def docs():
 
 @docs.command()
 @click.option('--module', callback=get_module_name, help='Module name.')
-@click.option('--preview', is_flag=True, help='Preview generated doc as text.')
-def moddocs(module, preview):
+@click.option('--preview', is_flag=True, help='Preview generated api doc as text.')
+def modapidoc(module, preview):
     """
-    Generate module documentation in appropriate format
+    Generate module api-doc in appropriate format
     """
     d = Docs()
     res = d.generate_module_docs(module, preview)
@@ -483,14 +484,30 @@ def moddocs(module, preview):
 
 @docs.command()
 @click.option('--module', callback=get_module_name, help='Module name.')
-def moddocspath(module):
+def modapidocpath(module):
     """
-    Display generated docs archive path
+    Display generated api-doc archive path
     """
     d = Docs()
     res = d.get_module_docs_archive_path(module)
 
     if not res:
+        sys.exit(1)
+
+@docs.command()
+@click.option('--module', callback=get_module_name, help='Module name.')
+def moddoc(module):
+    """
+    Get module documentation as json
+    """
+    try:
+        c = CleepApi(config.DEFAULT_RPC_URL)
+        doc = c.get_documentation(module)
+        logging.info(json.dumps(doc))
+    except Exception as e:
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
+            logging.exception('Get module "%s" doc failed:' % module)
+        logging.error(str(e))
         sys.exit(1)
 
 @click.group()
@@ -670,6 +687,26 @@ def modcheckchangelog(module, as_json):
     except Exception as e:
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             logging.exception('Check changelog failed:')
+        logging.error(str(e))
+        sys.exit(1)
+
+@check.command()
+@click.option('--module', callback=get_module_name, help='Module name.')
+@click.option('-j', '--json', 'as_json', is_flag=True, help='Output format as json.')
+def modcheckdoc(module, as_json):
+    """
+    Check module documentation
+    """
+    c = Check()
+    try:
+        res = c.check_documentation(module)
+        if as_json:
+            logging.info('%s' % json.dumps(res))
+        else:
+            logging.info('%s' % res)
+    except Exception as e:
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
+            logging.exception('Check documentation failed:')
         logging.error(str(e))
         sys.exit(1)
 
