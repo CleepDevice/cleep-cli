@@ -700,10 +700,14 @@ def modcheckdoc(module, as_json):
     c = Check()
     try:
         res = c.check_documentation(module)
+
         if as_json:
-            logging.info('%s' % json.dumps(res))
+            logging.info('%s' % json.dumps(res["data"]))
         else:
-            logging.info('%s' % res)
+            logging.info('%s' % res["data"])
+
+        if res["error"]:
+            sys.exit(1)
     except Exception as e:
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             logging.exception('Check documentation failed:')

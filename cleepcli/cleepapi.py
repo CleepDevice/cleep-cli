@@ -83,9 +83,7 @@ class CleepApi():
 
         if status_code != 200:
             raise Exception("Unable to call cleep %s endpoint", url)
-        if resp["error"]:
-            raise Exception(resp["message"])
-        return resp["data"]
+        return resp
 
     def __post(self, url, data):
         """
