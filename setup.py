@@ -16,7 +16,7 @@ setup(
     author_email = 'tanguy.bonneau@gmail.com',
     maintainer = 'Tanguy Bonneau',
     maintainer_email = 'tanguy.bonneau@gmail.com',
-    url = 'http://www.github.com/tangb/cleep-cli/',
+    url = 'https://github.com/CleepDevice/cleep-cli',
     packages = ['cleepcli'],
     include_package_data = True,
     install_requires = requirements,
