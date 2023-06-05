@@ -7,8 +7,8 @@ platform:
   arch: arm
 
 trigger:
-  branch:
-    - master
+  event:
+    - tag
 
 concurrency:
   limit: 1
