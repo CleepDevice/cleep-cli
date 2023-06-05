@@ -29,6 +29,7 @@ DEFAULT_MODULES = list(MODULES_REPO_URL.keys())
 GITHUB_ORG = 'CleepDevice'
 GITHUB_REPO = 'cleep'
 GITHUB_REPO_DOCS = 'cleep-docs'
+GITHUB_REPO_APP_DOCS = "cleep-app-docs"
 
 REPO_URL = 'https://github.com/CleepDevice/cleep.git'
 REPO_DIR = os.environ.get('REPO_DIR', '/root/cleep-dev')

@@ -9,6 +9,7 @@ import os
 import logging
 import sys
 import subprocess
+import psutil
 
 #from https://elinux.org/RPi_HardwareHistory
 RASPBERRY_PI_REVISIONS = {
@@ -316,3 +317,11 @@ def cidr_to_netmask(cidr):
     
     return mask[:-1]
 
+def is_cleep_running():
+    """
+    Return True if cleep is running
+    """
+    for proc in psutil.process_iter(['pid', 'name']):
+        if "cleep" in proc.info['name']:
+            return True
+    return False

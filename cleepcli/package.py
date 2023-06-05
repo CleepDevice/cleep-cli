@@ -8,6 +8,7 @@ import logging
 import time
 from . import config
 from .check import Check
+from .docs import Docs
 from .test import Test
 from github import Github
 from zipfile import ZipFile, ZIP_DEFLATED
@@ -248,7 +249,7 @@ sha256sum $DEB > $SHA256
             # delete tag
             if not self.__delete_github_tag(release_found.tag_name, token):
                 return False
-        
+
         # create release
         self.logger.info('Creating new release "%s"...' % version)
         try:
@@ -339,6 +340,7 @@ sha256sum $DEB > $SHA256
 
         # collect data
         check = Check()
+        docs = Docs()
         data_backend = check.check_backend(module_name)
         if len(data_backend['errors']) > 0:
             raise Exception('Error in backend. Fix it before packaging application: %s' % data_backend['errors'])
@@ -362,7 +364,12 @@ sha256sum $DEB > $SHA256
             raise Exception('Error in code quality. Fix it before packaging application: %s' % data_code_quality['errors'])
         if data_code_quality['score'] < 7.0:
             raise Exception('Code quality for app "%s" is too low to be packaged (%s). Please improve it to be greater than 7.0' % (module_name, data_code_quality['score']))
-
+        data_documentation = check.check_module_documentation(module_name)
+        if data_documentation['invalid']:
+            raise Exception('Documentation is invalid. Please fix it before publishing')
+        data_breaking_changes = docs.check_module_breaking_changes()
+        if len(data_breaking_changes['errors']) > 0:
+            raise Exception('There are breaking changes in your new version. Please fix it before publishing')
         data_test = {
             'score': 0.0
         }
@@ -447,4 +454,3 @@ sha256sum $DEB > $SHA256
             'quality': metadata['quality'],
             'confidence': metadata['confidence'],
         }
-

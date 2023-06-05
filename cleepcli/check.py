@@ -3,7 +3,7 @@
 
 import sys
 import os
-from .console import AdvancedConsole
+from .console import AdvancedConsole, Console
 import logging
 from . import config
 from . import tools as Tools
@@ -1399,11 +1399,62 @@ overgeneral-exceptions=Exception
             'unreleased': unreleased,
         }
 
-    def check_documentation(self, module_name):
+    def check_module_documentation(self, module_name):
         """
         Check module documentation
 
         Args:
             module_name (str): module name
+
+        Returns:
+            dict: check doc result::
+
+                {
+                    invalid (bool): True if doc is invalid,
+                    details (dict): check details
+                }
+
         """
-        return self.cleepapi.check_documentation(module_name)
+        if Tools.is_cleep_running():
+            return self.__check_module_documentation_by_api_call(module_name)
+        return self.__check_module_documentation_by_command_line(module_name)
+
+    def __check_module_documentation_by_command_line(self, module_name):
+        """
+        Check app documentation by command line
+        """
+        output = {
+            "invalid": False,
+            "details": {}
+        }
+
+        self.logger.debug("Check module docs by command line")
+        console = Console()
+        cmd = f"cleep --cicheckdoc={module_name}"
+        self.logger.debug("Cmd: %s", cmd)
+        resp = console.command(cmd)
+        self.logger.debug("Cmd resp: %s", resp)
+
+        if resp["returncode"] != 0:
+            output["invalid"] = True
+        output["details"] = json.loads(resp["stdout"])
+
+        return output
+
+    def __check_module_documentation_by_api_call(self, module_name):
+        """
+        Check app documentation by api call
+        """
+        output = {
+            "invalid": False,
+            "details": {}
+        }
+
+        self.logger.debug("Check module docs by api call")
+        resp = self.cleepapi.check_documentation(module_name)
+        self.logger.debug("Call resp: %s", resp)
+        if resp["error"]:
+            output["invalid"] = True
+        output["details"] = resp["data"]
+
+        return output

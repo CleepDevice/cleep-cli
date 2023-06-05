@@ -477,7 +477,7 @@ def modapidoc(module, preview):
     Generate module api-doc in appropriate format
     """
     d = Docs()
-    res = d.generate_module_docs(module, preview)
+    res = d.generate_module_api_docs(module, preview)
 
     if not res:
         sys.exit(1)
@@ -489,7 +489,7 @@ def modapidocpath(module):
     Display generated api-doc archive path
     """
     d = Docs()
-    res = d.get_module_docs_archive_path(module)
+    res = d.get_module_api_docs_archive_path(module)
 
     if not res:
         sys.exit(1)
@@ -501,12 +501,29 @@ def moddoc(module):
     Get module documentation as json
     """
     try:
-        c = CleepApi(config.DEFAULT_RPC_URL)
-        doc = c.get_documentation(module)
-        logging.info(json.dumps(doc))
+        d = Docs()
+        docs = d.generate_module_docs(module)
+        logging.info(json.dumps(docs))
     except Exception as e:
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             logging.exception('Get module "%s" doc failed:' % module)
+        logging.error(str(e))
+        sys.exit(1)
+
+@docs.command()
+@click.option('--module', callback=get_module_name, help='Module name.')
+@click.option('--version', prompt="Module version", help='Module version.')
+def moddoctest(module, version):
+    """
+    Test
+    """
+    try:
+        d = Docs()
+        docs = d.generate_module_docs(module)
+        res = d.publish_app_docs(module, version, docs)
+    except Exception as e:
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
+            logging.exception('Test module "%s" doc failed:' % module)
         logging.error(str(e))
         sys.exit(1)
 
@@ -699,14 +716,47 @@ def modcheckdoc(module, as_json):
     """
     c = Check()
     try:
-        res = c.check_documentation(module)
+        res = c.check_module_documentation(module)
 
         if as_json:
-            logging.info('%s' % json.dumps(res["data"]))
+            logging.info('%s' % json.dumps(res["details"]))
         else:
-            logging.info('%s' % res["data"])
+            logging.info('%s' % res["details"])
 
-        if res["error"]:
+        if res["invalid"]:
+            sys.exit(1)
+    except Exception as e:
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
+            logging.exception('Check documentation failed:')
+        logging.error(str(e))
+        sys.exit(1)
+
+@check.command()
+@click.option('--module', callback=get_module_name, help='Module name.')
+@click.option('-j', '--json', 'as_json', is_flag=True, help='Output format as json.')
+def modcheckbreakingchanges(module, as_json):
+    """
+    Check module breaking changes
+    """
+    d = Docs()
+    try:
+        res = d.check_module_breaking_changes(module)
+
+        if as_json:
+            logging.info('%s', json.dumps(res))
+        else:
+            if len(res["errors"]) == 0:
+                logging.info("No breaking changes detected")
+            else:
+                logging.info("List of detected breaking changes:")
+                for error in res["errors"]:
+                    logging.info(" - %s", error)
+            if len(res["warnings"]) > 0:
+                logging.info("List of warnings:")
+                for warning in res["warnings"]:
+                    logging.info(" - %s", warning)
+
+        if len(res["errors"]) > 0:
             sys.exit(1)
     except Exception as e:
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:

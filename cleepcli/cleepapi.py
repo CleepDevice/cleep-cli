@@ -55,7 +55,6 @@ class CleepApi():
         Returns:
             dict: cleep command response
         """
-        self.logger.info("Getting documentation %s", self.get_doc_url)
         url = urllib.parse.urljoin(self.get_doc_url, module_name)
 
         (status_code, resp) = self.__get(url)
@@ -76,7 +75,6 @@ class CleepApi():
         Returns:
             dict: cleep command response
         """
-        self.logger.info("Checking documentation")
         url = urllib.parse.urljoin(self.check_doc_url, module_name)
 
         (status_code, resp) = self.__get(url)
