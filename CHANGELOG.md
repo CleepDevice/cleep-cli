@@ -1,5 +1,13 @@
 # Cleep-cli
 
+# [1.32.1] - 2023-11-08
+## Fixed
+- Fix error logged when app doc file doesn't exists (it breaks cmd output)
+
+# [1.32.0] - 2023-06-05
+## Added
+- Add modcheckbreakingchanges cmd to get app breaking changes
+
 # [1.31.0] - 2023-04-25
 ## Added
 - Add moddoc command to generate module documentation

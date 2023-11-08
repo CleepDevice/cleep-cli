@@ -18,6 +18,8 @@ from .tools import is_cleep_running
 from semver import Version
 import requests
 
+requests.packages.urllib3.disable_warnings()
+
 class Docs():
     """
     Handle documentation processes
@@ -600,5 +602,6 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
             return content["doc"]
 
         except Exception:
-            self.logger.exception("Unable to get app doc file")
+            if self.logger.getEffectiveLevel() == logging.DEBUG:
+                self.logger.exception("Unable to get app doc file")
             return None
