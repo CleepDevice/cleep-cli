@@ -1,5 +1,9 @@
 # Cleep-cli
 
+# [1.32.2] - 2023-11-09
+## Fixed
+- Fix core sync with modules dir symlink (always removed before)
+
 # [1.32.1] - 2023-11-08
 ## Fixed
 - Fix error logged when app doc file doesn't exists (it breaks cmd output)
