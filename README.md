@@ -75,7 +75,8 @@ Install Visual studio code [sftp](https://marketplace.visualstudio.com/items?ite
         "files": "**/*.{sh,py,js,css,html,json}",
         "autoUpload": true,
         "autoDelete": true
-    }
+    },
+    "ignore": [".vscode", ".git"]
 }
 ```
 
