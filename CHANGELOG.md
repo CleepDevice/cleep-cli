@@ -1,5 +1,17 @@
 # Cleep-cli
 
+# [1.32.5] - 2023-12-29
+## Fixed
+- Handle console returncode instead of error flag
+
+# [1.32.4] - 2023-12-29
+## Fixed
+- Sync cli dependencies with cleep ones
+
+# [1.32.3] - 2023-12-29
+## Fixed
+- Add missing semver dependency
+
 # [1.32.2] - 2023-11-09
 ## Fixed
 - Fix core sync with modules dir symlink (always removed before)
