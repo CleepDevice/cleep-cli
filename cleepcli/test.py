@@ -166,9 +166,12 @@ cd "%(path)s"
         }
         c = Console()
         res = c.command(cmd, timeout=timeout)
-        if res['error'] or res['killed']:
-            self.logger.error('Error during command execution (killed: %s): %s' % (res['killed'], res['stderr']))
+        if res['returncode'] != 0 or res['killed']:
+            self.logger.error('Error during command execution (killed: %s): %s', res['killed'], res['stderr'])
             return False
+
+        if res.get('stderr'):
+            self.logger.warning('Warning on stderr: %s', res.get('stderr'))
 
         return res
 
@@ -422,7 +425,7 @@ coverage run --omit="*/lib/python*/*","*test_*.py" --concurrency=thread --parall
         if res == False:
             raise Exception('Error generating coverage results')
 
-        stdout = '\n'.join(res['stdout'])
+        stdout = '\n'.join(res.get('stdout', []))
         if not as_json:
             return stdout
         return self.__coverage-to_dict(stdout)
