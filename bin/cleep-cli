@@ -142,7 +142,7 @@ def coretestscov(as_json):
 @click.option('--publish', is_flag=True, help='Publish documentation to github pages.')
 def coredocs(publish):
     """
-    Generate core documentation in appropriate format and publish it if requested
+    Generate and publih core documentation
     """
     d = Docs()
     res = d.generate_core_docs(publish)
@@ -230,7 +230,7 @@ def memprof(interval):
 @click.pass_context
 def reset(ctx):
     """
-    Clear all installed Cleep stuff and reinstall all necessary. All sources must exist (use coreget command).
+    Reset Cleep dev env
     """
     confirm = False
     if os.path.exists(config.CORE_DST) or os.path.exists(config.HTML_DST):
@@ -798,6 +798,22 @@ def cimodcheck(module):
     except Exception as e:
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             logging.exception('Module checking failed:')
+        logging.error(str(e))
+        sys.exit(1)
+
+@ci.command(hidden=True)
+@click.option('--module', prompt='Module name', help='Module name.')
+@click.option('--version', prompt='Module version', help='Module version.')
+def cimoddocpublish(module, version):
+    """
+    Publish module documentation to keep track of changes and detect breaking changes. Useful for CI
+    """
+    d = Docs()
+    try:
+        d.publish_module_docs(module, version)
+    except Exception as e:
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
+            logging.exception('Module doc publication failed:')
         logging.error(str(e))
         sys.exit(1)
 
