@@ -123,10 +123,21 @@ fi
 mkdir tmp
 touch tmp/cleep.conf
 echo "SENTRY_DSN=$SENTRY_DSN" >> tmp/cleep.conf
+echo ----- sentry dsn
+echo $SENTRY_DSN
+echo -----
 
 # update debian scripts for this release
 sed -i "s/__CLEEP_VERSION__/$VERSION/g" debian/preinst
-head -n 15 debian/preinst
+echo ----- version changes
+head -n 9 debian/preinst | tail -n 3
+echo -----
+REQUIREMENTS=`awk '{printf("\\\\"%%s\\\\" ",$0)} END { printf "\\\\n" }' requirements.txt`
+echo $REQUIREMENTS
+sed -i 's|__CLEEP_REQUIREMENTS__|'"$REQUIREMENTS"'|g' debian/preinst
+echo ----- requirements changes
+head -n 38 debian/preinst | tail -n 3
+echo -----
 
 # build Cleep application
 debuild -us -uc
