@@ -66,6 +66,7 @@ class Package():
         self.logger.info('Building Cleep package...')
         cmd = """
 SENTRY_DSN=`printenv SENTRY_DSN`
+echo $SENTRY_DSN
 
 if [ -z "$SENTRY_DSN" ]; then
     echo 
@@ -85,7 +86,7 @@ checkResult() {
         if [[ -z "$1" ]]; then
             msg="see output log"
         fi
-        echo -e "${RED}Error occured: $msg.${NOCOLOR}"
+        echo -e "Error occured: $msg."
         exit 1
     fi
 }
@@ -122,6 +123,10 @@ fi
 mkdir tmp
 touch tmp/cleep.conf
 echo "SENTRY_DSN=$SENTRY_DSN" >> tmp/cleep.conf
+
+# update debian scripts for this release
+sed -i "s/__CLEEP_VERSION__/$VERSION/g" debian/preinst
+head -n 15 debian/preinst
 
 # build Cleep application
 debuild -us -uc

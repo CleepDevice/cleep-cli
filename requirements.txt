@@ -1,13 +1,14 @@
 Click>=7.0,<8.0
 watchdog>=2.1.6,<3.0.0
-coverage>=6.0.0,<7.0.0
 Sphinx>=4.2.0,<5.0.0
 sphinx-rtd-theme>=1.0.0
 CProfileV>=1.0.7
 # Force version due to pynacl package introduced in 1.55 that makes 15-20 mins to build on raspi
 # This package seems useful only for github actions we are not using.
-PyGithub==1.54.1
+PyGithub==2.1.1
 pylint>=2.11.1,<3.0.0
-requests>=2.27
 semver==3.0.0
+# Make sure deps below match with cleep ones
+coverage==7.2.7
 passlib==1.7.4
+requests==2.31.0
