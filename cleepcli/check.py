@@ -14,7 +14,6 @@ try:
     APP_CATEGORIES_CHECK_DISABLED = False
 except:
     APP_CATEGORIES_CHECK_DISABLED = True
-    logging.warn('Cleep module is not installed. Cleep application CATEGORIES validation is disabled')
 import re
 import inspect
 import glob
@@ -707,6 +706,8 @@ overgeneral-exceptions=Exception
             })
             if msg:
                 out['errors'].append(msg)
+        else:
+            logging.warn('Cleep module is not installed. Cleep application CATEGORIES validation is disabled')
 
         # MODULE_DEPS
         msg = self.__check_constant({'name': 'MODULE_DEPS', 'type': list, 'value': getattr(class_, 'MODULE_DEPS', None), 'empty': True})
