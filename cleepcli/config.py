@@ -7,7 +7,8 @@ try:
     import cleep
 except:
     class cleep:
-        __file__ = None
+        # fallback to supposed cleep installation path
+        __file__ = '/usr/lib/python3/dist-packages/cleep/__init__.py'
 
 def get_core_version_from_sources(repo_dir):
     try:
