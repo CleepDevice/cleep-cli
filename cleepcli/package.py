@@ -124,7 +124,7 @@ mkdir tmp
 touch tmp/cleep.conf
 echo "SENTRY_DSN=$SENTRY_DSN" >> tmp/cleep.conf
 echo ----- sentry dsn
-echo $SENTRY_DSN
+cat $SENTRY_DSN
 echo -----
 
 # update debian scripts for this release
