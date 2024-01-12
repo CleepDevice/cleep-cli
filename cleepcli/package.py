@@ -123,9 +123,9 @@ fi
 mkdir tmp
 touch tmp/cleep.conf
 echo "SENTRY_DSN=$SENTRY_DSN" >> tmp/cleep.conf
-echo ----- sentry dsn
-cat $SENTRY_DSN
-echo -----
+echo "----- sentry dsn"
+echo $SENTRY_DSN | cut -f1 -d@
+echo "-----"
 
 # update debian scripts for this release
 sed -i "s/__CLEEP_VERSION__/$VERSION/g" debian/preinst
@@ -383,7 +383,7 @@ sha256sum $DEB > $SHA256
         data_documentation = check.check_module_documentation(module_name)
         if data_documentation['invalid']:
             raise Exception('Documentation is invalid. Please fix it before publishing')
-        data_breaking_changes = docs.check_module_breaking_changes()
+        data_breaking_changes = docs.check_module_breaking_changes(module_name)
         if len(data_breaking_changes['errors']) > 0:
             raise Exception('There are breaking changes in your new version. Please fix it before publishing')
         data_test = {
