@@ -1,5 +1,9 @@
 # Cleep-cli
 
+# [1.33.0] - 2024-01-15
+## Updated
+- Find cleep rpc url from cleep logs
+
 # [1.32.5] - 2023-12-29
 ## Fixed
 - Handle console returncode instead of error flag

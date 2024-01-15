@@ -10,6 +10,7 @@ import logging
 import sys
 import subprocess
 import psutil
+import re
 
 #from https://elinux.org/RPi_HardwareHistory
 RASPBERRY_PI_REVISIONS = {
@@ -325,3 +326,19 @@ def is_cleep_running():
         if "cleep" in proc.info['name']:
             return True
     return False
+
+def get_cleep_url():
+    """
+    Return cleep url or None if not running
+    """
+    pattern = "(http[s]?:\/\/\d\.\d\.\d\.\d:\d+)"
+    try:
+        with open("/var/log/cleep.log") as log:
+            for line in log.readlines():
+                match = re.search(pattern, line)
+                if match:
+                    return match.groups()[0]
+                    break
+    except:
+        return None
+

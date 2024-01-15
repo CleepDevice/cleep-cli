@@ -17,6 +17,10 @@ class CleepApi():
 
     def __init__(self, rpc_url):
         self.logger = logging.getLogger(self.__class__.__name__)
+
+        if not rpc_url:
+            rpc_url = 'http://0.0.0.0:80'
+
         self.command_url = urllib.parse.urljoin(rpc_url, "/command")
         self.get_doc_url = urllib.parse.urljoin(rpc_url, "/doc/")
         self.check_doc_url = urllib.parse.urljoin(rpc_url, "/doc/check/")
@@ -61,9 +65,9 @@ class CleepApi():
 
         if status_code != 200:
             raise Exception("Unable to call cleep %s endpoint", url)
-        if resp["error"]:
-            raise Exception(resp["message"])
-        return resp["data"]
+        if resp.get("error"):
+            raise Exception(resp.get("message", "No error message"))
+        return resp.get("data")
 
     def check_documentation(self, module_name):
         """
@@ -135,3 +139,5 @@ class CleepApi():
                 self.logger.exception('Error occured while requesting GET "%s"' % url)
             else:
                 self.logger.error('Error occured while requesting GET "%s": %s' % (url, str(e)))
+
+        return (404, {})

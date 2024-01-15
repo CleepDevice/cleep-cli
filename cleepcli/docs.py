@@ -14,7 +14,7 @@ from github.GithubException import BadCredentialsException, UnknownObjectExcepti
 from urllib.parse import quote
 import base64
 from .cleepapi import CleepApi
-from .tools import is_cleep_running
+from .tools import is_cleep_running, get_cleep_url
 from semver import Version
 import requests
 
@@ -200,7 +200,9 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
         Generate module docs by api call
         """
         self.logger.debug("Get module docs by api call")
-        cleepapi = CleepApi(config.DEFAULT_RPC_URL)
+        rpc_url = get_cleep_url()
+        self.logger.info('Cleep RPC url: %s', rpc_url)
+        cleepapi = CleepApi(rpc_url)
         return cleepapi.get_documentation(module_name)
 
     def __generate_module_docs_by_command_line(self, module_name):

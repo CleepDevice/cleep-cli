@@ -273,7 +273,10 @@ overgeneral-exceptions=Exception
 
     def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.cleepapi = CleepApi(config.DEFAULT_RPC_URL)
+
+        rpc_url = Tools.get_cleep_url()
+        self.logger.info('Cleep RPC url: %s', rpc_url)
+        self.cleepapi = CleepApi(rpc_url)
 
     def check_backend(self, module_name, module_author=None):
         """
