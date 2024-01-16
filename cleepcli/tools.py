@@ -323,7 +323,7 @@ def is_cleep_running():
     Return True if cleep is running
     """
     for proc in psutil.process_iter(['pid', 'name']):
-        if "cleep" in proc.info['name']:
+        if proc.info['name'] == "cleep":
             return True
     return False
 

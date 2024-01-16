@@ -1,5 +1,9 @@
 # Cleep-cli
 
+# [1.33.1] - 2024-01-16
+## Fixed
+- Restrict process name search in Tools.is_cleep_running function
+
 # [1.33.0] - 2024-01-15
 ## Updated
 - Find cleep rpc url from cleep logs
