@@ -20,6 +20,7 @@ class CleepApi():
 
         if not rpc_url:
             rpc_url = 'http://0.0.0.0:80'
+        self.logger.debug('RPC url: %s', rpc_url)
 
         self.command_url = urllib.parse.urljoin(rpc_url, "/command")
         self.get_doc_url = urllib.parse.urljoin(rpc_url, "/doc/")
@@ -64,7 +65,7 @@ class CleepApi():
         (status_code, resp) = self.__get(url)
 
         if status_code != 200:
-            raise Exception("Unable to call cleep %s endpoint", url)
+            raise Exception("Unable to call cleep %s endpoint" % url)
         if resp.get("error"):
             raise Exception(resp.get("message", "No error message"))
         return resp.get("data")

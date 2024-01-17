@@ -1,5 +1,9 @@
 # Cleep-cli
 
+# [1.33.2] - 2024-01-17
+## Fixed
+- Fix issue parsing to json console stdout when checking app documentation
+
 # [1.33.1] - 2024-01-16
 ## Fixed
 - Restrict process name search in Tools.is_cleep_running function

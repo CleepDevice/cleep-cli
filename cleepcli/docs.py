@@ -212,12 +212,13 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
         self.logger.debug("Get module docs by command line")
         console = Console()
         resp = console.command(f"cleep --cidoc={module_name}")
+        self.logger.debug("Resp: %s", resp)
 
         if resp["returncode"] != 0:
             self.logger.error("Unable to generate %s doc", module_name)
             raise Exception(f"Error occured generating {module_name} documentation")
 
-        return json.loads(resp["stdout"])
+        return json.loads(''.join(resp["stdout"]))
 
     def generate_core_docs(self, publish=False):
         """
