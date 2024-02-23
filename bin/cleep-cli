@@ -804,13 +804,14 @@ def cimodcheck(module):
 @ci.command(hidden=True)
 @click.option('--module', prompt='Module name', help='Module name.')
 @click.option('--version', prompt='Module version', help='Module version.')
-def cimoddocpublish(module, version):
+@click.option('--ghtoken', prompt='Github access token', help='Github access token', default=None)
+def cimoddocpublish(module, version, ghtoken):
     """
     Publish module documentation to keep track of changes and detect breaking changes. Useful for CI
     """
     d = Docs()
     try:
-        d.publish_module_docs(module, version)
+        d.publish_module_docs(module, version, ghtoken)
     except Exception as e:
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             logging.exception('Module doc publication failed:')

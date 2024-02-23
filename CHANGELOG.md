@@ -1,5 +1,9 @@
 # Cleep-cli
 
+# [1.33.3] - 2024-02-23
+## Updated
+- Add way to pass github access token via command line for cimoddocpublish cmd
+
 # [1.33.2] - 2024-01-17
 ## Fixed
 - Fix issue parsing to json console stdout when checking app documentation
