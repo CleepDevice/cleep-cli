@@ -272,6 +272,21 @@ def get_module_name(param, value):
     return module_name
 
 @mod.command()
+def modssync():
+    """
+    Synchronize all mandatory modules (system, network...)
+    """
+    logging.info('Synchronizing mandatory modules...')
+    f = File()
+
+    for module in config.MODULES_REPO_URL.keys():
+        res = f.module_sync(module)
+        if not res:
+            sys.exit(1)
+
+    logging.info('Done')
+
+@mod.command()
 @click.option('--module', callback=get_module_name, help='Module name.')
 def modsync(module):
     """

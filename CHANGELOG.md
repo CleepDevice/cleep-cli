@@ -1,5 +1,12 @@
 # Cleep-cli
 
+# [1.34.0] - 2024-03-07
+## Added
+- Add new modssync command to sync all mandatory modules at once
+
+## Fixed
+- Create modules directory in cleep installation folder to allow CI to start from scratch
+
 # [1.33.4] - 2024-03-07
 ## Fixed
 - Change way to detect Cleep installation path
