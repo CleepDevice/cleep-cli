@@ -1,5 +1,10 @@
 # Cleep-cli
 
+# [1.34.2] - 2024-03-07
+## Fixed
+- Create missing /etc/cleep dir
+- Change modules destination dir (now /opt/cleep/modules)
+
 # [1.34.1] - 2024-03-07
 ## Fixed
 - Create missing Cleep install directories

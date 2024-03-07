@@ -24,15 +24,24 @@ class File():
             raise Exception('Cleep needs to be installed before using this command')
 
         c = Console()
+        variables = {
+            'REPO_DIR': config.REPO_DIR,
+            'CORE_DST': config.CORE_DST,
+            'HTML_DST': config.HTML_DST,
+            'BIN_DST': config.BIN_DST,
+            'MEDIA_DST': config.MEDIA_DST,
+            'CONFIG_DIR': config.CONFIG_DIR,
+        }
         cmd = """
 mkdir -p "%(HTML_DST)s/"
 mkdir -p "%(CORE_DST)s/modules"
 mkdir -p "%(MEDIA_DST)s/modules"
+mdkir -p "%(CONFIG_DIR)s"
 rsync -av "%(REPO_DIR)s/cleep/" "%(CORE_DST)s/" --exclude "/tests/" --exclude "modules" --exclude "*__pycache__*" --delete --exclude "*.pyc" --keep-dirlinks
 rsync -av "%(REPO_DIR)s/html/" "%(HTML_DST)s/" --delete --exclude "js/modules/" --exclude "*node_modules*"
 rsync -av "%(REPO_DIR)s/bin/cleep" "%(BIN_DST)s/cleep"
 rsync -av "%(REPO_DIR)s/medias/sounds" "%(MEDIA_DST)s/sounds/" --delete
-    """ % {'REPO_DIR': config.REPO_DIR, 'CORE_DST': config.CORE_DST, 'HTML_DST':config.HTML_DST, 'BIN_DST':config.BIN_DST, 'MEDIA_DST':config.MEDIA_DST}
+    """ % variables
         self.logger.debug('Coresync cmd: %s' % cmd)
         resp = c.command(cmd, 15)
         self.logger.debug('Coresync stdout:\n%s' % '\n'.join(resp['stdout']))

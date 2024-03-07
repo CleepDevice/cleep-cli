@@ -42,7 +42,7 @@ HTML_SRC = '%s/html' % REPO_DIR
 HTML_DST = '/opt/cleep/html'
 
 MODULES_SRC = '%s/modules' % REPO_DIR
-MODULES_DST = '%s/modules' % CORE_DST
+MODULES_DST = '/opt/cleep/modules'
 MODULES_HTML_DST = '%s/js/modules' % HTML_DST
 MODULES_SCRIPTS_DST = '/opt/cleep/scripts'
 
@@ -56,3 +56,5 @@ DOCS_AUTHOR = 'CleepDevice'
 DOCS_PROJECT_NAME = 'Cleep core'
 
 CORE_VERSION = get_core_version_from_sources(REPO_DIR)
+
+CONFIG_DIR = '/etc/cleep'
