@@ -8,7 +8,7 @@ try:
 except:
     class cleep:
         # fallback to supposed cleep installation path
-        __file__ = '/usr/lib/python3/dist-packages/cleep/__init__.py'
+        __path__ = ['/usr/lib/python3/dist-packages/cleep']
 
 def get_core_version_from_sources(repo_dir):
     try:
@@ -36,7 +36,7 @@ REPO_URL = 'https://github.com/CleepDevice/cleep.git'
 REPO_DIR = os.environ.get('REPO_DIR', '/root/cleep-dev')
 
 CORE_SRC = '%s/cleep' % REPO_DIR
-CORE_DST = os.path.dirname(cleep.__file__) if cleep.__file__ else None
+CORE_DST = cleep.__path__[0] if cleep.__path__ else None
 
 HTML_SRC = '%s/html' % REPO_DIR
 HTML_DST = '/opt/cleep/html'

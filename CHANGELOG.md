@@ -1,5 +1,9 @@
 # Cleep-cli
 
+# [1.33.4] - 2024-03-07
+## Fixed
+- Change way to detect Cleep installation path
+
 # [1.33.3] - 2024-02-23
 ## Updated
 - Add way to pass github access token via command line for cimoddocpublish cmd
