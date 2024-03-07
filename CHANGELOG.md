@@ -1,5 +1,9 @@
 # Cleep-cli
 
+# [1.34.1] - 2024-03-07
+## Fixed
+- Create missing Cleep install directories
+
 # [1.34.0] - 2024-03-07
 ## Added
 - Add new modssync command to sync all mandatory modules at once

@@ -26,8 +26,9 @@ class File():
         c = Console()
         cmd = """
 mkdir -p "%(HTML_DST)s/"
-rsync -av "%(REPO_DIR)s/cleep/" "%(CORE_DST)s/" --exclude "/tests/" --exclude "modules" --exclude "*__pycache__*" --delete --exclude "*.pyc" --keep-dirlinks
 mkdir -p "%(CORE_DST)s/modules"
+mkdir -p "%(MEDIA_DST)s/modules"
+rsync -av "%(REPO_DIR)s/cleep/" "%(CORE_DST)s/" --exclude "/tests/" --exclude "modules" --exclude "*__pycache__*" --delete --exclude "*.pyc" --keep-dirlinks
 rsync -av "%(REPO_DIR)s/html/" "%(HTML_DST)s/" --delete --exclude "js/modules/" --exclude "*node_modules*"
 rsync -av "%(REPO_DIR)s/bin/cleep" "%(BIN_DST)s/cleep"
 rsync -av "%(REPO_DIR)s/medias/sounds" "%(MEDIA_DST)s/sounds/" --delete
