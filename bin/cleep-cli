@@ -272,7 +272,8 @@ def get_module_name(param, value):
     return module_name
 
 @mod.command()
-def modssync():
+@click.option('--run-scripts', default=False, is_flag=True, help='Also run preinst.sh and postinst.sh scripts')
+def modssync(run_scripts):
     """
     Synchronize all mandatory modules (system, network...)
     """
@@ -281,6 +282,9 @@ def modssync():
 
     for module in config.MODULES_REPO_URL.keys():
         res = f.module_sync(module)
+        if not res:
+            sys.exit(1)
+        res = f.module_run_install_scripts(module)
         if not res:
             sys.exit(1)
 

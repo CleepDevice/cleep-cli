@@ -1,5 +1,9 @@
 # Cleep-cli
 
+# [1.35.0] - 2024-03-08
+## Updated
+- Add run-scripts to modssync
+
 # [1.34.2] - 2024-03-07
 ## Fixed
 - Create missing /etc/cleep dir

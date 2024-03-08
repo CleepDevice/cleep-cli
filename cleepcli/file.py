@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import sys
 import os
 from .console import Console
 import logging
@@ -36,7 +35,7 @@ class File():
 mkdir -p "%(HTML_DST)s/"
 mkdir -p "%(CORE_DST)s/modules"
 mkdir -p "%(MEDIA_DST)s/modules"
-mdkir -p "%(CONFIG_DIR)s"
+mkdir -p "%(CONFIG_DIR)s"
 rsync -av "%(REPO_DIR)s/cleep/" "%(CORE_DST)s/" --exclude "/tests/" --exclude "modules" --exclude "*__pycache__*" --delete --exclude "*.pyc" --keep-dirlinks
 rsync -av "%(REPO_DIR)s/html/" "%(HTML_DST)s/" --delete --exclude "js/modules/" --exclude "*node_modules*"
 rsync -av "%(REPO_DIR)s/bin/cleep" "%(BIN_DST)s/cleep"
@@ -58,7 +57,8 @@ rsync -av "%(REPO_DIR)s/medias/sounds" "%(MEDIA_DST)s/sounds/" --delete
         Copy specified module content to valid execution location
         """
         if not os.path.exists(os.path.join(config.MODULES_SRC, module_name)):
-            sys.exit('Module "%s" doesn\'t exist [%s]' % (module_name, os.path.join(config.MODULES_SRC, module_name)))
+            self.logger.error('Module "%s" doesn\'t exist [%s]' % (module_name, os.path.join(config.MODULES_SRC, module_name)))
+            return False
     
         if not os.path.exists(os.path.join(config.MODULES_DST, module_name)):
             os.makedirs(os.path.join(config.MODULES_DST, module_name))
@@ -101,3 +101,30 @@ fi
 
         return True
 
+    def module_run_install_scripts(self, module_name):
+        """
+        Run module installation scripts
+        """
+        if not os.path.exists(os.path.join(config.MODULES_SRC, module_name)):
+            self.logger.error('Module "%s" doesn\'t exist [%s]' % (module_name, os.path.join(config.MODULES_SRC, module_name)))
+            return False
+
+        preinst_script = os.path.join(config.MODULES_SCRIPTS_DST, module_name, "preinst.sh")
+        postinst_script = os.path.join(config.MODULES_SCRIPTS_DST, module_name, "postinst.sh")
+        console = Console()
+
+        if os.path.exists(preinst_script):
+            self.logger.info('Running %s scripts', preinst_script)
+            resp = console.command(preinst_script, timeout=300)
+            if resp["returncode"] != 0:
+                self.logger.error('Error running %s [%s]: %s', preinst_script, resp["returncode"], ''.join(resp["stderr"]))
+                return False
+
+        if os.path.exists(postinst_script):
+            self.logger.info('Running %s scripts', postinst_script)
+            resp = console.command(postinst_script, timeout=300)
+            if resp["returncode"] != 0:
+                self.logger.error('Error running %s [%s]: %s', postinst_script, resp["returncode"], ''.join(resp["stderr"]))
+                return False
+
+        return True
