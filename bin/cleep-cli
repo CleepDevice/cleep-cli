@@ -6,7 +6,6 @@
 
 import logging
 import sys
-logging.basicConfig(level=logging.INFO, format=u'%(message)s', stream=sys.stdout)
 import os
 import platform
 import subprocess
@@ -23,10 +22,14 @@ from cleepcli.package import Package
 from cleepcli.docs import Docs
 from cleepcli.check import Check
 from cleepcli.ci import Ci
-from cleepcli.cleepapi import CleepApi
 import cleepcli.config as config
 from cleepcli.version import VERSION
 
+if os.getcwd() == '/root/cleep-cli':
+    # in dev env, force debug log level by default
+    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s [%(name)s:%(lineno)d]: %(message)s', stream=sys.stdout)
+else:
+    logging.basicConfig(level=logging.INFO, format='%(message)s', stream=sys.stdout)
 
 # install logging trace level
 level = logging.TRACE = logging.DEBUG - 5
@@ -255,8 +258,8 @@ def reset(ctx):
 def mod():
     pass
 
-def get_module_name(param, value):
-    module_name = value if value else None
+def get_module_name(ctx, param, value):
+    module_name = value or None
     try:
         current_path = os.getcwd()
         if current_path.startswith(config.MODULES_SRC) and not module_name:
@@ -341,7 +344,7 @@ def watch(quiet, loglevel, rpc_url):
     """
     Start watchdog that monitors filesystem changes on Cleep sources
     """
-    if logging.getLogger().getEffectiveLevel()==logging.DEBUG:
+    if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
         # do not overwrite root logger level if configured to DEBUG (dev mode)
         pass
     elif quiet:
@@ -863,14 +866,14 @@ def print_version(ctx, param, value):
 def cli():
     pass
 
-if __name__ == '__main__':
 
+if __name__ == '__main__':
     def is_raspbian():
         if platform.system()!='Linux':
             return False
         res = subprocess.Popen(u'cat /etc/os-release | grep -i raspbian | wc -l', stdout=subprocess.PIPE, shell=True)
         stdout = res.communicate()[0]
-        if stdout.strip()=='0':
+        if stdout.strip() == '0':
             return False
         return True
 
@@ -878,5 +881,4 @@ if __name__ == '__main__':
     if is_raspbian():
         cli()
     else:
-        click.echo('Cleep-cli runs only on RaspiOS distribution')
-
+        click.echo('Cleep-cli runs only on RaspberrypiOS distribution')

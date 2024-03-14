@@ -1,5 +1,11 @@
 # Cleep-cli
 
+# [1.35.1] - 2024-03-14
+## Fixed
+- Fix issue with get_module_name (occured after Click upgrade)
+- Fix watch command filtering to not reload Cleep after useless changes (test, doc...)
+- Fix some dependencies update (Click, watchdog)
+
 # [1.35.0] - 2024-03-08
 ## Updated
 - Add run-scripts to modssync
