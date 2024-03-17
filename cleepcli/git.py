@@ -91,7 +91,7 @@ class Git():
         module_path = os.path.join(config.MODULES_SRC, module)
         cmd = 'git clone -q "%s" "%s"' % (url, module_path)
         self.logger.debug('cmd: %s' % cmd)
-        resp = c.command(cmd, 60)
+        resp = c.command(cmd, timeout=120)
         self.logger.debug('Clone resp: %s' % resp)
         if resp['error'] or resp['killed']:
             self.logger.error('Error occured while cloning "%s" mod repository: %s' % (module, 'killed' if resp['killed'] else resp['stderr']))
