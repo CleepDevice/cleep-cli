@@ -48,12 +48,13 @@ PRAGMA_NO_COVER_PATTERN = r'#\s*pragma\s*:\s*no\s+cover'
 def core():
     pass
 
-def get_core_mods(git=None):
+def get_core_mods(git=None, branch=None):
     """
     Get all core modules from their repos
 
     Args:
         git (Git): Git instance. Create new instance if not provided
+        branch (str): branch name
 
     Returns:
         bool: True if modules installed successfully
@@ -63,9 +64,9 @@ def get_core_mods(git=None):
     for module in config.DEFAULT_MODULES:
         module_path = os.path.join(config.MODULES_SRC, module)
         if not os.path.exists(module_path):
-            res = g.clone_mod(module)
+            res = g.clone_mod(module, branch)
         else:
-            res = g.pull_mod(module)
+            res = g.pull_mod(module, branch)
 
         if not res:
             logging.error('Error getting "%s" default module' % module)
@@ -843,11 +844,12 @@ def cimoddocpublish(module, version, ghtoken):
 @ci.command(hidden=True)
 @click.pass_context
 @click.option('--nosync', is_flag=True, default=False, help='Sync mods.')
-def cigetmods(ctx, nosync):
+@click.option('--branch', default=None, help='Get apps specific branch')
+def cigetmods(ctx, nosync, branch):
     """
     Get all core modules from git repos
     """
-    if not get_core_mods():
+    if not get_core_mods(branch=branch):
         sys.exit(1)
 
     if not nosync:

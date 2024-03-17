@@ -1,5 +1,9 @@
 # Cleep-cli
 
+# [1.36.0] - 2024-03-17
+# Added
+- Add way to pull specific branch for cigetmods command
+
 # [1.35.1] - 2024-03-14
 ## Fixed
 - Fix issue with get_module_name (occured after Click upgrade)
