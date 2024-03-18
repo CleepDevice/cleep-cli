@@ -212,10 +212,11 @@ sha256sum $DEB > $SHA256
             self.logger.exception('Error deleting tag "%s"' % tag_name)
             return False
 
-    def publish_cleep(self, version):
+    def publish_cleep(self, version, prerelease):
         """
         Publish cleep version on github
         """
+        label = 'pre-release' if prerelease else 'release'
         token = os.environ['GITHUB_ACCESS_TOKEN']
         github = Github(token)
         repo = github.get_repo('%s/%s' % (config.GITHUB_ORG, config.GITHUB_REPO))
@@ -245,21 +246,21 @@ sha256sum $DEB > $SHA256
         release_found = None
         releases = repo.get_releases()
         for release in releases:
-            self.logger.debug('Release "%s"' % release.title)
+            self.logger.debug('%s "%s"', label, release.title)
             if release.title==version:
-                self.logger.debug(' -> Release found')
+                self.logger.debug(' -> %s found', label)
                 release_found = release
                 break
 
         if release_found and (release_found.prerelease or release_found.draft):
             # due to github limitation (bug or limitation?), draft assets are not downloadable
             # so we create prerelease version instead of draft and delete it before creating it
-            # again when pushing version
-            self.logger.info('Deleting existing release "%s"...' % release_found.tag_name)
+            # again when pushing new version
+            self.logger.info('Deleting existing %s "%s"...', label, release_found.tag_name)
             try:
                 release_found.delete_release()
             except:
-                self.logger.exception('Error deleting existing release:')
+                self.logger.exception('Error deleting existing %s:', label)
                 return False
 
             # delete tag
@@ -267,7 +268,7 @@ sha256sum $DEB > $SHA256
                 return False
 
         # create release
-        self.logger.info('Creating new release "%s"...' % version)
+        self.logger.info('Creating new %s "%s"...', label, version)
         try:
             commits = repo.get_commits()
             release_found = repo.create_git_release(
@@ -275,10 +276,10 @@ sha256sum $DEB > $SHA256
                 name=version,
                 message=changelog,
                 draft=False,
-                prerelease=True,
+                prerelease=prerelease,
             )
         except:
-            self.logger.exception('Error occured creating new release:')
+            self.logger.exception('Error occured creating new %s:', label)
             return False
 
         # upload assets

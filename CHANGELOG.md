@@ -1,5 +1,9 @@
 # Cleep-cli
 
+# [1.37.0] - 2024-03-18
+# Added
+- Add prerelease flag to corepublish command
+
 # [1.36.0] - 2024-03-17
 # Added
 - Add way to pull specific branch for cigetmods command
