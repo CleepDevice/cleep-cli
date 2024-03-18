@@ -164,10 +164,11 @@ cd "%(path)s"
             'command': coverage_command,
             'options': coverage_options,
         }
+        self.logger.debug('Coverage cmd: %s', cmd)
         c = Console()
         res = c.command(cmd, timeout=timeout)
         if res['returncode'] != 0 or res['killed']:
-            self.logger.error('Error during command execution (killed: %s): %s', res['killed'], res['stderr'])
+            self.logger.error('Error during command execution [%s] (killed: %s): %s - %s', res["returncode"], res["killed"], res["stdout"], res["stderr"])
             return False
 
         if res.get('stderr'):
@@ -417,10 +418,10 @@ coverage run --omit="*/lib/python*/*","*test_*.py" --concurrency=thread --parall
             string or dict according to as_json option
         """
         # combine results
-        if self.__coverage_simple_command(self.__get_core_tests_path(), 'combine', timeout=120.0) == False:
-            raise Exception('Error preparing coverage results')
+        #if self.__coverage_simple_command(self.__get_core_tests_path(), 'combine', timeout=120.0) == False:
+        #    raise Exception('Error preparing coverage results')
 
-        # combine results
+        # report results
         res = self.__coverage_simple_command(self.__get_core_tests_path(), 'report', '-i', timeout=120.0)
         if res == False:
             raise Exception('Error generating coverage results')
@@ -428,5 +429,5 @@ coverage run --omit="*/lib/python*/*","*test_*.py" --concurrency=thread --parall
         stdout = '\n'.join(res.get('stdout', []))
         if not as_json:
             return stdout
-        return self.__coverage-to_dict(stdout)
+        return self.__coverage_to_dict(stdout)
 

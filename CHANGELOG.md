@@ -4,6 +4,9 @@
 # Added
 - Add prerelease flag to corepublish command
 
+# Fixed
+- Issue when requesting core coverage with coretestscov cmd
+
 # [1.36.0] - 2024-03-17
 # Added
 - Add way to pull specific branch for cigetmods command
