@@ -418,8 +418,7 @@ coverage run --omit="*/lib/python*/*","*test_*.py" --concurrency=thread --parall
             string or dict according to as_json option
         """
         # combine results
-        #if self.__coverage_simple_command(self.__get_core_tests_path(), 'combine', timeout=120.0) == False:
-        #    raise Exception('Error preparing coverage results')
+        self.__coverage_simple_command(self.__get_core_tests_path(), 'combine', timeout=120.0)
 
         # report results
         res = self.__coverage_simple_command(self.__get_core_tests_path(), 'report', '-i', timeout=120.0)

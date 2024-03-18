@@ -1,14 +1,18 @@
 # Cleep-cli
 
+# [1.37.1] - 2024-03-18
+## Fixed
+- Fixed issue with coretests cmd
+
 # [1.37.0] - 2024-03-18
-# Added
+## Added
 - Add prerelease flag to corepublish command
 
-# Fixed
+#" Fixed
 - Issue when requesting core coverage with coretestscov cmd
 
 # [1.36.0] - 2024-03-17
-# Added
+## Added
 - Add way to pull specific branch for cigetmods command
 
 # [1.35.1] - 2024-03-14
