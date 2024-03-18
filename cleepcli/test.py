@@ -152,7 +152,7 @@ class Test():
         """
         return '%s/%s/tests' % (config.MODULES_SRC, module_name)
 
-    def __coverage_simple_command(self, path, coverage_command, coverage_options='', coverage_file=None, timeout=5.0):
+    def __coverage_simple_command(self, path, coverage_command, coverage_options='', coverage_file=None, timeout=5.0, quiet=True):
         coverage_file = 'COVERAGE_FILE=%s ' % coverage_file if coverage_file else ''
         
         cmd = """
@@ -168,15 +168,16 @@ cd "%(path)s"
         c = Console()
         res = c.command(cmd, timeout=timeout)
         if res['returncode'] != 0 or res['killed']:
-            self.logger.error('Error during command execution [%s] (killed: %s): %s - %s', res["returncode"], res["killed"], res["stdout"], res["stderr"])
+            if len(res["stdout"]) == 0 or not res["stdout"][0].startswith("No data to"):
+                self.logger.error('Error during command execution [%s] (killed: %s): %s - %s', res["returncode"], res["killed"], res["stdout"], res["stderr"])
             return False
 
-        if res.get('stderr'):
+        if not quiet and res.get('stderr'):
             self.logger.warning('Warning on stderr: %s', res.get('stderr'))
 
         return res
 
-    def module_test(self, module_name, display_coverage=False, copy_to=None):
+    def module_tests(self, module_name, display_coverage=False, copy_to=None):
         """
         Execute module unit tests and display process output on stdout
 
@@ -217,7 +218,7 @@ COVERAGE_FILE=%s coverage run --omit="*/lib/python*/*","test_*" --source="../bac
         # display coverage report
         if display_coverage:
             self.logger.debug('Display coverage')
-            self.logger.info(self.module_test_coverage(module_name))
+            self.logger.info(self.module_tests_coverage(module_name))
 
         # copy coverage file to standart location (in module tests directory) for coverage report tools
         if copy_to:
@@ -229,7 +230,7 @@ COVERAGE_FILE=%s coverage run --omit="*/lib/python*/*","test_*" --source="../bac
 
         return True
 
-    def module_test_coverage(self, module_name, missing=False, as_json=False):
+    def module_tests_coverage(self, module_name, missing=False, as_json=False, quiet=True):
         """
         Display module coverage
 
@@ -237,6 +238,7 @@ COVERAGE_FILE=%s coverage run --omit="*/lib/python*/*","test_*" --source="../bac
             module_name (string): module name
             missing (bool): display missing statements (default False)
             as_json (bool): return results as json
+            quiet (bool): display or not coverage.py warnings
 
         Returns:
             string or dict according to as_json option
@@ -254,16 +256,17 @@ COVERAGE_FILE=%s coverage run --omit="*/lib/python*/*","test_*" --source="../bac
         if not os.path.exists(coverage_file):
             raise Exception('No coverage file found. Did tests run ?')
 
-        res = self.__coverage_simple_command(
+        report = self.__coverage_simple_command(
             self.__get_module_tests_path(module_name),
             'report',
             '-m -i' if missing else '-i',
             coverage_file,
+            quiet=quiet,
         )
-        if res == False:
+        if not report:
             raise Exception('Error executing coverage report')
 
-        stdout = '\n'.join(res['stdout'])
+        stdout = '\n'.join(report['stdout'])
         if not as_json:
             return stdout
         return self.__coverage_to_dict(stdout)
@@ -323,13 +326,15 @@ COVERAGE_FILE=%s coverage run --omit="*/lib/python*/*","test_*" --source="../bac
 
         return files
 
-    def core_tests(self, display_coverage=False, display_test_output=False):
+    def core_tests(self, display_coverage=False, display_test_output=False, xml=False, quiet=True):
         """
         Execute core unit tests and display process output on stdout
 
         Args:
             display_coverage (bool): display coverage report (default False)
             display_test_output (bool): display unit test output (default True)
+            xml (bool): use xml coverage command instead of report command
+            quiet (bool): display or not coverage.py warnings
 
         Returns:
             bool: True if process succeed.
@@ -390,7 +395,7 @@ coverage run --omit="*/lib/python*/*","*test_*.py" --concurrency=thread --parall
 
         # coverage
         if display_coverage:
-            coverage = self.core_test_coverage()
+            coverage = self.core_tests_coverage(xml=xml, quiet=quiet)
             logging.info(coverage)
 
         # display tests report
@@ -407,21 +412,24 @@ coverage run --omit="*/lib/python*/*","*test_*.py" --concurrency=thread --parall
 
         return True if len(files_on_error) == 0 else False
 
-    def core_test_coverage(self, as_json=False):
+    def core_tests_coverage(self, as_json=False, xml=False, quiet=True):
         """
         Get core test coverage last results
 
         Args:
             as_json (bool): return output as json
+            xml (bool): use xml coverage command instead of report command
+            quiet (bool): display or not coverage.py warnings
 
         Returns:
             string or dict according to as_json option
         """
         # combine results
-        self.__coverage_simple_command(self.__get_core_tests_path(), 'combine', timeout=120.0)
+        self.__coverage_simple_command(self.__get_core_tests_path(), 'combine', timeout=120.0, quiet=quiet)
 
         # report results
-        res = self.__coverage_simple_command(self.__get_core_tests_path(), 'report', '-i', timeout=120.0)
+        command = "xml" if xml else "report"
+        res = self.__coverage_simple_command(self.__get_core_tests_path(), command, "--ignore-errors", timeout=120.0, quiet=quiet)
         if res == False:
             raise Exception('Error generating coverage results')
 

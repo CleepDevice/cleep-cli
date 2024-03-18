@@ -1,5 +1,12 @@
 # Cleep-cli
 
+# [1.37.2] - 2024-03-18
+## Added
+- Add way to generate coverage report to xml (only format supported by codacy)
+
+## Fixed
+- Typo: rename xxx_test to xxx_tests
+
 # [1.37.1] - 2024-03-18
 ## Fixed
 - Fixed issue with coretests cmd

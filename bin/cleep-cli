@@ -112,25 +112,29 @@ def coresync():
 @core.command()
 @click.option('--coverage', is_flag=True, help='Display coverage report.')
 @click.option('--output', is_flag=True, help='Display tests output.')
-def coretests(coverage, output):
+@click.option('--xml', is_flag=True, default=False, help='Use xml reporting instead of default one (report).')
+@click.option('--quiet', is_flag=True, default=True, help='Display or not coverage warnings.')
+def coretests(coverage, output, xml, quiet):
     """
     Execute core tests
     """
     m = Test()
-    res = m.core_tests(coverage, output)
+    res = m.core_tests(coverage, output, xml)
 
     if not res:
         sys.exit(1)
 
 @core.command()
 @click.option('-j', '--json', 'as_json', is_flag=True, help='Output format as json')
-def coretestscov(as_json):
+@click.option('--xml', is_flag=True, default=False, help='Use xml reporting instead of default one (report).')
+@click.option('--quiet', is_flag=True, default=True, help='Display or not coverage warnings.')
+def coretestscov(as_json, xml, quiet):
     """
     Display core tests coverage
     """
     t = Test()
     try:
-        res = t.core_test_coverage(as_json)
+        res = t.core_tests_coverage(as_json=as_json, xml=xml, quiet=quiet)
 
         if as_json:
             logging.info(json.dumps(res))
@@ -376,7 +380,7 @@ def modtests(ctx, module, coverage, copyto):
     ctx.invoke(modsync, module=module)
 
     m = Test()
-    res = m.module_test(module, coverage, copyto)
+    res = m.module_tests(module, coverage, copyto)
 
     if not res:
         sys.exit(1)
@@ -410,13 +414,14 @@ def is_file_coverage_valid(coverage_info):
 @click.option('--missing', is_flag=True, help='Display missing statements.')
 @click.option('--threshold', default=0, help='Reject threshold (0-10)')
 @click.option('-j', '--json', 'as_json', is_flag=True, help='Output format as json')
-def modtestscov(module, missing, threshold, as_json):
+@click.option('--quiet', is_flag=True, default=True, help='Display or not coverage warnings.')
+def modtestscov(module, missing, threshold, as_json, quiet):
     """
     Display module tests coverage summary
     """
     t = Test()
     try:
-        res = t.module_test_coverage(module, missing, as_json)
+        res = t.module_tests_coverage(module, missing, as_json, quiet=quiet)
         if as_json:
             logging.info(json.dumps(res))
 
