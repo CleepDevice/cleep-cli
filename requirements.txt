@@ -1,6 +1,6 @@
 Click>=8.0,<9.0
 watchdog>=3.0.0,<4.0.0
-Sphinx>=4.2.0,<5.0.0
+Sphinx>=5.0.0,<6.0.0
 sphinx-rtd-theme>=1.0.0
 CProfileV>=1.0.7
 # Force version due to pynacl package introduced in 1.55 that makes 15-20 mins to build on raspi
