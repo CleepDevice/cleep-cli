@@ -1,5 +1,13 @@
 # Cleep-cli
 
+# [1.37.4] - 2024-03-20
+## Fixed
+- Change cleep api docs repo
+
+# [1.37.3] - 2024-03-18
+## Fixed
+- Bump Sphinx dependency
+
 # [1.37.2] - 2024-03-18
 ## Added
 - Add way to generate coverage report to xml (only format supported by codacy)
