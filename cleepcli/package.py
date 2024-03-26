@@ -212,9 +212,14 @@ sha256sum $DEB > $SHA256
             self.logger.exception('Error deleting tag "%s"' % tag_name)
             return False
 
-    def publish_cleep(self, version, prerelease):
+    def publish_cleep(self, version, prerelease, tag):
         """
         Publish cleep version on github
+
+        Args:
+            version (str): cleep version
+            prerelease (bool): True to publish pre-release version
+            tag (str): associated git tag
         """
         label = 'pre-release' if prerelease else 'release'
         token = os.environ['GITHUB_ACCESS_TOKEN']
@@ -272,7 +277,7 @@ sha256sum $DEB > $SHA256
         try:
             commits = repo.get_commits()
             release_found = repo.create_git_release(
-                tag='v%s' % version,
+                tag=tag,
                 name=version,
                 message=changelog,
                 draft=False,

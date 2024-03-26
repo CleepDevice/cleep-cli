@@ -1,5 +1,9 @@
 # Cleep-cli
 
+# [1.38.0] - 2024-03-26
+## Added
+- Add tag option to corepublish
+
 # [1.37.4] - 2024-03-20
 ## Fixed
 - Change cleep api docs repo

@@ -458,14 +458,15 @@ def corebuild():
         sys.exit(1)
 
 @package.command()
-@click.option('--version', prompt='Version', help='Version to publish.')
+@click.option('--version', required=True, help='Version to publish.')
 @click.option('--prerelease', is_flag=True, default=False, help='Pre-release flag')
-def corepublish(version, prerelease):
+@click.option('--tag', required=True, help='Release git tag.')
+def corepublish(version, prerelease, tag):
     """
     Publish built Cleep debian package
     """
     p = Package()
-    res = p.publish_cleep(version, prerelease)
+    res = p.publish_cleep(version, prerelease, tag)
 
     if not res:
         sys.exit(1)
