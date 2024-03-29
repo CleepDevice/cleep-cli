@@ -1,5 +1,9 @@
 # Cleep-cli
 
+# [1.38.1] - 2024-03-29
+## Fixed
+- Some info log breaks json output
+
 # [1.38.0] - 2024-03-26
 ## Added
 - Add tag option to corepublish

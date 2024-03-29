@@ -201,7 +201,7 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
         """
         self.logger.debug("Get module docs by api call")
         rpc_url = get_cleep_url()
-        self.logger.info('Cleep RPC url: %s', rpc_url)
+        self.logger.debug('Cleep RPC url: %s', rpc_url)
         cleepapi = CleepApi(rpc_url)
         return cleepapi.get_documentation(module_name)
 

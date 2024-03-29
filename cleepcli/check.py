@@ -275,7 +275,7 @@ overgeneral-exceptions=Exception
         self.logger = logging.getLogger(self.__class__.__name__)
 
         rpc_url = Tools.get_cleep_url()
-        self.logger.info('Cleep RPC url: %s', rpc_url)
+        self.logger.debug('Cleep RPC url: %s', rpc_url)
         self.cleepapi = CleepApi(rpc_url)
 
     def check_backend(self, module_name, module_author=None):
