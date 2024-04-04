@@ -1,5 +1,9 @@
 # Cleep-cli
 
+# [1.38.2] - 2024-04-04
+## Fixed
+- Run mandatory apps install scripts during cigetmods
+
 # [1.38.1] - 2024-03-29
 ## Fixed
 - Some info log breaks json output

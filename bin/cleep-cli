@@ -799,8 +799,8 @@ def ci():
     pass
 
 @ci.command(hidden=True)
-@click.option('--package', prompt='Package path', help='Package path.')
-@click.option('--nocompat', is_flag=True, help='Do not check module compat but for deps only.')
+@click.option('--package', prompt='Package path', help='Package path (zip archive).')
+@click.option('--nocompat', is_flag=True, help='Do not check module compatibility (deps only)')
 def cimodinstall(package, nocompat):
     """
     Install module. Useful for CI
@@ -809,7 +809,7 @@ def cimodinstall(package, nocompat):
     try:
         package_infos = c.mod_check_package(package)
         c.mod_extract_sources(package, package_infos)
-        c.mod_install_source(package, package_infos, nocompat)
+        c.mod_install_sources(package, package_infos, nocompat)
     except Exception as e:
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             logging.exception('Module source installation failed:')
@@ -860,8 +860,9 @@ def cigetmods(ctx, nosync, branch):
         sys.exit(1)
 
     if not nosync:
-        for module in config.DEFAULT_MODULES:
-            ctx.invoke(modsync, module=module)
+        # sync mandatory apps + run install scripts
+        ctx.invoke(modssync, run_scripts=True)
+
 
 def print_version(ctx, param, value):
     if not value or ctx.resilient_parsing:

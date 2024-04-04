@@ -117,7 +117,7 @@ class Ci():
             'has_test_requirements': has_tests_requirements,
         }
 
-    def mod_install_source(self, package_path, package_infos, no_compatibility_check=False):
+    def mod_install_sources(self, package_path, package_infos, no_compatibility_check=False):
         """
         Install module package (zip archive) sources
 
@@ -165,7 +165,7 @@ class Ci():
                 raise Exception('Updating app "update" failed: %s' % resp_json)
             if resp_json['data']:
                 self.__wait_for_cleep_process('update')
-                self.logger.info('  Restarting cleep...')
+                self.logger.info('  Restarting Cleep...')
                 cleep_proc.kill()
                 cleep_proc = subprocess.Popen(['cleep', '--noro'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 time.sleep(15)
@@ -188,7 +188,7 @@ class Ci():
             self.__wait_for_cleep_process(module_name)
 
             # restart cleep
-            self.logger.info('  Restarting cleep...')
+            self.logger.info('  Restarting Cleep...')
             cleep_proc.kill()
             cleep_proc = subprocess.Popen(['cleep', '--noro'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             time.sleep(15)
