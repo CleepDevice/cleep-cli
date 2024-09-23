@@ -280,12 +280,13 @@ COVERAGE_FILE=%s coverage run --omit="*/lib/python*/*","test_*" --source="../bac
         """
         return '%s/tests' % (config.CORE_SRC)
 
-    def __list_core_files(self, core_path):
+    def __list_core_files(self, core_path, pattern=None):
         """
         Return all python files on core with their associated tests
 
         Args:
             core_path (string): core path
+            pattern (str): custom pattern to filter files to process
 
         Returns:
             dict: list of files with test file path::
@@ -301,32 +302,35 @@ COVERAGE_FILE=%s coverage run --omit="*/lib/python*/*","test_*" --source="../bac
         self.logger.info('Searching core files...')
         for root, _, filenames in os.walk(core_path):
             for filename in filenames:
-                filepath = os.path.join(root, filename)
-
-                # drop useless files
-                if not filename.endswith('.py'):
-                    self.logger.debug('  Drop file "%s": not python file' % filepath)
-                    continue
-                if filename.startswith('__init__'):
-                    self.logger.debug('  Drop file "%s": python init file' % filepath)
-                    continue
-                if filename.startswith('test_'):
-                    self.logger.debug('  Drop file "%s": test file' % filepath)
-                    continue
-                if root.endswith('libs/tests'):
-                    self.logger.debug('  Drop file "%s": test lib' % filepath)
-                    continue
-
                 # build paths
+                filepath = os.path.join(root, filename)
                 core_relative_path = root.replace('%s' % core_path, '')
                 core_relative_path = core_relative_path[1:] if core_relative_path.startswith('/') else core_relative_path
                 test_filepath = os.path.join(tests_path, core_relative_path, 'test_%s' % filename)
+
+                # drop useless files
+                if not filename.endswith('.py'):
+                    self.logger.debug('  Drop file "%s": not python file', filepath)
+                    continue
+                if filename.startswith('__init__'):
+                    self.logger.debug('  Drop file "%s": python init file', filepath)
+                    continue
+                if filename.startswith('test_'):
+                    self.logger.debug('  Drop file "%s": test file', filepath)
+                    continue
+                if root.endswith('libs/tests'):
+                    self.logger.debug('  Drop file "%s": test lib', filepath)
+                    continue
+                if pattern and not re.search(pattern, test_filepath) and not re.search(pattern, filepath):
+                    self.logger.debug('  Drop file "%s": does not match pattern %s', filepath, pattern)
+                    continue
+
                 self.logger.debug('  Found "%s" [%s]' % (filepath, test_filepath))
                 files.append((filepath, test_filepath))
 
         return files
 
-    def core_tests(self, display_coverage=False, display_test_output=False, xml=False, quiet=True):
+    def core_tests(self, display_coverage=False, display_test_output=False, xml=False, quiet=True, pattern=None):
         """
         Execute core unit tests and display process output on stdout
 
@@ -335,6 +339,7 @@ COVERAGE_FILE=%s coverage run --omit="*/lib/python*/*","test_*" --source="../bac
             display_test_output (bool): display unit test output (default True)
             xml (bool): use xml coverage command instead of report command
             quiet (bool): display or not coverage.py warnings
+            pattern (str): custom pattern to filter files to process
 
         Returns:
             bool: True if process succeed.
@@ -348,7 +353,7 @@ COVERAGE_FILE=%s coverage run --omit="*/lib/python*/*","test_*" --source="../bac
 
         # get files paths
         core_path = config.CORE_SRC
-        files = self.__list_core_files(core_path)
+        files = self.__list_core_files(core_path, pattern)
 
         # execute tests
         self.logger.info('Running unit tests...')
@@ -356,8 +361,11 @@ COVERAGE_FILE=%s coverage run --omit="*/lib/python*/*","test_*" --source="../bac
         files_on_success = []
         console_callback = self.__console_callback if display_test_output else self.__quiet_console_callback
         for filepath, test_filepath in files:
+            reduced_filepath = filepath.replace(core_path+'/', '')
+            reduced_test_filepath = test_filepath.replace(core_path+'/', '')
             self.logger.info('')
-            self.logger.info('Testing %s using %s...' % (filepath.replace(core_path+'/', ''), test_filepath.replace(core_path+'/', '')))
+            self.logger.info('Testing %s using %s...', reduced_filepath, reduced_test_filepath)
+
             cmd = """
 cd "%(core_tests_path)s"
 coverage run --omit="*/lib/python*/*","*test_*.py" --concurrency=thread --parallel-mode %(test_file)s

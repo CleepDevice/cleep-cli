@@ -114,12 +114,13 @@ def coresync():
 @click.option('--output', is_flag=True, help='Display tests output.')
 @click.option('--xml', is_flag=True, default=False, help='Use xml reporting instead of default one (report).')
 @click.option('--quiet', is_flag=True, default=True, help='Display or not coverage warnings.')
-def coretests(coverage, output, xml, quiet):
+@click.option('-p', '--pattern', default=None, help='Run tests on specified file pattern only')
+def coretests(coverage, output, xml, quiet, pattern):
     """
     Execute core tests
     """
     m = Test()
-    res = m.core_tests(coverage, output, xml)
+    res = m.core_tests(coverage, output, xml, quiet, pattern)
 
     if not res:
         sys.exit(1)
