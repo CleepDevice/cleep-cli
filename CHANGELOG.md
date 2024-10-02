@@ -1,5 +1,9 @@
 # Cleep-cli
 
+# [1.39.2] - 2024-10-02
+## Fixed
+- Fix semver check for version string starting with v
+
 # [1.39.1] - 2024-10-02
 ## Fixed
 - Change way to get Cleep url to retrieve app documentation

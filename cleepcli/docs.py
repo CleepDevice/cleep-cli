@@ -356,7 +356,8 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
             bool: True if publication succeed, False otherwise
         """
         try:
-            Version.parse(module_version)
+            version = module_version[1:] if module_version.startswith('v') else module_version
+            Version.parse(version)
         except ValueError as error:
             raise Exception(str(error))
         repo = self.__get_github_app_docs_repo(github_token)
