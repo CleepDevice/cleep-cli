@@ -341,7 +341,7 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
 
         return True
 
-    def publish_module_docs(self, module_name, module_version, github_token=None):
+    def publish_module_docs(self, module_name, module_version, github_token=None, github_owner=None):
         """
         Publish application documentation on specified repo.
         It publish both a tagged version and a latest version
@@ -349,7 +349,8 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
         Args:
             module_name (str): module name
             module_version (str): module version (semver)
-            github_token (str): github access token
+            github_token (str): github access token (default None)
+            github_owner (str): github repo owner (default None)
 
         Returns:
             bool: True if publication succeed, False otherwise
@@ -430,12 +431,13 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
 
         return (None, None)
 
-    def __get_github_app_docs_repo(self, github_token=None):
+    def __get_github_app_docs_repo(self, github_token=None, github_owner=None):
         """
         Create Github repository instance.
 
         Args:
             github_token (str): github repo access token
+            github_owner (str): github repo owner
 
         Returns:
             Repository (object): repository instance or None if error occured
@@ -446,7 +448,10 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
             if not github_token:
                 github_token = os.environ.get("GITHUB_TOKEN")
             github = Github(github_token)
-            repo = github.get_repo(f"{config.GITHUB_ORG}/{config.GITHUB_REPO_APP_DOCS}")
+
+            if not github_owner:
+                github_owner = config.GITHUB_ORG
+            repo = github.get_repo(f"{github_owner}/{config.GITHUB_REPO_APP_DOCS}")
 
             return repo
 

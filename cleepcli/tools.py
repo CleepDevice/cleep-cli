@@ -11,6 +11,7 @@ import sys
 import subprocess
 import psutil
 import re
+from configparser import ConfigParser
 
 #from https://elinux.org/RPi_HardwareHistory
 RASPBERRY_PI_REVISIONS = {
@@ -331,14 +332,27 @@ def get_cleep_url():
     """
     Return cleep url or None if not running
     """
-    pattern = "(http[s]?:\/\/\d\.\d\.\d\.\d:\d+)"
-    try:
-        with open("/var/log/cleep.log") as log:
-            for line in log.readlines():
-                match = re.search(pattern, line)
-                if match:
-                    return match.groups()[0]
-                    break
-    except:
-        return None
+    conf = ConfigParser()
+    with open("/etc/cleep/cleep.conf", "r") as fdesc:
+        conf.read_file(fdesc)
+
+    config = {}
+    for section in conf.sections():
+        config[section] = {}
+        for option, val in conf.items(section):
+            try:
+                config[section][option] = ast.literal_eval(val)
+            except Exception:
+                config[section][option] = f"{val}"
+
+    ssl_key = config.get("rpc", {}).get("rpc_key")
+    ssl_cert = config.get("rpc", {}).get("rpc_cert")
+    ssl_enabled = True if ssl_key and ssl_cert else False
+    host = config.get("rpc", {}).get("rpc_host", "0.0.0.0")
+    port_http = config.get('rpc', {}).get('rpc_port', 80)
+    port_https = config.get("rpc", {}).get("rpc_ssl_port", 443)
+    port = port_https if ssl_enabled else port_http
+    protocol = "https" if ssl_enabled else "http"
+
+    return f'{protocol}://{host}:{port}'
 

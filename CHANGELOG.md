@@ -1,5 +1,16 @@
 # Cleep-cli
 
+# [1.39.1] - 2024-10-02
+## Fixed
+- Change way to get Cleep url to retrieve app documentation
+
+## Added
+- New ghowner arg in cimoddocpublish cmd to set repo owner
+
+# [1.39.0] - 2024-09-23
+## Added
+- Add pattern parameter to coretests to run only matches
+
 # [1.38.2] - 2024-04-04
 ## Fixed
 - Run mandatory apps install scripts during cigetmods
