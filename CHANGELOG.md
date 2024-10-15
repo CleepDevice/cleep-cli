@@ -1,5 +1,9 @@
 # Cleep-cli
 
+# [1.40.1] - 2024-10-15
+## Fixed
+- Add more log to debug app doc generation failure
+
 # [1.40.0] - 2024-10-15
 ## Added
 - Add way to run specific app tests based on pattern

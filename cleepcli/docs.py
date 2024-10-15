@@ -215,7 +215,7 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
         self.logger.debug("Resp: %s", resp)
 
         if resp["returncode"] != 0:
-            self.logger.error("Unable to generate %s doc", module_name)
+            self.logger.error("Unable to generate %s doc: %s", module_name, resp)
             raise Exception(f"Error occured generating {module_name} documentation")
 
         return json.loads(''.join(resp["stdout"]))
