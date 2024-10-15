@@ -1,5 +1,9 @@
 # Cleep-cli
 
+# [1.40.0] - 2024-10-15
+## Added
+- Add way to run specific app tests based on pattern
+
 # [1.39.2] - 2024-10-02
 ## Fixed
 - Fix semver check for version string starting with v

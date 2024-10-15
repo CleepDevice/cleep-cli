@@ -177,13 +177,15 @@ cd "%(path)s"
 
         return res
 
-    def module_tests(self, module_name, display_coverage=False, copy_to=None):
+    def module_tests(self, module_name, display_coverage=False, copy_to=None, pattern=None):
         """
         Execute module unit tests and display process output on stdout
 
         Args:
             module_name (string): module name
             display_coverage (bool): display coverage report (default False)
+            copy_to (str): copy coverage file to specified path
+            pattern (str): run testcase that match pattern (no coverage)
 
         Returns:
             bool: True if process succeed, False otherwise
@@ -202,10 +204,10 @@ cd "%(path)s"
         self.logger.info('Running unit tests...')
         coverage_file_path = self.__get_coverage_file(module_name, module_version)
         module_tests_path = self.__get_module_tests_path(module_name)
-        cmd = """
-cd "%s"
-COVERAGE_FILE=%s coverage run --omit="*/lib/python*/*","test_*" --source="../backend" --concurrency=thread -m unittest discover
-        """ % (module_tests_path, coverage_file_path)
+        if pattern:
+            cmd = self.__get_tests_cmd_with_pattern(module_tests_path, pattern)
+        else:
+            cmd = self.__get_tests_cmd_with_coverage(module_tests_path, coverage_file_path)
         self.logger.debug('Test cmd: %s' % cmd)
         self.__endless_command_running = True
         self.__reset_stds()
@@ -229,6 +231,24 @@ COVERAGE_FILE=%s coverage run --omit="*/lib/python*/*","test_*" --source="../bac
             return False
 
         return True
+
+    def __get_tests_cmd_with_coverage(self, module_tests_path, coverage_file_path):
+        """
+        Return cmdline to run full tests on file with coverage
+        """
+        return """
+cd "%s"
+COVERAGE_FILE=%s coverage run --omit="*/lib/python*/*","test_*" --source="../backend" --concurrency=thread -m unittest discover
+        """ % (module_tests_path, coverage_file_path)
+
+    def __get_tests_cmd_with_pattern(self, module_tests_path, pattern):
+        """
+        Return cmdline to run tests matching specified pattern
+        """
+        return """
+cd "%s"
+python3 -m unittest -k "%s" test_*
+        """ % (module_tests_path, pattern)
 
     def module_tests_coverage(self, module_name, missing=False, as_json=False, quiet=True):
         """
