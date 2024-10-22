@@ -139,7 +139,7 @@ class Ci():
             time.sleep(15)
 
             # make sure to have latest modules.json version
-            self.logger.info('  Updating applications list in Cleep')
+            self.logger.info('  Refreshing markets...')
             resp = requests.post(self.CLEEP_COMMAND_URL, json={
                 'command': 'check_modules_updates',
                 'to': 'update',
