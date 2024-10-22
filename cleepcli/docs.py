@@ -190,6 +190,9 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
 
         Args:
             module_name (string): module name
+
+        Returns:
+            object: documentation (json)
         """
         if is_cleep_running():
             return self.__generate_module_docs_by_api_call(module_name)
@@ -341,7 +344,7 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
 
         return True
 
-    def publish_module_docs(self, module_name, module_version, github_token=None, github_owner=None):
+    def publish_module_docs(self, module_name, module_version, github_token=None, github_owner=None, doc_file=None):
         """
         Publish application documentation on specified repo.
         It publish both a tagged version and a latest version
@@ -351,6 +354,7 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
             module_version (str): module version (semver)
             github_token (str): github access token (default None)
             github_owner (str): github repo owner (default None)
+            doc_file (str): doc file path containing existing app documentation
 
         Returns:
             bool: True if publication succeed, False otherwise
@@ -364,7 +368,11 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
         if repo is None:
             raise Exception("Unable to connect to app doc repository")
 
-        documentation = self.generate_module_docs(module_name)
+        if doc_file:
+            with open(doc_file, "r") as doc:
+                documentation = json.load(doc)
+        else:
+            documentation = self.generate_module_docs(module_name)
 
         try:
             # latest doc file

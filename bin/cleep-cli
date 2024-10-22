@@ -542,23 +542,6 @@ def moddoc(module):
         logging.error(str(e))
         sys.exit(1)
 
-@docs.command()
-@click.option('--module', callback=get_module_name, help='Module name.')
-@click.option('--version', prompt="Module version", help='Module version.')
-def moddoctest(module, version):
-    """
-    Test
-    """
-    try:
-        d = Docs()
-        docs = d.generate_module_docs(module)
-        res = d.publish_app_docs(module, version, docs)
-    except Exception as e:
-        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
-            logging.exception('Test module "%s" doc failed:' % module)
-        logging.error(str(e))
-        sys.exit(1)
-
 @click.group()
 def check():
     pass
@@ -838,13 +821,14 @@ def cimodcheck(module):
 @click.option('--version', prompt='Module version', help='Module version.')
 @click.option('--ghtoken', prompt='Github access token', help='Github access token', default=None)
 @click.option('--ghowner', prompt='Github repo owner', help='Github repo owner', default=None)
-def cimoddocpublish(module, version, ghtoken, ghowner):
+@click.option('--docfile', help='Already generated module doc', default=None, type=click.Path(exists=True))
+def cimoddocpublish(module, version, ghtoken, ghowner, docfile):
     """
     Publish module documentation to keep track of changes and detect breaking changes. Useful for CI
     """
     d = Docs()
     try:
-        d.publish_module_docs(module, version, ghtoken, ghowner)
+        d.publish_module_docs(module, version, ghtoken, ghowner, docfile)
     except Exception as e:
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
             logging.exception('Module doc publication failed:')

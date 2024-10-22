@@ -1,5 +1,9 @@
 # Cleep-cli
 
+# [1.41.0] - 2024-10-22
+## Added
+- Add new option to pass already generated app documentation to cimoddocpublish
+
 # [1.40.1] - 2024-10-15
 ## Fixed
 - Add more log to debug app doc generation failure
