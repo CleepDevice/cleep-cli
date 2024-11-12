@@ -59,6 +59,32 @@ class Package():
         self.__endless_command_return_code = return_code
         self.__endless_command_running = False
 
+    def check_cleep_version(self):
+        """
+        Check if Cleep version is valid according to __init__.py
+        """
+        cmd = """
+# check python version
+VERSION=`head -n 1 debian/changelog | awk '{ gsub("[\(\)]","",$2); print $2 }'`
+PYTHON_VERSION=`cat cleep/__init__.py | grep $VERSION | wc -l`
+if [ "$PYTHON_VERSION" -ne "1" ]
+then
+    echo
+    echo "ERROR: python version is not the same than debian version, please update cleep/__init__.py __version__ to $VERSION"
+    echo
+    exit 1
+fi
+        """
+
+        c = Console()
+        result = c.command(cmd)
+
+        self.logger.debug('Return code: %s' % result['returncode'])
+        if result['returncode'] != 0:
+            self.logger.error('Cleep version mismatch between debian/changelog and cleep/__init__.py')
+            return False
+        return True
+
     def build_cleep(self):
         """
         Build cleep debian package

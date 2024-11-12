@@ -1,5 +1,9 @@
 # Cleep-cli
 
+# [1.43.0] - 2024-11-12
+## Added
+- Add command to check Cleep version before building deb package
+
 # [1.42.0] - 2024-11-12
 ## Added
 - Update debian/control files according to packages.list before build Cleep deb package
