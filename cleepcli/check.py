@@ -1459,6 +1459,6 @@ overgeneral-exceptions=Exception
         self.logger.debug("Call resp: %s", resp)
         if resp["error"]:
             output["invalid"] = True
-        output["details"] = resp["data"]
+        output["details"] = resp["data"] if resp["data"] is not None else {}
 
         return output

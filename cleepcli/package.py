@@ -138,6 +138,11 @@ sed -i 's|__CLEEP_REQUIREMENTS__|'"$REQUIREMENTS"'|g' debian/preinst
 echo ----- requirements changes
 head -n 38 debian/preinst | tail -n 3
 echo -----
+PACKAGES=`cat packages.list | paste -sd "," -`
+sed -i 's|__CLEEP_PACKAGES__|'"$PACKAGES"'|g' debian/control
+echo ----- control changes
+cat debian/control | grep "^Depends:"
+echo -----
 
 # build Cleep application
 debuild -us -uc

@@ -1,5 +1,12 @@
 # Cleep-cli
 
+# [1.42.0] - 2024-11-12
+## Added
+- Update debian/control files according to packages.list before build Cleep deb package
+
+## Fixed
+- Return {} instead of None if documentation cmd return nothing
+
 # [1.41.0] - 2024-10-22
 ## Added
 - Add new option to pass already generated app documentation to cimoddocpublish
