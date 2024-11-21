@@ -11,5 +11,5 @@ semver==3.0.0
 # Make sure deps below match with cleep ones
 coverage==7.2.7
 passlib==1.7.4
-requests==2.31.0
+requests==2.32.0
 psutil==5.9.4
