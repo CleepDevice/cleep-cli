@@ -853,7 +853,7 @@ overgeneral-exceptions=Exception
 
     def __check_modimgsrc_directive(self, module_name, js_files, all_files):
         """
-        Check if developer uses mod-img-src directive to display its images
+        Check if developer uses mod-img-src or cl-img-src directive to display its images
 
         Args:
             module_name (string): module name
@@ -891,8 +891,8 @@ overgeneral-exceptions=Exception
 
         # check directive usage for found images
         for image_file in image_files:
-            pattern = r"mod-img-src\s*=\s*[\"']\s*%s\s*[\"']" % image_file['path'].replace(module_name+'/', '')
-            self.logger.debug('Mod-img-src pattern: %s' % pattern)
+            pattern = r"(?:cl-img-src|cl-app-img)\s*=\s*[\"']\s*%s\s*[\"']" % image_file['path'].replace(module_name+'/', '')
+            self.logger.debug('cl-img-src|cl-app-img pattern: %s' % pattern)
             found = False
             for cached in cacheds:
                 matches = re.finditer(pattern, cached, re.MULTILINE)
@@ -901,7 +901,7 @@ overgeneral-exceptions=Exception
                     found = True
                     founds.append(image_file['path'])
             if not found:
-                warnings.append('Image "%s" may not be displayed properly because mod-img-src directive wasn\'t used' % image_file['filename'])
+                warnings.append('Image "%s" may not be displayed properly because cl-app-src directive wasn\'t used (or cl-img-src in config component)' % image_file['filename'])
 
         return warnings, founds
 

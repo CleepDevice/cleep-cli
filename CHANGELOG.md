@@ -1,5 +1,9 @@
 # Cleep-cli
 
+# [1.43.1] - 2025-02-03
+## Fixed
+- Pattern to detect correct usage of img in app html (cl-app-img or cl-img-src)
+
 # [1.43.0] - 2024-11-12
 ## Added
 - Add command to check Cleep version before building deb package
