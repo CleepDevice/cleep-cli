@@ -1,5 +1,9 @@
 # Cleep-cli
 
+# [1.43.2] - 2025-02-07
+## Fixed
+- Return error when modcheckdoc failed
+
 # [1.43.1] - 2025-02-03
 ## Fixed
 - Pattern to detect correct usage of img in app html (cl-app-img or cl-img-src)

@@ -1429,7 +1429,8 @@ overgeneral-exceptions=Exception
         """
         output = {
             "invalid": False,
-            "details": {}
+            "error": "",
+            "details": {},
         }
 
         self.logger.debug("Check module docs by command line")
@@ -1441,7 +1442,9 @@ overgeneral-exceptions=Exception
 
         if resp["returncode"] != 0:
             output["invalid"] = True
-        output["details"] = json.loads(resp["stdout"])
+            output["error"] = json.loads(resp["stdout"])
+        else:
+            output["details"] = json.loads(resp["stdout"])
 
         return output
 
@@ -1459,6 +1462,8 @@ overgeneral-exceptions=Exception
         self.logger.debug("Call resp: %s", resp)
         if resp["error"]:
             output["invalid"] = True
-        output["details"] = resp["data"] if resp["data"] is not None else {}
+            output["error"] = resp["message"]
+        else:
+            output["details"] = resp["data"] if resp["data"] is not None else {}
 
         return output

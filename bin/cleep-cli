@@ -733,10 +733,15 @@ def modcheckdoc(module, as_json):
     try:
         res = c.check_module_documentation(module)
 
+        content = res["details"]
         if as_json:
-            logging.info('%s' % json.dumps(res["details"]))
+            if res["invalid"]:
+                content = {"error": res["error"]}
+            logging.info('%s' % json.dumps(content))
         else:
-            logging.info('%s' % res["details"])
+            if res["invalid"]:
+                content = f"Error: {res['error']}"
+            logging.info('%s' % content)
 
         if res["invalid"]:
             sys.exit(1)
