@@ -733,17 +733,21 @@ def modcheckdoc(module, as_json):
     try:
         res = c.check_module_documentation(module)
 
-        content = res["details"]
         if as_json:
-            if res["invalid"]:
-                content = {"error": res["error"]}
-            logging.info('%s' % json.dumps(content))
+            logging.info("%s", json.dumps(res))
         else:
-            if res["invalid"]:
-                content = f"Error: {res['error']}"
-            logging.info('%s' % content)
+            message = f'Error: {res.get("message")}' if res.get("error") else "Documentation is valid"
+            logging.info("%s", message)
+            for fn_name, fn_data in res.get("data", {}).items():
+                logging.info("- %s [%s]", fn_name, "OK" if fn_data.get("valid", False) else "KO")
+                logging.info("  Errors:")
+                for error in fn_data.get("errors", []):
+                    logging.info("   - %s", error)
+                logging.info("  Warnings:")
+                for warn in fn_data.get("warnings", []):
+                    logging.info("   - %s", warn)
 
-        if res["invalid"]:
+        if res.get("error", True):
             sys.exit(1)
     except Exception as e:
         if logging.getLogger().getEffectiveLevel() == logging.DEBUG:

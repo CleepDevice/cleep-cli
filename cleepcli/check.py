@@ -1428,9 +1428,9 @@ overgeneral-exceptions=Exception
         Check app documentation by command line
         """
         output = {
-            "invalid": False,
-            "error": "",
-            "details": {},
+            "error": False,
+            "message": None,
+            "data": None,
         }
 
         self.logger.debug("Check module docs by command line")
@@ -1440,11 +1440,9 @@ overgeneral-exceptions=Exception
         resp = console.command(cmd)
         self.logger.debug("Cmd resp: %s", resp)
 
-        if resp["returncode"] != 0:
-            output["invalid"] = True
-            output["error"] = json.loads(resp["stdout"])
-        else:
-            output["details"] = json.loads(resp["stdout"])
+        output["error"] = resp.get("returncode", 1) != 0
+        output["message"] = None if resp.get("returncode", 1) == 0 else "Invalid application documentation"
+        output["data"] = json.loads(''.join(resp.get("stdout", [])))
 
         return output
 
@@ -1452,18 +1450,22 @@ overgeneral-exceptions=Exception
         """
         Check app documentation by api call
         """
-        output = {
-            "invalid": False,
-            "details": {}
-        }
-
         self.logger.debug("Check module docs by api call")
-        resp = self.cleepapi.check_documentation(module_name)
-        self.logger.debug("Call resp: %s", resp)
-        if resp["error"]:
-            output["invalid"] = True
-            output["error"] = resp["message"]
-        else:
-            output["details"] = resp["data"] if resp["data"] is not None else {}
+        output = {
+            "error": False,
+            "message": None,
+            "data": None,
+        }
+        try:
+            resp = self.cleepapi.check_documentation(module_name)
+            self.logger.debug("Call resp: %s", resp)
+
+            output["error"] = resp.get("error", True)
+            output["message"] = resp.get("message")
+            output["data"] = resp.get("data")
+
+        except Exception:
+            output["error"] = True
+            output["message"] = "Cleep api call failed. Unable to get application documentation"
 
         return output

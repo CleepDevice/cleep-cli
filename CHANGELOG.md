@@ -1,5 +1,9 @@
 # Cleep-cli
 
+# [1.43.3] - 2025-02-10
+## Fixed
+- Fix modcheckdoc response output (json and text)
+
 # [1.43.2] - 2025-02-07
 ## Fixed
 - Return error when modcheckdoc failed
