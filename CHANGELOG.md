@@ -1,5 +1,10 @@
 # Cleep-cli
 
+# [1.43.4] - 2025-04-25
+## Fixed
+- Increase timeout of CI RPC commands to reduce failure when network is slow
+- Fix issue during app doc generation
+
 # [1.43.3] - 2025-02-10
 ## Fixed
 - Fix modcheckdoc response output (json and text)
