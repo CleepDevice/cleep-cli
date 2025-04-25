@@ -418,7 +418,7 @@ sha256sum $DEB > $SHA256
         if data_code_quality['score'] < 7.0:
             raise Exception('Code quality for app "%s" is too low to be packaged (%s). Please improve it to be greater than 7.0' % (module_name, data_code_quality['score']))
         data_documentation = check.check_module_documentation(module_name)
-        if data_documentation['invalid']:
+        if data_documentation['error']:
             raise Exception('Documentation is invalid. Please fix it before publishing')
         data_breaking_changes = docs.check_module_breaking_changes(module_name)
         if len(data_breaking_changes['errors']) > 0:
