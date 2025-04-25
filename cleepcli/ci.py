@@ -143,6 +143,7 @@ class Ci():
             resp = requests.post(self.CLEEP_COMMAND_URL, json={
                 'command': 'check_modules_updates',
                 'to': 'update',
+                'timeout': 60.0,
             })
             resp.raise_for_status()
             resp_json = resp.json()
@@ -156,7 +157,8 @@ class Ci():
                 'to': 'update',
                 'params': {
                     'module_name': 'update',
-                }
+                },
+                'timeout': 60.0,
             })
             resp.raise_for_status()
             resp_json = resp.json()
@@ -179,7 +181,8 @@ class Ci():
                     'module_name': module_name,
                     'package': package_path,
                     'no_compatibility_check': no_compatibility_check,
-                }
+                },
+                'timeout': 60.0,
             })
             resp.raise_for_status()
             resp_json = resp.json()
@@ -224,7 +227,8 @@ class Ci():
             time.sleep(1.0)
             resp = requests.post(self.CLEEP_COMMAND_URL, json={
                 'command': 'get_modules_updates',
-                'to': 'update'
+                'to': 'update',
+                'timeout': 60.0,
             })
             resp.raise_for_status()
             resp_json = resp.json()
