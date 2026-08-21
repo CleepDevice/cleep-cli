@@ -1,5 +1,9 @@
 # Cleep-cli
 
+# [1.43.5] - 2026-08-21
+## Fixed
+- Detect Cleep RPC over HTTPS first (Cleep 0.1+ default), then fallback to HTTP
+
 # [1.43.4] - 2025-04-25
 ## Fixed
 - Increase timeout of CI RPC commands to reduce failure when network is slow
