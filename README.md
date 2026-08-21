@@ -92,3 +92,16 @@ It uses pylint to check code quality (it returns a score)
 
 The [watchdog](https://pypi.org/project/watchdog/) python library is used to detect changes on filesystem. According to changed files, it detects if change occurs on frontend or backend files and send commands to restart Cleep application.
 
+## CI (GitHub Actions)
+
+A tag `vX.Y.Z` (or a manual **workflow_dispatch**) builds a **universal** wheel + sdist on `ubuntu-latest` (Python 3.9) and uploads them to PyPI.
+
+Repository secret:
+
+| Secret | Description |
+|--------|-------------|
+| `PYPI_API_TOKEN` | PyPI API token (`pypi-...`) |
+
+No Raspberry Pi / Woodpecker needed: the package is pure Python (`py2.py3-none-any`).
+
+
