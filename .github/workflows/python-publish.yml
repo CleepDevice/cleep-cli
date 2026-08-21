@@ -15,6 +15,8 @@ permissions:
 jobs:
     publish:
         runs-on: ubuntu-latest
+        # Required so PYPI_API_TOKEN is loaded (environment secret, not repo secret).
+        environment: actions
         steps:
             - uses: actions/checkout@v4
 
