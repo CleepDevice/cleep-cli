@@ -412,9 +412,9 @@ import unittest
 import logging
 import sys
 sys.path.append('../')
+from cleep.libs.tests import session
 from backend.%(MODULE_NAME)s import %(MODULE_NAME_CAPITALIZED)s
 from cleep.exception import InvalidParameter, MissingParameter, CommandError, Unauthorized
-from cleep.libs.tests import session
 from mock import Mock, patch
 
 # Unit testing is part of a development, it's why Cleep requires to have application code tested to
@@ -428,7 +428,7 @@ from mock import Mock, patch
 # or a specific test with command:
 #   python3 -m unittest test_%(MODULE_NAME)s.Test%(MODULE_NAME_CAPITALIZED)s.test__on_configure
 # You can get tests coverage with command:
-#   coverage run --omit="*/lib/python*/*","test_*" --concurrency=thread test_%(MODULE_NAME)s.py; coverage report -m -i
+#   coverage run --omit="*/lib/python*/*","test_*" --concurrency=gevent test_%(MODULE_NAME)s.py; coverage report -m -i
 # or you can simply use developer application that allows you to perform all tests and coverage directly from web interface
 class Test%(MODULE_NAME_CAPITALIZED)s(unittest.TestCase):
 
@@ -620,7 +620,8 @@ a:hover.icon.icon-home {
 /bin/echo "%(ANGULAR_CONTROLLER)s" > %(MODULE_DIR)s/frontend/%(MODULE_NAME)s.config.js
 /bin/echo "%(ANGULAR_CONTROLLER_TEMPLATE)s" > %(MODULE_DIR)s/frontend/%(MODULE_NAME)s.config.html
 /bin/mkdir -p "%(MODULE_DIR)s/tests"
-/usr/bin/touch "%(MODULE_DIR)s/tests/__init__.py"
+/bin/echo "from gevent import monkey" > "%(MODULE_DIR)s/tests/__init__.py"
+/bin/echo "monkey.patch_all()" >> "%(MODULE_DIR)s/tests/__init__.py"
 /bin/echo "%(TEST_DEFAULT)s" > %(MODULE_DIR)s/tests/test_%(MODULE_NAME)s.py
 /bin/mkdir -p "%(MODULE_DIR)s/docs"
 /bin/echo "%(DOCS_CONF_PY)s" > %(MODULE_DIR)s/docs/conf.py

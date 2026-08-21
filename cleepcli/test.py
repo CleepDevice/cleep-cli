@@ -238,7 +238,7 @@ cd "%(path)s"
         """
         return """
 cd "%s"
-COVERAGE_FILE=%s coverage run --omit="*/lib/python*/*","test_*" --source="../backend" --concurrency=thread -m unittest discover
+COVERAGE_FILE=%s coverage run --omit="*/lib/python*/*","test_*" --source="../backend" --concurrency=gevent -m unittest discover
         """ % (module_tests_path, coverage_file_path)
 
     def __get_tests_cmd_with_pattern(self, module_tests_path, pattern):
@@ -388,7 +388,7 @@ python3 -m unittest -k "%s" test_*
 
             cmd = """
 cd "%(core_tests_path)s"
-coverage run --omit="*/lib/python*/*","*test_*.py" --concurrency=thread --parallel-mode %(test_file)s
+coverage run --omit="*/lib/python*/*","*test_*.py" --concurrency=gevent --parallel-mode %(test_file)s
             """ % {
                 'core_tests_path': self.__get_core_tests_path(),
                 'test_file': test_filepath,
