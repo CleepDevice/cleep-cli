@@ -20,17 +20,22 @@ import requests
 
 requests.packages.urllib3.disable_warnings()
 
-class Docs():
+
+class Docs:
     """
     Handle documentation processes
     @see https://samnicholls.net/2016/06/15/how-to-sphinx-readthedocs/
     """
 
-    DOCS_TEMP_PATH = '/tmp/cleep-docs'
-    DOCS_EXTRACT_PATH = '/tmp/docs'
-    DOCS_ARCHIVE_NAME = 'cleep-core-docs.zip'
-    DOCS_COMMIT_MESSAGE = 'Update doc Cleep v%(version)s'
-    BASE_APP_DOC_URL = "https://raw.githubusercontent.com/CleepDevice/" + config.GITHUB_REPO_APP_DOCS + "/main/%(module_name)s/%(module_name)s.json"
+    DOCS_TEMP_PATH = "/tmp/cleep-docs"
+    DOCS_EXTRACT_PATH = "/tmp/docs"
+    DOCS_ARCHIVE_NAME = "cleep-core-docs.zip"
+    DOCS_COMMIT_MESSAGE = "Update doc Cleep v%(version)s"
+    BASE_APP_DOC_URL = (
+        "https://raw.githubusercontent.com/CleepDevice/"
+        + config.GITHUB_REPO_APP_DOCS
+        + "/main/%(module_name)s/%(module_name)s.json"
+    )
 
     def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -40,7 +45,10 @@ class Docs():
         self.__module_author = None
 
     def __console_callback(self, stdout, stderr):
-        self.logger.info((stdout if stdout is not None else '') + (stderr if stderr is not None else ''))
+        self.logger.info(
+            (stdout if stdout is not None else "")
+            + (stderr if stderr is not None else "")
+        )
 
     def __console_end_callback(self, return_code, killed):
         self.__endless_command_running = False
@@ -60,27 +68,26 @@ class Docs():
 
         """
         if self.__module_version:
-            return {
-                'version': self.__module_version,
-                'author': self.__module_author
-            }
+            return {"version": self.__module_version, "author": self.__module_author}
 
         try:
-            module_ = importlib.import_module('cleep.modules.%s' % (module_name))
-            app_filename = getattr(module_, 'APP_FILENAME', module_name)
+            module_ = importlib.import_module("cleep.modules.%s" % (module_name))
+            app_filename = getattr(module_, "APP_FILENAME", module_name)
             del module_
-            module_ = importlib.import_module('cleep.modules.%s.%s' % (module_name, app_filename))
-            class_name = next((item for item in dir(module_) if item.lower() == app_filename.lower()), None)
-            module_class_ = getattr(module_, class_name or '', None)
+            module_ = importlib.import_module(
+                "cleep.modules.%s.%s" % (module_name, app_filename)
+            )
+            class_name = next(
+                (item for item in dir(module_) if item.lower() == app_filename.lower()),
+                None,
+            )
+            module_class_ = getattr(module_, class_name or "", None)
             self.__module_version = module_class_.MODULE_VERSION
             self.__module_author = module_class_.MODULE_AUTHOR
 
-            return {
-                'version': self.__module_version,
-                'author': self.__module_author
-            }
+            return {"version": self.__module_version, "author": self.__module_author}
         except:
-            self.logger.exception('Unable to get module infos. Is module valid?')
+            self.logger.exception("Unable to get module infos. Is module valid?")
             return None
 
     def generate_module_api_docs(self, module_name, preview=False):
@@ -91,20 +98,22 @@ class Docs():
             module_name (string): module name
             preview (bool): preview generated documentation as text directly on stdout
         """
-        #checking module path
-        path = os.path.join(config.MODULES_SRC, module_name, 'docs')
+        # checking module path
+        path = os.path.join(config.MODULES_SRC, module_name, "docs")
         if not os.path.exists(path):
-            self.logger.error('Docs directory for module "%s" does not exist' % (module_name))
+            self.logger.error(
+                'Docs directory for module "%s" does not exist' % (module_name)
+            )
             return False
 
         module_data = self.__get_module_data(module_name)
-        self.logger.debug('Module data: %s' % module_data)
+        self.logger.debug("Module data: %s" % module_data)
         if module_data is None:
             return False
 
         today = datetime.today()
 
-        self.logger.info('=> Generating documentation...')
+        self.logger.info("=> Generating documentation...")
         cmd = """
 cd "%(DOCS_PATH)s"
 /usr/bin/rm -rf "%(BUILD_DIR)s" "%(SOURCE_DIR)s"
@@ -141,18 +150,23 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
 /bin/cp -a "%(BUILD_DIR)s/xml/source/%(MODULE_NAME)s.xml" "%(MODULE_NAME)s-docs.xml"
 %(DISPLAY_TEXT)s
         """ % {
-            'DOCS_PATH': path,
-            'SOURCE_DIR': 'source',
-            'BUILD_DIR': '_build',
-            'MODULE_NAME': module_name,
-            'MODULE_NAME_CAPITALIZED': module_name.capitalize(),
-            'YEAR': today.year,
-            'AUTHOR': module_data['author'],
-            'VERSION': module_data['version'],
-            'DISPLAY_TEXT': 'echo; echo; echo "========== DOC PREVIEW =========="; echo; cat "%s-docs.txt"' % module_name if preview else '',
+            "DOCS_PATH": path,
+            "SOURCE_DIR": "source",
+            "BUILD_DIR": "_build",
+            "MODULE_NAME": module_name,
+            "MODULE_NAME_CAPITALIZED": module_name.capitalize(),
+            "YEAR": today.year,
+            "AUTHOR": module_data["author"],
+            "VERSION": module_data["version"],
+            "DISPLAY_TEXT": (
+                'echo; echo; echo "========== DOC PREVIEW =========="; echo; cat "%s-docs.txt"'
+                % module_name
+                if preview
+                else ""
+            ),
         }
 
-        self.logger.debug('Docs cmd: %s' % cmd)
+        self.logger.debug("Docs cmd: %s" % cmd)
         self.__endless_command_running = True
         c = EndlessConsole(cmd, self.__console_callback, self.__console_end_callback)
         c.start()
@@ -160,8 +174,8 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
         while self.__endless_command_running:
             time.sleep(0.25)
 
-        self.logger.debug('Return code: %s' % self.__endless_command_return_code)
-        if self.__endless_command_return_code!=0:
+        self.logger.debug("Return code: %s" % self.__endless_command_return_code)
+        if self.__endless_command_return_code != 0:
             return False
 
         return True
@@ -171,17 +185,22 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
         Display module docs archive path if exists
         """
         # check module path
-        docs_path = os.path.join(config.MODULES_SRC, module_name, 'docs')
+        docs_path = os.path.join(config.MODULES_SRC, module_name, "docs")
         if not os.path.exists(docs_path):
-            self.logger.error('Docs directory for module "%s" does not exist' % (module_name))
+            self.logger.error(
+                'Docs directory for module "%s" does not exist' % (module_name)
+            )
             return False
 
-        zip_path = os.path.join(docs_path, '%s-docs.zip' % module_name)
+        zip_path = os.path.join(docs_path, "%s-docs.zip" % module_name)
         if not os.path.exists(zip_path):
-            self.logger.error('There is no documentation archive generated for module "%s"' % (module_name))
+            self.logger.error(
+                'There is no documentation archive generated for module "%s"'
+                % (module_name)
+            )
             return False
 
-        self.logger.info('DOC_ARCHIVE=%s' % zip_path)
+        self.logger.info("DOC_ARCHIVE=%s" % zip_path)
         return True
 
     def generate_module_docs(self, module_name):
@@ -204,7 +223,7 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
         """
         self.logger.debug("Get module docs by api call")
         rpc_url = get_cleep_url()
-        self.logger.debug('Cleep RPC url: %s', rpc_url)
+        self.logger.debug("Cleep RPC url: %s", rpc_url)
         cleepapi = CleepApi(rpc_url)
         return cleepapi.get_documentation(module_name)
 
@@ -221,22 +240,22 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
             self.logger.error("Unable to generate %s doc: %s", module_name, resp)
             raise Exception(f"Error occured generating {module_name} documentation")
 
-        return json.loads(''.join(resp["stdout"]))
+        return json.loads("".join(resp["stdout"]))
 
     def generate_core_docs(self, publish=False):
         """
         Generate core documentation
         """
         # check core path
-        path = os.path.join(config.CORE_SRC, '../docs')
-        self.logger.debug('Core docs path: %s' % path)
+        path = os.path.join(config.CORE_SRC, "../docs")
+        self.logger.debug("Core docs path: %s" % path)
         if not os.path.exists(path):
-            self.logger.error('Docs directory for core does not exist')
+            self.logger.error("Docs directory for core does not exist")
             return False
 
         today = datetime.today()
 
-        self.logger.info('=> Generating documentation...')
+        self.logger.info("=> Generating documentation...")
         cmd = """
 cd "%(DOCS_PATH)s"
 echo "=> Generating documentation sources..."
@@ -262,17 +281,17 @@ cd "_build"; /usr/bin/zip "../%(CORE)s-docs.zip" -r "html"; cd ..
 if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
 # TODO /bin/cp -a "%(BUILD_DIR)s/xml/source/%(CORE)s.xml" "%(CORE)s-docs.xml"
         """ % {
-            'DOCS_PATH': path,
-            'SOURCE_DIR': 'source',
-            'BUILD_DIR': '_build',
-            'CORE': 'cleep-core',
-            'PROJECT': config.DOCS_PROJECT_NAME,
-            'YEAR': today.year,
-            'AUTHOR': config.DOCS_AUTHOR,
-            'VERSION': config.CORE_VERSION,
+            "DOCS_PATH": path,
+            "SOURCE_DIR": "source",
+            "BUILD_DIR": "_build",
+            "CORE": "cleep-core",
+            "PROJECT": config.DOCS_PROJECT_NAME,
+            "YEAR": today.year,
+            "AUTHOR": config.DOCS_AUTHOR,
+            "VERSION": config.CORE_VERSION,
         }
 
-        self.logger.debug('Docs cmd: %s' % cmd)
+        self.logger.debug("Docs cmd: %s" % cmd)
         self.__endless_command_running = True
         c = EndlessConsole(cmd, self.__console_callback, self.__console_end_callback)
         c.start()
@@ -280,13 +299,15 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
         while self.__endless_command_running:
             time.sleep(0.25)
 
-        self.logger.debug('Return code: %s' % self.__endless_command_return_code)
-        if self.__endless_command_return_code!=0:
+        self.logger.debug("Return code: %s" % self.__endless_command_return_code)
+        if self.__endless_command_return_code != 0:
             return False
 
         # publish docs
         if publish:
-            self.logger.info('=> Publishing documentation for Cleep v%s...', config.CORE_VERSION)
+            self.logger.info(
+                "=> Publishing documentation for Cleep v%s...", config.CORE_VERSION
+            )
             return self.publish_core_docs()
 
         return True
@@ -298,53 +319,78 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
         c = Console()
 
         # check
-        docs_archive_path = os.path.join(config.REPO_DIR, 'docs/', self.DOCS_ARCHIVE_NAME)
+        docs_archive_path = os.path.join(
+            config.REPO_DIR, "docs/", self.DOCS_ARCHIVE_NAME
+        )
         if not os.path.exists(docs_archive_path):
-            self.logger.error('Core has no docs archive generated (%s). Please run "cleep-cli coredocs" first' % docs_archive_path)
+            self.logger.error(
+                'Core has no docs archive generated (%s). Please run "cleep-cli coredocs" first'
+                % docs_archive_path
+            )
             return False
 
         # clone repo
-        self.logger.debug('Cloning core repository...')
-        repo = 'git@github.com:%s/%s.git' % (config.GITHUB_ORG, config.GITHUB_REPO_DOCS)
-        cmd = 'rm -rf "%s"; git clone -q "%s" "%s"' % (self.DOCS_TEMP_PATH, repo, self.DOCS_TEMP_PATH)
-        self.logger.debug('cmd: %s' % cmd)
-        resp = c.command(cmd, 60) 
-        self.logger.debug('Clone resp: %s' % resp)
-        if resp['returncode'] != 0 or resp['killed']:
-            self.logger.error('Error occured while cloning repository: %s' % ('killed' if resp['killed'] else resp['stderr']))
+        self.logger.debug("Cloning core repository...")
+        repo = "git@github.com:%s/%s.git" % (config.GITHUB_ORG, config.GITHUB_REPO_DOCS)
+        cmd = 'rm -rf "%s"; git clone -q "%s" "%s"' % (
+            self.DOCS_TEMP_PATH,
+            repo,
+            self.DOCS_TEMP_PATH,
+        )
+        self.logger.debug("cmd: %s" % cmd)
+        resp = c.command(cmd, 60)
+        self.logger.debug("Clone resp: %s" % resp)
+        if resp["returncode"] != 0 or resp["killed"]:
+            self.logger.error(
+                "Error occured while cloning repository: %s"
+                % ("killed" if resp["killed"] else resp["stderr"])
+            )
             return False
-    
+
         # add docs
-        self.logger.debug('Updating docs...')
+        self.logger.debug("Updating docs...")
         cmd = 'unzip "%s" -d "%s" && cp -fr %s %s' % (
             docs_archive_path,
             self.DOCS_EXTRACT_PATH,
-            os.path.join(self.DOCS_EXTRACT_PATH, 'html', '*'),
+            os.path.join(self.DOCS_EXTRACT_PATH, "html", "*"),
             self.DOCS_TEMP_PATH,
         )
-        self.logger.debug('cmd: %s' % cmd)
-        resp = c.command(cmd, 60) 
-        self.logger.debug('Unzip resp: %s' % resp)
-        if resp['returncode'] != 0 or resp['killed']:
-            self.logger.error('Error occured while unzipping core docs archive: %s' % ('killed' if resp['killed'] else resp['stderr']))
+        self.logger.debug("cmd: %s" % cmd)
+        resp = c.command(cmd, 60)
+        self.logger.debug("Unzip resp: %s" % resp)
+        if resp["returncode"] != 0 or resp["killed"]:
+            self.logger.error(
+                "Error occured while unzipping core docs archive: %s"
+                % ("killed" if resp["killed"] else resp["stderr"])
+            )
             return False
 
         # commit changes
-        self.logger.debug('Commiting changes...')
+        self.logger.debug("Commiting changes...")
         cmd = 'cd "%s" && git add . && git commit -m "%s" | true && git push | true' % (
             self.DOCS_TEMP_PATH,
-            self.DOCS_COMMIT_MESSAGE % { 'version': config.CORE_VERSION },
+            self.DOCS_COMMIT_MESSAGE % {"version": config.CORE_VERSION},
         )
-        self.logger.debug('cmd: %s' % cmd)
-        resp = c.command(cmd, 60) 
-        self.logger.debug('Commit resp: %s' % resp)
-        if resp['returncode'] != 0 or resp['killed']:
-            self.logger.error('Error occured while pushing changes: %s' % ('killed' if resp['killed'] else resp['stderr']))
+        self.logger.debug("cmd: %s" % cmd)
+        resp = c.command(cmd, 60)
+        self.logger.debug("Commit resp: %s" % resp)
+        if resp["returncode"] != 0 or resp["killed"]:
+            self.logger.error(
+                "Error occured while pushing changes: %s"
+                % ("killed" if resp["killed"] else resp["stderr"])
+            )
             return False
 
         return True
 
-    def publish_module_docs(self, module_name, module_version, github_token=None, github_owner=None, doc_file=None):
+    def publish_module_docs(
+        self,
+        module_name,
+        module_version,
+        github_token=None,
+        github_owner=None,
+        doc_file=None,
+    ):
         """
         Publish application documentation on specified repo.
         It publish both a tagged version and a latest version
@@ -360,11 +406,13 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
             bool: True if publication succeed, False otherwise
         """
         try:
-            version = module_version[1:] if module_version.startswith('v') else module_version
+            version = (
+                module_version[1:] if module_version.startswith("v") else module_version
+            )
             Version.parse(version)
         except ValueError as error:
             raise Exception(str(error))
-        repo = self.__get_github_app_docs_repo(github_token)
+        repo = self.__get_github_app_docs_repo(github_token, github_owner)
         if repo is None:
             raise Exception("Unable to connect to app doc repository")
 
@@ -377,17 +425,23 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
         try:
             # latest doc file
             latest_file_path = self.__get_app_doc_file_path(module_name)
-            (_, file_sha) = self.__get_github_app_doc_file(latest_file_path, repo)
+            _, file_sha = self.__get_github_app_doc_file(latest_file_path, repo)
             latest_content = {
                 "version": module_version,
                 "doc": documentation,
             }
-            self.__create_or_update_repo_doc_file(module_name, latest_file_path, latest_content, file_sha, repo)
+            self.__create_or_update_repo_doc_file(
+                module_name, latest_file_path, latest_content, file_sha, repo
+            )
 
             # version doc file
-            version_file_path = self.__get_app_doc_file_path(module_name, module_version)
-            (_, file_sha) = self.__get_github_app_doc_file(version_file_path, repo)
-            self.__create_or_update_repo_doc_file(module_name, version_file_path, documentation, file_sha, repo)
+            version_file_path = self.__get_app_doc_file_path(
+                module_name, module_version
+            )
+            _, file_sha = self.__get_github_app_doc_file(version_file_path, repo)
+            self.__create_or_update_repo_doc_file(
+                module_name, version_file_path, documentation, file_sha, repo
+            )
 
             return True
 
@@ -395,7 +449,9 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
             self.logger.exception("Unable to update doc file in repo")
             return False
 
-    def __create_or_update_repo_doc_file(self, module_name, file_path, file_content, file_sha, repo):
+    def __create_or_update_repo_doc_file(
+        self, module_name, file_path, file_content, file_sha, repo
+    ):
         """
         Process create or update file in repo according to file_sha value
 
@@ -409,9 +465,16 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
         update_commit_message = f"Update {module_name} doc"
         create_commit_message = f"Create {module_name} doc"
         if file_sha:
-            repo.update_file(file_path, update_commit_message, json.dumps(file_content, indent=2), file_sha)
+            repo.update_file(
+                file_path,
+                update_commit_message,
+                json.dumps(file_content, indent=2),
+                file_sha,
+            )
         else:
-            repo.create_file(file_path, create_commit_message, json.dumps(file_content, indent=2))
+            repo.create_file(
+                file_path, create_commit_message, json.dumps(file_content, indent=2)
+            )
 
     def __get_github_app_doc_file(self, file_path, repo):
         """
@@ -453,8 +516,6 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
         """
         try:
             if not github_token:
-                github_token = os.environ.get("GITHUB_ACCESS_TOKEN")
-            if not github_token:
                 github_token = os.environ.get("GITHUB_TOKEN")
             github = Github(github_token)
 
@@ -483,7 +544,7 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
         Returns:
             str: path
         """
-        version = '' if not module_version else f"_{module_version}"
+        version = "" if not module_version else f"_{module_version}"
         path = quote(f"{module_name}/{module_name}{version}.json")
         self.logger.debug("Github app doc file path: %s", path)
         return path
@@ -544,29 +605,51 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
 
             self.logger.debug(" -> args length: %s VS %s", len(new_args), len(old_args))
             if len(new_args) < len(old_args):
-                errors.append(f"Command {cmd_name} has a parameter that was removed. This is not allowed.")
+                errors.append(
+                    f"Command {cmd_name} has a parameter that was removed. This is not allowed."
+                )
                 continue
 
             if len(new_args) > len(old_args):
                 error_found = False
-                for index, new_arg in enumerate(new_args[len(old_args) - len(new_args):]):
+                for index, new_arg in enumerate(
+                    new_args[len(old_args) - len(new_args) :]
+                ):
                     if not new_arg["optional"]:
-                        errors.append(f"Command {cmd_name} has new parameter {new_arg['name']} added in new version but has not default value. This will cause command call failure.")
+                        errors.append(
+                            f"Command {cmd_name} has new parameter {new_arg['name']} added in new version but has not default value. This will cause command call failure."
+                        )
                         error_found = True
                 if error_found:
                     continue
 
-            for index, new_arg in enumerate(new_args[:len(old_args)]):
+            for index, new_arg in enumerate(new_args[: len(old_args)]):
                 self.logger.debug(" -> new_arg at position %s: %s", index, new_arg)
-                self.logger.debug(" -> arg position: %s VS %s", new_arg["name"], old_args[index]["name"])
+                self.logger.debug(
+                    " -> arg position: %s VS %s",
+                    new_arg["name"],
+                    old_args[index]["name"],
+                )
                 if new_arg["name"] != old_args[index]["name"]:
-                    errors.append(f"Command {cmd_name} argument {new_arg['name']} order has changed. This could cause command call failure.")
-                self.logger.debug(" -> arg type: %s VS %s", new_arg["type"], old_args[index]["type"])
+                    errors.append(
+                        f"Command {cmd_name} argument {new_arg['name']} order has changed. This could cause command call failure."
+                    )
+                self.logger.debug(
+                    " -> arg type: %s VS %s", new_arg["type"], old_args[index]["type"]
+                )
                 if new_arg["type"] != old_args[index]["type"]:
-                    warnings.append(f"Command {cmd_name} argument {new_arg['name']} type is different from previous version ({old_args[index]['type']}). This could create command call failure.")
-                self.logger.debug(" -> arg formats: %s VS %s", new_arg["formats"], old_args[index]["formats"])
+                    warnings.append(
+                        f"Command {cmd_name} argument {new_arg['name']} type is different from previous version ({old_args[index]['type']}). This could create command call failure."
+                    )
+                self.logger.debug(
+                    " -> arg formats: %s VS %s",
+                    new_arg["formats"],
+                    old_args[index]["formats"],
+                )
                 if new_arg["formats"] != old_args[index]["formats"]:
-                    warnings.append(f"Command {cmd_name} argument {new_arg['name']} has formats updated from previous version. This could create command call failure.")
+                    warnings.append(
+                        f"Command {cmd_name} argument {new_arg['name']} has formats updated from previous version. This could create command call failure."
+                    )
 
     def __compare_doc_returns(self, new_doc, old_doc, errors, warnings):
         """
@@ -590,18 +673,30 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
             self.logger.debug("old_returns: %s", old_returns)
 
             for new_return in new_returns:
-                found_old_returns = [old_return for old_return in old_returns if old_return["type"] == new_return["type"]]
+                found_old_returns = [
+                    old_return
+                    for old_return in old_returns
+                    if old_return["type"] == new_return["type"]
+                ]
                 self.logger.debug(" -> found old returns: %s", found_old_returns)
                 for found_old_return in found_old_returns:
                     if new_return["formats"] != found_old_return["formats"]:
-                        warnings.append(f"Command {cmd_name} has formats updated from previous version. This could create called failure.")
+                        warnings.append(
+                            f"Command {cmd_name} has formats updated from previous version. This could create called failure."
+                        )
 
             if len(old_returns) > len(new_returns):
                 for old_return in old_returns:
-                    found_new_returns = [new_return for new_return in new_returns if new_return["type"] == old_return["type"]]
+                    found_new_returns = [
+                        new_return
+                        for new_return in new_returns
+                        if new_return["type"] == old_return["type"]
+                    ]
                     self.logger.debug(" -> found new returns: %s", found_new_returns)
                     if len(found_new_returns) == 0:
-                        warnings.append(f"Command {cmd_name} has return type {old_return['type']} removed from previous version. This could create error in caller.")
+                        warnings.append(
+                            f"Command {cmd_name} has return type {old_return['type']} removed from previous version. This could create error in caller."
+                        )
 
     def __get_latest_app_doc_file_from_url(self, module_name):
         """
@@ -614,7 +709,7 @@ if [ $? -ne 0 ]; then echo "Error occured"; exit 1; fi
             str: application documentation file content
         """
         try:
-            url = self.BASE_APP_DOC_URL % { "module_name": module_name }
+            url = self.BASE_APP_DOC_URL % {"module_name": module_name}
             self.logger.debug("App doc url: %s", url)
             resp = requests.get(url, headers={"Content-Type": "application/json"})
 

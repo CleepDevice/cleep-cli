@@ -18,17 +18,18 @@ import copy
 import hashlib
 import requests
 
-class Package():
+
+class Package:
     """
     Helper for package generation. Helps to create:
      * Cleep .deb package
      * application .zip package
     """
 
-    FRONTEND_DIR = 'frontend/'
-    BACKEND_DIR = 'backend/'
-    SCRIPTS_DIR = 'scripts/'
-    TESTS_DIR = 'tests/'
+    FRONTEND_DIR = "frontend/"
+    BACKEND_DIR = "backend/"
+    SCRIPTS_DIR = "scripts/"
+    TESTS_DIR = "tests/"
 
     def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -46,14 +47,17 @@ class Package():
             string: sha256 string
         """
         sha256_hash = hashlib.sha256()
-        with open(fullpath,'rb') as f:
-            for byte_block in iter(lambda: f.read(4096),b''):
+        with open(fullpath, "rb") as f:
+            for byte_block in iter(lambda: f.read(4096), b""):
                 sha256_hash.update(byte_block)
 
         return sha256_hash.hexdigest()
 
     def __console_callback(self, stdout, stderr):
-        self.logger.info((stdout if stdout is not None else '') + (stderr if stderr is not None else ''))
+        self.logger.info(
+            (stdout if stdout is not None else "")
+            + (stderr if stderr is not None else "")
+        )
 
     def __console_end_callback(self, return_code, killed):
         self.__endless_command_return_code = return_code
@@ -79,9 +83,11 @@ fi
         c = Console()
         result = c.command(cmd)
 
-        self.logger.debug('Return code: %s' % result['returncode'])
-        if result['returncode'] != 0:
-            self.logger.error('Cleep version mismatch between debian/changelog and cleep/__init__.py')
+        self.logger.debug("Return code: %s" % result["returncode"])
+        if result["returncode"] != 0:
+            self.logger.error(
+                "Cleep version mismatch between debian/changelog and cleep/__init__.py"
+            )
             return False
         return True
 
@@ -89,7 +95,7 @@ fi
         """
         Build cleep debian package
         """
-        self.logger.info('Building Cleep package...')
+        self.logger.info("Building Cleep package...")
         cmd = """
 SENTRY_DSN=`printenv SENTRY_DSN`
 echo $SENTRY_DSN
@@ -208,7 +214,7 @@ sha256sum $DEB > $SHA256
         while self.__endless_command_running:
             time.sleep(0.25)
 
-        self.logger.debug('Return code: %s' % self.__endless_command_return_code)
+        self.logger.debug("Return code: %s" % self.__endless_command_return_code)
         if self.__endless_command_return_code != 0:
             return False
 
@@ -226,18 +232,19 @@ sha256sum $DEB > $SHA256
         # curl -X DELETE -H "Authorization: token <token>" -H "User-Agent: PyGithub/Python" https://api.github.com/repos/tangb/cleep/git/refs/tags/<tag_name>
         try:
             headers = {
-                'Authorization': 'token %s' % token,
-                'User-Agent': 'PyGithub/Python',
+                "Authorization": "token %s" % token,
+                "User-Agent": "PyGithub/Python",
             }
             resp = requests.delete(
-                'https://api.github.com/repos/%s/%s/git/refs/tags/%s' % (config.GITHUB_ORG, config.GITHUB_REPO, tag_name),
+                "https://api.github.com/repos/%s/%s/git/refs/tags/%s"
+                % (config.GITHUB_ORG, config.GITHUB_REPO, tag_name),
                 headers=headers,
             )
             if resp.status_code >= 200 and resp.status_code < 300:
                 return True
             else:
-                self.logger.debug('Response data: %s' % resp.data.decode('utf-8'))
-                self.logger.error('Unable to delete tag [status=%s]' % resp.status_code)
+                self.logger.debug("Response data: %s" % resp.data.decode("utf-8"))
+                self.logger.error("Unable to delete tag [status=%s]" % resp.status_code)
                 return False
         except:
             self.logger.exception('Error deleting tag "%s"' % tag_name)
@@ -252,15 +259,21 @@ sha256sum $DEB > $SHA256
             prerelease (bool): True to publish pre-release version
             tag (str): associated git tag
         """
-        label = 'pre-release' if prerelease else 'release'
-        token = os.environ['GITHUB_ACCESS_TOKEN']
+        label = "pre-release" if prerelease else "release"
+        token = os.environ["GITHUB_TOKEN"]
         github = Github(token)
-        repo = github.get_repo('%s/%s' % (config.GITHUB_ORG, config.GITHUB_REPO))
+        repo = github.get_repo("%s/%s" % (config.GITHUB_ORG, config.GITHUB_REPO))
 
         # check build existence
-        archive = os.path.abspath(os.path.join(config.REPO_DIR, '..', 'cleep_%s_armhf.deb' % version))
-        sha256 = os.path.abspath(os.path.join(config.REPO_DIR, '..', 'cleep_%s_armhf.sha256' % version))
-        changes = os.path.abspath(os.path.join(config.REPO_DIR, '..', 'cleep_%s_armhf.changes' % version))
+        archive = os.path.abspath(
+            os.path.join(config.REPO_DIR, "..", "cleep_%s_armhf.deb" % version)
+        )
+        sha256 = os.path.abspath(
+            os.path.join(config.REPO_DIR, "..", "cleep_%s_armhf.sha256" % version)
+        )
+        changes = os.path.abspath(
+            os.path.join(config.REPO_DIR, "..", "cleep_%s_armhf.changes" % version)
+        )
         if not os.path.exists(archive):
             self.logger.error('Archive file "%s" does not exist' % archive)
         if not os.path.exists(sha256):
@@ -269,22 +282,25 @@ sha256sum $DEB > $SHA256
             self.logger.error('Changes file "%s" does not exist' % changes)
 
         # get changelog
-        cmd = 'sed -n "/cleep (%(version)s)/,/Checksums-Sha1:/{/cleep (%(version)s)/b;/Checksums-Sha1:/b;p}" %(changes)s | tail -n +2' % {'version': version, 'changes': changes}
-        self.logger.debug('Cmd = %s' % cmd)
+        cmd = (
+            'sed -n "/cleep (%(version)s)/,/Checksums-Sha1:/{/cleep (%(version)s)/b;/Checksums-Sha1:/b;p}" %(changes)s | tail -n +2'
+            % {"version": version, "changes": changes}
+        )
+        self.logger.debug("Cmd = %s" % cmd)
         c = Console()
         result = c.command(cmd)
-        if result['error']:
-            self.logger.error('Unable to read changelog')
-        changelog = '\n'.join([line.strip() for line in result['stdout']])
-        self.logger.debug('Changelog:\n%s' % changelog)
+        if result["error"]:
+            self.logger.error("Unable to read changelog")
+        changelog = "\n".join([line.strip() for line in result["stdout"]])
+        self.logger.debug("Changelog:\n%s" % changelog)
 
         # search existing release
         release_found = None
         releases = repo.get_releases()
         for release in releases:
             self.logger.debug('%s "%s"', label, release.title)
-            if release.title==version:
-                self.logger.debug(' -> %s found', label)
+            if release.title == version:
+                self.logger.debug(" -> %s found", label)
                 release_found = release
                 break
 
@@ -292,11 +308,13 @@ sha256sum $DEB > $SHA256
             # due to github limitation (bug or limitation?), draft assets are not downloadable
             # so we create prerelease version instead of draft and delete it before creating it
             # again when pushing new version
-            self.logger.info('Deleting existing %s "%s"...', label, release_found.tag_name)
+            self.logger.info(
+                'Deleting existing %s "%s"...', label, release_found.tag_name
+            )
             try:
                 release_found.delete_release()
             except:
-                self.logger.exception('Error deleting existing %s:', label)
+                self.logger.exception("Error deleting existing %s:", label)
                 return False
 
             # delete tag
@@ -315,7 +333,7 @@ sha256sum $DEB > $SHA256
                 prerelease=prerelease,
             )
         except:
-            self.logger.exception('Error occured creating new %s:', label)
+            self.logger.exception("Error occured creating new %s:", label)
             return False
 
         # upload assets
@@ -325,13 +343,13 @@ sha256sum $DEB > $SHA256
             self.logger.info('Uploading asset "%s"...' % sha256)
             release_found.upload_asset(sha256)
         except:
-            self.logger.exception('Error uploading assets:')
+            self.logger.exception("Error uploading assets:")
             return False
 
         return True
 
-        #TODO code for draft release removed for problem downloading draft assets
-        #if not release_found:
+        # TODO code for draft release removed for problem downloading draft assets
+        # if not release_found:
         #    #create release
         #    self.logger.info('Creating new release "%s"...' % version)
         #    try:
@@ -347,7 +365,7 @@ sha256sum $DEB > $SHA256
         #        self.logger.exception('Error occured creating new release:')
         #        return False
 
-        #else:
+        # else:
         #    #only update draft release !
         #    if not release_found.draft:
         #        self.logger.error('Existing release "%s" is not draft. Please create new release' % version)
@@ -395,115 +413,153 @@ sha256sum $DEB > $SHA256
         check = Check()
         docs = Docs()
         data_backend = check.check_backend(module_name)
-        if len(data_backend['errors']) > 0:
-            raise Exception('Error in backend. Fix it before packaging application: %s' % data_backend['errors'])
+        if len(data_backend["errors"]) > 0:
+            raise Exception(
+                "Error in backend. Fix it before packaging application: %s"
+                % data_backend["errors"]
+            )
         data_frontend = check.check_frontend(module_name)
-        if len(data_frontend['errors']) > 0:
-            raise Exception('Error in frontend. Fix it before packaging application: %s' % data_frontend['errors'])
+        if len(data_frontend["errors"]) > 0:
+            raise Exception(
+                "Error in frontend. Fix it before packaging application: %s"
+                % data_frontend["errors"]
+            )
         data_scripts = check.check_scripts(module_name)
-        if len(data_scripts['errors']) > 0:
-            raise Exception('Error in scripts. Fix it before packaging application: %s' % data_scripts['errors'])
+        if len(data_scripts["errors"]) > 0:
+            raise Exception(
+                "Error in scripts. Fix it before packaging application: %s"
+                % data_scripts["errors"]
+            )
         data_tests = check.check_tests(module_name)
-        if len(data_tests['errors']) > 0:
-            raise Exception('Error in tests. Fix it before packaging application: %s' % data_tests['errors'])
+        if len(data_tests["errors"]) > 0:
+            raise Exception(
+                "Error in tests. Fix it before packaging application: %s"
+                % data_tests["errors"]
+            )
         data_changelog = check.check_changelog(module_name)
-        logging.debug('Changelog: %s' % data_changelog)
-        if data_changelog['version'] != data_backend['metadata']['version']:
-            raise Exception('Changelog does not seems to have been updated (no version "%s" found)' % data_backend['metadata']['version'])
-        if data_changelog['unreleased']:
-            raise Exception('Changelog has UNRELEASED flag enabled, please remove it before publishing')
+        logging.debug("Changelog: %s" % data_changelog)
+        if data_changelog["version"] != data_backend["metadata"]["version"]:
+            raise Exception(
+                'Changelog does not seems to have been updated (no version "%s" found)'
+                % data_backend["metadata"]["version"]
+            )
+        if data_changelog["unreleased"]:
+            raise Exception(
+                "Changelog has UNRELEASED flag enabled, please remove it before publishing"
+            )
         data_code_quality = check.check_code_quality(module_name)
-        if len(data_code_quality['errors']) > 0:
-            raise Exception('Error in code quality. Fix it before packaging application: %s' % data_code_quality['errors'])
-        if data_code_quality['score'] < 7.0:
-            raise Exception('Code quality for app "%s" is too low to be packaged (%s). Please improve it to be greater than 7.0' % (module_name, data_code_quality['score']))
+        if len(data_code_quality["errors"]) > 0:
+            raise Exception(
+                "Error in code quality. Fix it before packaging application: %s"
+                % data_code_quality["errors"]
+            )
+        if data_code_quality["score"] < 7.0:
+            raise Exception(
+                'Code quality for app "%s" is too low to be packaged (%s). Please improve it to be greater than 7.0'
+                % (module_name, data_code_quality["score"])
+            )
         data_documentation = check.check_module_documentation(module_name)
-        if data_documentation['error']:
-            raise Exception('Documentation is invalid. Please fix it before publishing')
+        if data_documentation["error"]:
+            raise Exception("Documentation is invalid. Please fix it before publishing")
         data_breaking_changes = docs.check_module_breaking_changes(module_name)
-        if len(data_breaking_changes['errors']) > 0:
-            raise Exception('There are breaking changes in your new version. Please fix it before publishing')
-        data_test = {
-            'score': 0.0
-        }
+        if len(data_breaking_changes["errors"]) > 0:
+            raise Exception(
+                "There are breaking changes in your new version. Please fix it before publishing"
+            )
+        data_test = {"score": 0.0}
         if ci:
             # execute tests
             test = Test()
             if not test.module_test(module_name):
-                raise Exception('Test execution failed for "%s". Please fix it.' % module_name)
+                raise Exception(
+                    'Test execution failed for "%s". Please fix it.' % module_name
+                )
             data_test = test.module_test_coverage(module_name, as_json=True)
 
         # build module description file (module.json)
-        fdesc = NamedTemporaryFile(delete=False, encoding='utf-8', mode='w')
+        fdesc = NamedTemporaryFile(delete=False, encoding="utf-8", mode="w")
         module_json = fdesc.name
-        metadata = copy.deepcopy(data_backend['metadata'])
-        metadata['icon'] = data_frontend['icon']
-        metadata['quality'] = data_code_quality['score']
-        metadata['confidence'] = data_test['score']
-        metadata['changelog'] = data_changelog['changelog']
-        fdesc.write(str(json.dumps(metadata, indent=4, ensure_ascii=False, sort_keys=True)))
+        metadata = copy.deepcopy(data_backend["metadata"])
+        metadata["icon"] = data_frontend["icon"]
+        metadata["quality"] = data_code_quality["score"]
+        metadata["confidence"] = data_test["score"]
+        metadata["changelog"] = data_changelog["changelog"]
+        fdesc.write(
+            str(json.dumps(metadata, indent=4, ensure_ascii=False, sort_keys=True))
+        )
         fdesc.close()
 
         # build zip archive
         fdesc = NamedTemporaryFile(delete=False)
         module_archive = fdesc.name
-        self.logger.debug('Archive filepath: %s' % module_archive)
-        archive = ZipFile(fdesc, 'w', ZIP_DEFLATED)
+        self.logger.debug("Archive filepath: %s" % module_archive)
+        archive = ZipFile(fdesc, "w", ZIP_DEFLATED)
 
         # add frontend files
-        for a_file in data_frontend['files']:
-            archive.write(a_file['fullpath'], os.path.join(self.FRONTEND_DIR, 'js', 'modules', a_file['path']))
+        for a_file in data_frontend["files"]:
+            archive.write(
+                a_file["fullpath"],
+                os.path.join(self.FRONTEND_DIR, "js", "modules", a_file["path"]),
+            )
 
         # add backend files
-        path_in = data_backend['files']['module']['fullpath']
-        path_out = os.path.join(self.BACKEND_DIR, 'modules', data_backend['files']['module']['path'])
+        path_in = data_backend["files"]["module"]["fullpath"]
+        path_out = os.path.join(
+            self.BACKEND_DIR, "modules", data_backend["files"]["module"]["path"]
+        )
         archive.write(path_in, path_out)
-        for a_file in data_backend['files']['events']:
-            path_in = a_file['fullpath']
-            path_out = os.path.join(self.BACKEND_DIR, 'modules', a_file['path'])
+        for a_file in data_backend["files"]["events"]:
+            path_in = a_file["fullpath"]
+            path_out = os.path.join(self.BACKEND_DIR, "modules", a_file["path"])
             archive.write(path_in, path_out)
-        for a_file in data_backend['files']['formatters']:
-            path_in = a_file['fullpath']
-            path_out = os.path.join(self.BACKEND_DIR, 'modules', a_file['path'])
+        for a_file in data_backend["files"]["formatters"]:
+            path_in = a_file["fullpath"]
+            path_out = os.path.join(self.BACKEND_DIR, "modules", a_file["path"])
             archive.write(path_in, path_out)
-        for a_file in data_backend['files']['drivers']:
-            path_in = a_file['fullpath']
-            path_out = os.path.join(self.BACKEND_DIR, 'modules', a_file['path'])
+        for a_file in data_backend["files"]["drivers"]:
+            path_in = a_file["fullpath"]
+            path_out = os.path.join(self.BACKEND_DIR, "modules", a_file["path"])
             archive.write(path_in, path_out)
-        for a_file in data_backend['files']['misc']:
-            path_in = a_file['fullpath']
-            path_out = os.path.join(self.BACKEND_DIR, 'modules', a_file['path'])
+        for a_file in data_backend["files"]["misc"]:
+            path_in = a_file["fullpath"]
+            path_out = os.path.join(self.BACKEND_DIR, "modules", a_file["path"])
             archive.write(path_in, path_out)
 
         # add tests
-        for a_file in data_tests['files']:
-            path_in = a_file['fullpath']
-            path_out = a_file['path']
+        for a_file in data_tests["files"]:
+            path_in = a_file["fullpath"]
+            path_out = a_file["path"]
             archive.write(path_in, path_out)
 
         # add scripts
-        for a_file in data_scripts['files']:
-            path_in = a_file['fullpath']
-            path_out = a_file['path']
+        for a_file in data_scripts["files"]:
+            path_in = a_file["fullpath"]
+            path_out = a_file["path"]
             archive.write(path_in, path_out)
 
         # add module.json
-        archive.write(module_json, 'module.json')
+        archive.write(module_json, "module.json")
 
         # close archive
         archive.close()
-        archive_path = os.path.join(os.path.dirname(module_archive), 'cleepapp_%s_v%s.zip' % (module_name, metadata['version']))
+        archive_path = os.path.join(
+            os.path.dirname(module_archive),
+            "cleepapp_%s_v%s.zip" % (module_name, metadata["version"]),
+        )
         os.rename(module_archive, archive_path)
 
         # clean some stuff
         if os.path.exists(module_json):
             os.remove(module_json)
 
-        self.logger.debug('Package for app "%s" has been built into "%s"' % (module_name, archive_path))
+        self.logger.debug(
+            'Package for app "%s" has been built into "%s"'
+            % (module_name, archive_path)
+        )
 
         return {
-            'package': archive_path,
-            'sha256': self.__compute_sha256(archive_path),
-            'quality': metadata['quality'],
-            'confidence': metadata['confidence'],
+            "package": archive_path,
+            "sha256": self.__compute_sha256(archive_path),
+            "quality": metadata["quality"],
+            "confidence": metadata["confidence"],
         }
