@@ -106,7 +106,7 @@ The [watchdog](https://pypi.org/project/watchdog/) python library is used to det
 
 ## CI (GitHub Actions)
 
-A tag `vX.Y.Z` (or a manual **workflow_dispatch**) builds a **universal** wheel + sdist on `ubuntu-latest` (Python 3.9) and uploads them to PyPI.
+A tag `vX.Y.Z` (or a manual **workflow_dispatch**) builds a **py3** wheel + sdist on `ubuntu-latest` (Python 3.9) via `python -m build` and uploads them to PyPI.
 
 GitHub **environment** `actions` (Settings → Environments), secret:
 
@@ -114,4 +114,4 @@ GitHub **environment** `actions` (Settings → Environments), secret:
 | ---------------- | ----------------------------------------------------------- |
 | `PYPI_API_TOKEN` | PyPI API token (`pypi-...`). Username Twine is `__token__`. |
 
-No Raspberry Pi / Woodpecker needed: the package is pure Python (`py2.py3-none-any`).
+No Raspberry Pi / Woodpecker needed: the package is pure Python (`py3-none-any`).

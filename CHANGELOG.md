@@ -5,6 +5,8 @@
 ## Fixed
 
 - Remove GITHUB_ACCESS_TOKEN usage to homogenize usage
+- Build with `python -m build` (drop deprecated `setup.py bdist_wheel --universal`)
+- Include `requirements.txt` in sdist (`MANIFEST.in`) for isolated builds
 
 # [1.43.6] - 2026-08-21
 
