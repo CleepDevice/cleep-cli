@@ -1,5 +1,11 @@
 # Cleep-cli
 
+# [1.43.8] - 2026-08-25
+
+## Fixed
+
+- Fix issue in core deb building
+
 # [1.43.7] - 2026-08-24
 
 ## Fixed

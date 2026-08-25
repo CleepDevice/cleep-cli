@@ -115,7 +115,7 @@ checkResult() {
     if [ $1 -ne $2 ]
     then
         msg=$3
-        if [[ -z "$1" ]]; then
+        if [ -z "$1" ]; then
             msg="see output log"
         fi
         echo -e "Error occured: $msg."
