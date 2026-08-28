@@ -1,5 +1,11 @@
 # Cleep-cli
 
+# [1.43.9] - 2026-08-28
+
+## Fixed
+
+- Fix issue in app test run
+
 # [1.43.8] - 2026-08-25
 
 ## Fixed

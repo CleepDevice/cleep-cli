@@ -224,6 +224,9 @@ cd "%(path)s"
 
         # copy coverage file to standart location (in module tests directory) for coverage report tools
         if copy_to:
+            if not os.path.isfile(coverage_file_path):
+                self.logger.error('Coverage file missing: %s' % coverage_file_path)
+                return False
             shutil.copyfile(coverage_file_path, os.path.join(copy_to, '.coverage'))
 
         self.logger.debug('Return code: %s' % self.__endless_command_return_code)
@@ -238,7 +241,7 @@ cd "%(path)s"
         """
         return """
 cd "%s"
-COVERAGE_FILE=%s coverage run --omit="*/lib/python*/*","test_*" --source="../backend" --concurrency=gevent -m unittest discover
+COVERAGE_FILE=%s coverage run --omit="*/lib/python*/*","test_*" --source="../backend" --concurrency=thread -m unittest discover
         """ % (module_tests_path, coverage_file_path)
 
     def __get_tests_cmd_with_pattern(self, module_tests_path, pattern):
