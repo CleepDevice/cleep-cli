@@ -250,7 +250,9 @@ sha256sum $DEB > $SHA256
             self.logger.exception('Error deleting tag "%s"' % tag_name)
             return False
 
-    def publish_cleep(self, version, prerelease, tag):
+    def publish_cleep(
+        self, version, prerelease, tag, force=False, skip_existing=False
+    ):
         """
         Publish cleep version on github
 
@@ -258,9 +260,17 @@ sha256sum $DEB > $SHA256
             version (str): cleep version
             prerelease (bool): True to publish pre-release version
             tag (str): associated git tag
+            force (bool): If release already exists, replace .deb/.sha256 assets
+                without deleting the git tag (safe for CI replay)
+            skip_existing (bool): If release already exists, exit successfully
+                without uploading (mutually exclusive intent with force —
+                force wins if both are set)
         """
         label = "pre-release" if prerelease else "release"
-        token = os.environ["GITHUB_TOKEN"]
+        token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GITHUB_ACCESS_TOKEN")
+        if not token:
+            self.logger.error("GITHUB_TOKEN is not set")
+            return False
         github = Github(token)
         repo = github.get_repo("%s/%s" % (config.GITHUB_ORG, config.GITHUB_REPO))
 
@@ -274,12 +284,18 @@ sha256sum $DEB > $SHA256
         changes = os.path.abspath(
             os.path.join(config.REPO_DIR, "..", "cleep_%s_armhf.changes" % version)
         )
+        missing = False
         if not os.path.exists(archive):
             self.logger.error('Archive file "%s" does not exist' % archive)
+            missing = True
         if not os.path.exists(sha256):
             self.logger.error('Checksum file "%s" does not exist' % sha256)
+            missing = True
         if not os.path.exists(changes):
             self.logger.error('Changes file "%s" does not exist' % changes)
+            missing = True
+        if missing:
+            return False
 
         # get changelog
         cmd = (
@@ -294,7 +310,7 @@ sha256sum $DEB > $SHA256
         changelog = "\n".join([line.strip() for line in result["stdout"]])
         self.logger.debug("Changelog:\n%s" % changelog)
 
-        # search existing release
+        # search existing release (by title = version name)
         release_found = None
         releases = repo.get_releases()
         for release in releases:
@@ -304,27 +320,50 @@ sha256sum $DEB > $SHA256
                 release_found = release
                 break
 
-        if release_found and (release_found.prerelease or release_found.draft):
-            # due to github limitation (bug or limitation?), draft assets are not downloadable
-            # so we create prerelease version instead of draft and delete it before creating it
-            # again when pushing new version
-            self.logger.info(
-                'Deleting existing %s "%s"...', label, release_found.tag_name
-            )
-            try:
-                release_found.delete_release()
-            except:
-                self.logger.exception("Error deleting existing %s:", label)
-                return False
+        if release_found:
+            if skip_existing and not force:
+                self.logger.info(
+                    'Release "%s" already exists — skip (--skip-existing)',
+                    version,
+                )
+                return True
 
-            # delete tag
-            if not self.__delete_github_tag(release_found.tag_name, token):
+            if force:
+                return self.__replace_release_assets(
+                    release_found,
+                    version,
+                    changelog,
+                    prerelease,
+                    archive,
+                    sha256,
+                )
+
+            if release_found.prerelease or release_found.draft:
+                # Legacy RC path: delete release + tag, then recreate.
+                # Prefer --force to replace assets without touching the tag.
+                self.logger.info(
+                    'Deleting existing %s "%s"...', label, release_found.tag_name
+                )
+                try:
+                    release_found.delete_release()
+                except Exception:
+                    self.logger.exception("Error deleting existing %s:", label)
+                    return False
+
+                if not self.__delete_github_tag(release_found.tag_name, token):
+                    return False
+                release_found = None
+            else:
+                self.logger.error(
+                    'Release "%s" already exists — use --force to replace '
+                    "assets or --skip-existing to no-op",
+                    version,
+                )
                 return False
 
         # create release
         self.logger.info('Creating new %s "%s"...', label, version)
         try:
-            commits = repo.get_commits()
             release_found = repo.create_git_release(
                 tag=tag,
                 name=version,
@@ -332,20 +371,53 @@ sha256sum $DEB > $SHA256
                 draft=False,
                 prerelease=prerelease,
             )
-        except:
+        except Exception:
             self.logger.exception("Error occured creating new %s:", label)
             return False
 
-        # upload assets
+        return self.__upload_release_assets(release_found, archive, sha256)
+
+    def __replace_release_assets(
+        self, release, version, changelog, prerelease, archive, sha256
+    ):
+        """Update existing release metadata and replace .deb / .sha256 assets."""
+        self.logger.info(
+            'Replacing assets on existing release "%s" (tag=%s)...',
+            version,
+            release.tag_name,
+        )
         try:
-            self.logger.info('Uploading asset "%s"...' % archive)
-            release_found.upload_asset(archive)
-            self.logger.info('Uploading asset "%s"...' % sha256)
-            release_found.upload_asset(sha256)
-        except:
-            self.logger.exception("Error uploading assets:")
+            release.update_release(
+                name=version,
+                message=changelog,
+                draft=False,
+                prerelease=prerelease,
+            )
+        except Exception:
+            self.logger.exception("Error updating release metadata:")
             return False
 
+        wanted = {os.path.basename(archive), os.path.basename(sha256)}
+        try:
+            for asset in release.get_assets():
+                if asset.name in wanted:
+                    self.logger.info('Deleting existing asset "%s"...', asset.name)
+                    asset.delete_asset()
+        except Exception:
+            self.logger.exception("Error deleting existing assets:")
+            return False
+
+        return self.__upload_release_assets(release, archive, sha256)
+
+    def __upload_release_assets(self, release, archive, sha256):
+        try:
+            self.logger.info('Uploading asset "%s"...' % archive)
+            release.upload_asset(archive)
+            self.logger.info('Uploading asset "%s"...' % sha256)
+            release.upload_asset(sha256)
+        except Exception:
+            self.logger.exception("Error uploading assets:")
+            return False
         return True
 
         # TODO code for draft release removed for problem downloading draft assets

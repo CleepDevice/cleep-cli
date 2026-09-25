@@ -1,5 +1,16 @@
 # Cleep-cli
 
+# [1.43.10] - 2026-09-25
+
+## Added
+
+- `corepublish --force`: replace `.deb`/`.sha256` on an existing GitHub Release without deleting the git tag (CI replay safe)
+- `corepublish --skip-existing`: no-op with success if the release already exists
+
+## Fixed
+
+- Final (non-prerelease) release already exists no longer always fails with create 422; require `--force` or `--skip-existing`
+
 # [1.43.9] - 2026-08-28
 
 ## Fixed

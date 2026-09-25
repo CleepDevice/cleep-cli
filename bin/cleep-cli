@@ -463,12 +463,26 @@ def corebuild():
 @click.option('--version', required=True, help='Version to publish.')
 @click.option('--prerelease', is_flag=True, default=False, help='Pre-release flag')
 @click.option('--tag', required=True, help='Release git tag.')
-def corepublish(version, prerelease, tag):
+@click.option(
+    '--force',
+    is_flag=True,
+    default=False,
+    help='If release already exists, replace .deb/.sha256 assets (keep git tag).',
+)
+@click.option(
+    '--skip-existing',
+    is_flag=True,
+    default=False,
+    help='If release already exists, exit 0 without uploading.',
+)
+def corepublish(version, prerelease, tag, force, skip_existing):
     """
     Publish built Cleep debian package
     """
     p = Package()
-    res = p.publish_cleep(version, prerelease, tag)
+    res = p.publish_cleep(
+        version, prerelease, tag, force=force, skip_existing=skip_existing
+    )
 
     if not res:
         sys.exit(1)
