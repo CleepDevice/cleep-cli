@@ -1,5 +1,11 @@
 # Cleep-cli
 
+# [1.44.0] - 2026-10-16
+
+# Added
+
+- After Cleep RPC hardening, CLI must uses local socket to access Cleep api
+
 # [1.43.10] - 2026-09-25
 
 ## Added

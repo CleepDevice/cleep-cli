@@ -12,7 +12,7 @@ import urllib.parse
 from . import config
 from .console import Console
 from .check import Check
-from .cleepapi import resolve_rpc_url
+from .cleepapi import local_socket_available, request_over_local_socket, resolve_rpc_url
 import subprocess
 
 requests.packages.urllib3.disable_warnings()
@@ -284,6 +284,8 @@ class Ci:
         """
         POST JSON to Cleep /command (self-signed TLS accepted).
         """
+        if local_socket_available():
+            return request_over_local_socket('POST', self.command_url, json_body=payload)
         return requests.post(self.command_url, json=payload, verify=False)
 
     def _rpc_get(self, url):
