@@ -243,6 +243,39 @@ class CleepApi():
             return False
         return True
 
+    def notify_sync_started(self):
+        """
+        Tell the developer UI a watch sync is starting.
+        """
+        data = {'to': 'developer', 'command': 'notify_sync_started'}
+        result = self.__post(self.command_url, data)
+        if not result or result[0] != 200:
+            self.logger.debug('Unable to notify sync started')
+            return False
+        return True
+
+    def notify_sync_done(self):
+        """
+        Tell the developer UI a watch sync finished without restart.
+        """
+        data = {'to': 'developer', 'command': 'notify_sync_done'}
+        result = self.__post(self.command_url, data)
+        if not result or result[0] != 200:
+            self.logger.debug('Unable to notify sync done')
+            return False
+        return True
+
+    def notify_sync_failed(self):
+        """
+        Tell the developer UI a watch sync failed.
+        """
+        data = {'to': 'developer', 'command': 'notify_sync_failed'}
+        result = self.__post(self.command_url, data)
+        if not result or result[0] != 200:
+            self.logger.debug('Unable to notify sync failed')
+            return False
+        return True
+
     def get_documentation(self, module_name):
         """
         Call endpoint to get documentation for specified application

@@ -201,8 +201,10 @@ class QuietPeriodTests(unittest.TestCase):
             self.assertTrue(self._wait_until(lambda: executor.file.core_sync.call_count >= 1))
             time.sleep(0.4)
             self.assertEqual(executor.file.core_sync.call_count, 1)
+            executor.cleep.notify_sync_started.assert_called_once()
             executor.cleep.restart_backend.assert_called_once()
             executor.cleep.restart_frontend.assert_not_called()
+            executor.cleep.notify_sync_done.assert_not_called()
         finally:
             executor.stop()
             executor.join(timeout=2)
@@ -217,6 +219,7 @@ class QuietPeriodTests(unittest.TestCase):
             time.sleep(0.4)
             executor.cleep.restart_backend.assert_not_called()
             executor.cleep.restart_frontend.assert_not_called()
+            executor.cleep.notify_sync_failed.assert_called_once()
         finally:
             executor.stop()
             executor.join(timeout=2)
@@ -228,6 +231,7 @@ class QuietPeriodTests(unittest.TestCase):
             executor.note_change(module="audio", frontend=True)
             self.assertTrue(self._wait_until(lambda: executor.file.module_sync.call_count >= 1))
             time.sleep(0.4)
+            executor.cleep.notify_sync_started.assert_called_once()
             executor.cleep.restart_backend.assert_not_called()
             executor.cleep.restart_frontend.assert_called_once()
         finally:
@@ -243,6 +247,7 @@ class QuietPeriodTests(unittest.TestCase):
             time.sleep(0.4)
             executor.cleep.restart_backend.assert_not_called()
             executor.cleep.restart_frontend.assert_not_called()
+            executor.cleep.notify_sync_done.assert_called_once()
         finally:
             executor.stop()
             executor.join(timeout=2)

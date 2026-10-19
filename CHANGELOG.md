@@ -1,5 +1,11 @@
 # Cleep-cli
 
+# [1.44.3] - 2026-10-19
+
+## Added
+
+- Watch notifies the developer UI as soon as files change (`notify_sync_started`), then `done` / `failed` after the quiet period
+
 # [1.44.2] - 2026-10-19
 
 ## Fixed

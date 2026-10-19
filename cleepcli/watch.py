@@ -130,8 +130,13 @@ class ActionsExecutor(Thread):
 
         Scripts-only edits set neither frontend nor backend: files are synced
         and Cleep is left running (install scripts are not re-run on watch).
+
+        The first change of a batch notifies the UI immediately so the wait
+        for the quiet period is visible.
         """
+        notify_started = False
         with self._lock:
+            notify_started = not self._batch.pending()
             if module:
                 self._batch.modules.add(module)
             if core:
@@ -141,26 +146,38 @@ class ActionsExecutor(Thread):
             if backend:
                 self._batch.backend = True
             self._batch.last = time.monotonic()
+        if notify_started:
+            self.cleep.notify_sync_started()
 
     def _run_batch(self, batch):
         failed = False
-        if batch.core:
-            self.logger.info("Syncing core")
-            if not self.file.core_sync():
-                failed = True
-        for module in sorted(batch.modules):
-            self.logger.info('Syncing module "%s"', module)
-            if not self.file.module_sync(module):
-                failed = True
-        if failed:
-            self.logger.error("Sync failed, Cleep was not restarted")
-            return
-        if batch.backend:
-            # Backend restart drops the UI connection. The page reloads on its own
-            # once Cleep answers again, with the frontend files already synced.
-            self.cleep.restart_backend()
-        elif batch.frontend:
-            self.cleep.restart_frontend()
+        try:
+            if batch.core:
+                self.logger.info("Syncing core")
+                if not self.file.core_sync():
+                    failed = True
+            for module in sorted(batch.modules):
+                self.logger.info('Syncing module "%s"', module)
+                if not self.file.module_sync(module):
+                    failed = True
+            if failed:
+                self.logger.error("Sync failed, Cleep was not restarted")
+                self.cleep.notify_sync_failed()
+                return
+            if batch.backend:
+                # Backend restart drops the UI connection. The page reloads on its own
+                # once Cleep answers again, with the frontend files already synced.
+                if not self.cleep.restart_backend():
+                    self.cleep.notify_sync_failed()
+            elif batch.frontend:
+                if not self.cleep.restart_frontend():
+                    self.cleep.notify_sync_failed()
+            else:
+                # Scripts-only: files synced, Cleep keeps running
+                self.cleep.notify_sync_done()
+        except Exception:
+            self.cleep.notify_sync_failed()
+            raise
 
     def run(self):
         """
