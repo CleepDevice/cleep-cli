@@ -8,10 +8,17 @@ import logging
 from threading import Thread, Lock
 from . import config
 from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler, EVENT_TYPE_MODIFIED
+from watchdog.events import (
+    FileSystemEventHandler,
+    EVENT_TYPE_CREATED,
+    EVENT_TYPE_MODIFIED,
+    EVENT_TYPE_MOVED,
+)
 import watchdog.events as events
 from .cleepapi import CleepApi
 from .file import File
+
+_WATCHED_EVENT_TYPES = (EVENT_TYPE_CREATED, EVENT_TYPE_MODIFIED, EVENT_TYPE_MOVED)
 
 
 def _is_under(path, root):
@@ -221,72 +228,75 @@ class CleepHandler(FileSystemEventHandler):
             return None
         return name
 
+    def _event_path(self, event):
+        """
+        Path to evaluate for filters. Prefer the destination of a move (atomic save).
+        """
+        if event.event_type == EVENT_TYPE_MOVED and getattr(event, "dest_path", None):
+            return event.dest_path
+        return event.src_path
+
     def __is_event_dropped(self, event):
         """
         Analyse event and return True if event must be dropped
         Return:
             bool: True if event must be dropped
         """
-        # drop dir modified event or created file (that always comes with modified file)
-        if type(event) in (events.DirModifiedEvent, events.FileCreatedEvent):
-            self.logger.debug(" Filtered: DirModifiedEvent or FileCreatedEvent")
-            return True
-
-        if event.event_type != EVENT_TYPE_MODIFIED:
-            self.logger.debug(" Filtered: not modified event type")
-            return True
-
-        # filter invalid event
         if not event:
             self.logger.debug(" Filtered: invalid event")
             return True
 
+        # Directory create/move is handled in on_any_event before this filter
+        if type(event) is events.DirModifiedEvent:
+            self.logger.debug(" Filtered: DirModifiedEvent")
+            return True
+
+        if getattr(event, "is_directory", False):
+            self.logger.debug(" Filtered: directory event")
+            return True
+
+        if event.event_type not in _WATCHED_EVENT_TYPES:
+            self.logger.debug(" Filtered: not watched event type")
+            return True
+
+        path = self._event_path(event)
+
         # filter event on current script
-        if event.src_path == ".%s" % __file__:
+        if path == ".%s" % __file__:
             self.logger.debug(" Filtered: event on current script")
             return True
 
         # filter root event
-        if event.src_path == ".":
+        if path == ".":
             self.logger.debug(" Filtered: root event")
             return True
 
         # filter invalid extension
-        src_ext = os.path.splitext(event.src_path)[1]
-        if src_ext in self.REJECTED_EXTENSIONS:
+        if os.path.splitext(path)[1] in self.REJECTED_EXTENSIONS:
             self.logger.debug(" Filtered: invalid extension")
             return True
 
         # filter by prefix (basename: watchdog reports absolute paths)
+        basename = os.path.basename(path)
         for prefix in self.REJECTED_PREFIXES:
-            if os.path.basename(event.src_path).startswith(prefix):
+            if basename.startswith(prefix):
                 self.logger.debug(" Filtered: source prefix")
-                return True
-            dest_path = getattr(event, "dest_path", None)
-            if dest_path and os.path.basename(dest_path).startswith(prefix):
-                self.logger.debug(" Filtered: destination prefix")
                 return True
 
         # filter by suffix
         for suffix in self.REJECTED_SUFFIXES:
-            if event.src_path.endswith(suffix):
+            if path.endswith(suffix):
                 self.logger.debug("Filtered: source suffix")
-                return True
-            dest_path = getattr(event, "dest_path", None)
-            if dest_path and dest_path.endswith(suffix):
-                self.logger.debug(" Filtered: destination suffix")
                 return True
 
         # filter by filename
         for filename in self.REJECTED_FILENAMES:
-            if event.src_path.endswith(filename):
+            if path.endswith(filename):
                 self.logger.debug(" Filtered: filename")
                 return True
 
         # filter by dir
-        if self._rejected_path(event.src_path) or self._rejected_path(
-            getattr(event, "dest_path", None)
-        ):
+        if self._rejected_path(path):
             self.logger.debug(" Filtered: directory")
             return True
 
@@ -303,16 +313,14 @@ class CleepHandler(FileSystemEventHandler):
         Returns:
             module name (string) or None if nothing found
         """
-        pattern = r"^%s/(.*?)/(?:frontend|backend|scripts)/.*$" % (config.MODULES_SRC)
+        pattern = r"^%s/(.*?)/(?:frontend|backend|scripts)/.*$" % (
+            re.escape(config.MODULES_SRC)
+        )
         # self.logger.debug('Module pattern: %s' % pattern)
 
-        if hasattr(event, "src_path"):
-            res = re.findall(pattern, event.src_path)
-            if res and len(res) > 0:
-                return res[0]
-
-        if hasattr(event, "dest_path"):
-            res = re.findall(pattern, event.dest_path)
+        path = self._event_path(event)
+        if path:
+            res = re.findall(pattern, path)
             if res and len(res) > 0:
                 return res[0]
 
@@ -329,22 +337,20 @@ class CleepHandler(FileSystemEventHandler):
             True if change occurs in core, False otherwise
         """
         pattern_core = r"^(%s/(?!tests|modules)(.*\.py)|%s/.*)$" % (
-            config.CORE_SRC,
-            config.HTML_SRC,
+            re.escape(config.CORE_SRC),
+            re.escape(config.HTML_SRC),
         )
-        pattern_bin = r"^%s/cleep" % (config.BIN_SRC)
+        pattern_bin = r"^%s/cleep" % (re.escape(config.BIN_SRC))
         # self.logger.debug('Core pattern: %s' % pattern_core)
         # self.logger.debug('Bin pattern: %s' % pattern_bin)
 
-        if hasattr(event, "src_path"):
-            if re.search(pattern_core, event.src_path):
-                return True
-            if re.search(pattern_bin, event.src_path):
-                return True
-
-        if hasattr(event, "dest_path"):
-            if re.search(pattern_core, event.dest_path):
-                return True
+        path = self._event_path(event)
+        if not path:
+            return False
+        if re.search(pattern_core, path):
+            return True
+        if re.search(pattern_bin, path):
+            return True
 
         return False
 
@@ -359,20 +365,14 @@ class CleepHandler(FileSystemEventHandler):
             True if change on frontend, False otherwise
         """
         pattern = r"^(%s/|%s/(?:.*?)/frontend/).*$" % (
-            config.HTML_SRC,
-            config.MODULES_SRC,
+            re.escape(config.HTML_SRC),
+            re.escape(config.MODULES_SRC),
         )
         # self.logger.debug('Frontend pattern: %s' % pattern)
 
-        if hasattr(event, "src_path"):
-            res = re.search(pattern, event.src_path)
-            if res:
-                return True
-
-        if hasattr(event, "dest_path"):
-            res = re.search(pattern, event.dest_path)
-            if res:
-                return True
+        path = self._event_path(event)
+        if path and re.search(pattern, path):
+            return True
 
         return False
 

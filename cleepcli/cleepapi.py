@@ -225,7 +225,7 @@ class CleepApi():
         # Maximum wait. systemctl returns as soon as the service has restarted.
         resp = c.command(cmd, timeout=60)
         self.logger.debug('Systemctl resp: %s' % resp)
-        if resp['error'] or resp['killed']:
+        if resp['killed'] or resp['returncode'] != 0:
             self.logger.error('Error restarting cleep backend')
             return False
 
@@ -237,7 +237,11 @@ class CleepApi():
         """
         self.logger.info('Restarting frontend')
         data = {'to':'developer', 'command':'restart_frontend'}
-        self.__post(self.command_url, data)
+        result = self.__post(self.command_url, data)
+        if not result or result[0] != 200:
+            self.logger.error('Error restarting cleep frontend')
+            return False
+        return True
 
     def get_documentation(self, module_name):
         """
@@ -274,7 +278,7 @@ class CleepApi():
         (status_code, resp) = self.__get(url)
 
         if status_code != 200:
-            raise Exception("Unable to call cleep %s endpoint", url)
+            raise Exception("Unable to call cleep %s endpoint" % url)
         return resp
 
     def __post(self, url, data):

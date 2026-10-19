@@ -90,7 +90,8 @@ def coreget():
 
     # force coresync to synchronize installation with repo
     f = File()
-    res = f.core_sync()
+    if not f.core_sync():
+        sys.exit(1)
 
     # core modules
     if not get_core_mods():
@@ -293,9 +294,10 @@ def modssync(run_scripts):
         res = f.module_sync(module)
         if not res:
             sys.exit(1)
-        res = f.module_run_install_scripts(module)
-        if not res:
-            sys.exit(1)
+        if run_scripts:
+            res = f.module_run_install_scripts(module)
+            if not res:
+                sys.exit(1)
 
     logging.info('Done')
 
@@ -899,17 +901,21 @@ def cli():
 
 
 if __name__ == '__main__':
-    def is_raspbian():
-        if platform.system()!='Linux':
+    def is_raspberry_pi_os():
+        if platform.system() != 'Linux':
             return False
-        res = subprocess.Popen(u'cat /etc/os-release | grep -i raspbian | wc -l', stdout=subprocess.PIPE, shell=True)
-        stdout = res.communicate()[0]
-        if stdout.strip() == '0':
+        try:
+            with open('/etc/os-release', 'r', encoding='utf-8') as handle:
+                content = handle.read().lower()
+        except OSError:
             return False
-        return True
+        return any(
+            token in content for token in ('raspbian', 'raspios', 'raspberry')
+        )
 
-    # execute only on raspbian
-    if is_raspbian():
+    # execute only on Raspberry Pi OS
+    if is_raspberry_pi_os():
         cli()
     else:
-        click.echo('Cleep-cli runs only on RaspberrypiOS distribution')
+        click.echo('Cleep-cli runs only on Raspberry Pi OS')
+        sys.exit(1)

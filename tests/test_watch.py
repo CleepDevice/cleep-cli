@@ -8,7 +8,7 @@ import time
 import unittest
 from unittest.mock import Mock
 
-from watchdog.events import DirCreatedEvent, FileModifiedEvent
+from watchdog.events import DirCreatedEvent, FileModifiedEvent, FileMovedEvent
 from watchdog.observers import Observer
 
 from cleepcli import config
@@ -57,6 +57,12 @@ class HandlerTests(unittest.TestCase):
     def test_core_file_is_queued(self):
         path = os.path.join(config.CORE_SRC, "rpcserver.py")
         self.handler.on_any_event(FileModifiedEvent(path))
+        self.executor.note_change.assert_called_once_with(core=True, frontend=False)
+
+    def test_atomic_save_move_is_queued(self):
+        src = os.path.join(config.CORE_SRC, ".rpcserver.py.tmp")
+        dest = os.path.join(config.CORE_SRC, "rpcserver.py")
+        self.handler.on_any_event(FileMovedEvent(src, dest))
         self.executor.note_change.assert_called_once_with(core=True, frontend=False)
 
     def test_created_git_directory_is_not_watched(self):

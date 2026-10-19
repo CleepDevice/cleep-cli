@@ -14,6 +14,9 @@ import signal
 import logging
 import re
 
+ON_POSIX = os.name == "posix"
+
+
 class EndlessConsole(Thread):
     """
     Helper class to execute long command line (system update...)
@@ -322,65 +325,52 @@ class Console():
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             close_fds=True,
-            preexec_fn=os.setsid
+            preexec_fn=os.setsid if ON_POSIX else None,
         )
         pid = proc.pid
-
-        # wait for end of command line
-        done = False
-        start = time.time()
         killed = False
-        return_code = None
-        while not done:
-            # read stds to avoid deadlocks
-            (stdout, stderr) = proc.communicate()
-            if stdout:
-                result['stdout'] += self.__process_lines(stdout.split(b'\n'))
-            if stderr:
-                result['stderr'] += self.__process_lines(stderr.split(b'\n'))
+        stdout = b""
+        stderr = b""
 
-            # check if command has finished
-            proc.poll()
-            if proc.returncode is not None:
-                # command terminated
-                self.logger.trace('Command terminated with returncode %s' % proc.returncode)
-                return_code = proc.returncode
-                self.last_return_code = return_code
-                done = True
-                break
+        try:
+            stdout, stderr = proc.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            self.logger.debug("Timeout over, kill command for PID=%s" % pid)
+            try:
+                if ON_POSIX:
+                    os.killpg(os.getpgid(pid), signal.SIGKILL)
+                else:  # pragma: no cover
+                    proc.kill()
+            except Exception:  # pragma: no cover
+                pass
+            killed = True
+            try:
+                stdout, stderr = proc.communicate(timeout=1.0)
+            except Exception:  # pragma: no cover
+                stdout, stderr = b"", b""
 
-            # check timeout
-            if time.time() > (start + timeout):
-                # timeout is over, kill command
-                pgid = os.getpgid(pid)
-                self.logger.debug('Timeout over, kill command for PID=%s PGID=%s' % (pid, pgid))
-                try:
-                    if ON_POSIX:
-                        os.killpg(pgid, signal.SIGKILL)
-                    else: # pragma: no cover
-                        proc.kill()
-                except Exception: # pragma: no cover
-                    pass
-                killed = True
-                break
+        if stdout:
+            result["stdout"] = self.__process_lines(stdout.split(b"\n"))
+        if stderr:
+            result["stderr"] = self.__process_lines(stderr.split(b"\n"))
 
-            # pause
-            time.sleep(0.125)
-
-        # prepare result
-        result['returncode'] = return_code
-        if not killed:
-            result['error'] = len(result['stderr']) > 0
-        self.logger.trace('Result: %s' % result)
+        return_code = proc.returncode
+        self.last_return_code = return_code
+        result["returncode"] = return_code
+        result["killed"] = killed
+        # Prefer return code over stderr: tools like systemctl often write to stderr on success
+        result["error"] = killed or return_code not in (0, None)
+        self.logger.trace("Command terminated with returncode %s" % return_code)
+        self.logger.trace("Result: %s" % result)
 
         # make sure all stds are closed
         try:
             proc.stdout.close()
-        except Exception: # pragma: no cover
+        except Exception:  # pragma: no cover
             pass
         try:
             proc.stderr.close()
-        except Exception: # pragma: no cover
+        except Exception:  # pragma: no cover
             pass
 
         # trigger callback (used for delayed command)

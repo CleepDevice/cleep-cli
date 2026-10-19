@@ -25,7 +25,7 @@ class Git():
         self.logger.debug('cmd: %s' % cmd)
         resp = c.command(cmd, 60)
         self.logger.debug('Pull resp: %s' % resp)
-        if resp['error'] or resp['killed']:
+        if resp['killed'] or resp['returncode'] != 0:
             self.logger.error('Error occured while pulling repository: %s' % ('killed' if resp['killed'] else resp['stderr']))
             return False
 
@@ -47,7 +47,7 @@ class Git():
         self.logger.debug('cmd: %s' % cmd)
         resp = c.command(cmd, 60)
         self.logger.debug('Clone resp: %s' % resp)
-        if resp['error'] or resp['killed']:
+        if resp['killed'] or resp['returncode'] != 0:
             self.logger.error('Error occured while cloning repository: %s' % ('killed' if resp['killed'] else resp['stderr']))
             return False
         

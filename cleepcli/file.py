@@ -47,7 +47,7 @@ rsync -av "%(REPO_DIR)s/medias/sounds" "%(MEDIA_DST)s/sounds/" --delete
         self.logger.debug('Coresync stdout:\n%s' % '\n'.join(resp['stdout']))
         if resp['stderr']:
             self.logger.debug('Coresync stderr:\n%s' % '\n'.join(resp['stderr']))
-        if resp['killed'] or resp['returncode'] not in (0, None):
+        if resp['killed'] or resp['returncode'] != 0:
             self.logger.error('Error occured while sync core content: %s' % ('killed' if resp['killed'] else resp['stderr']))
             return False
 
@@ -97,7 +97,7 @@ fi
         self.logger.debug('Modsync stdout:\n%s' % '\n'.join(resp['stdout']))
         if resp['stderr']:
             self.logger.debug('Modsync stderr:\n%s' % '\n'.join(resp['stderr']))
-        if resp['killed'] or resp['returncode'] not in (0, None):
+        if resp['killed'] or resp['returncode'] != 0:
             self.logger.error('Error occured while sync module content: %s' % ('killed' if resp['killed'] else resp['stderr']))
             return False
 
@@ -118,14 +118,14 @@ fi
         if os.path.exists(preinst_script):
             self.logger.info('Running %s scripts', preinst_script)
             resp = console.command(preinst_script, timeout=300)
-            if resp["returncode"] != 0:
+            if resp["killed"] or resp["returncode"] != 0:
                 self.logger.error('Error running %s [%s]: %s', preinst_script, resp["returncode"], ''.join(resp["stderr"]))
                 return False
 
         if os.path.exists(postinst_script):
             self.logger.info('Running %s scripts', postinst_script)
             resp = console.command(postinst_script, timeout=300)
-            if resp["returncode"] != 0:
+            if resp["killed"] or resp["returncode"] != 0:
                 self.logger.error('Error running %s [%s]: %s', postinst_script, resp["returncode"], ''.join(resp["stderr"]))
                 return False
 

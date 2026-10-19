@@ -1,14 +1,19 @@
 # Cleep-cli
 
-# [UNRELEASED] - 2026-10-16
+# [1.44.0] - 2026-10-18
 
-# Added
+## Added
 
 - After Cleep RPC hardening, CLI must uses local socket to access Cleep api
-
 ## Fixed
 
 - Improve watcher
+- `Console.command` honors its timeout, sets `killed`, and treats return code as the success signal
+- `systemctl restart cleep` is allowed up to 60 seconds and no longer fails only because of stderr
+- `modssync --run-scripts` only runs install scripts when the flag is set
+- `coreget` stops when core sync fails
+- Raspberry Pi OS detection no longer compares bytes to a string, and recognizes current Pi OS ids
+- Documentation check endpoint error message formats the URL correctly
 
 # [1.43.10] - 2026-09-25
 

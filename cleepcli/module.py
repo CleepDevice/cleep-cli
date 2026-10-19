@@ -645,7 +645,7 @@ a:hover.icon.icon-home {
             'CHANGELOG': templates['CHANGELOG'],
             'GIT_IGNORE': templates['GIT_IGNORE'],
         }, 10)
-        if resp['error'] or resp['killed']:
+        if resp['killed'] or resp['returncode'] != 0:
             self.logger.error('Error occured while creating application: %s' % ('killed' if resp['killed'] else resp['stderr']))
             shutil.rmtree(path)
             return False
