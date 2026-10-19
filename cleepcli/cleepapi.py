@@ -222,7 +222,8 @@ class CleepApi():
 
         cmd = '/bin/systemctl restart cleep'
         c = Console()
-        resp = c.command(cmd)
+        # Maximum wait. systemctl returns as soon as the service has restarted.
+        resp = c.command(cmd, timeout=60)
         self.logger.debug('Systemctl resp: %s' % resp)
         if resp['error'] or resp['killed']:
             self.logger.error('Error restarting cleep backend')

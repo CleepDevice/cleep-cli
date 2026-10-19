@@ -32,6 +32,7 @@ class File():
             'CONFIG_DIR': config.CONFIG_DIR,
         }
         cmd = """
+set -e
 mkdir -p "%(HTML_DST)s/"
 mkdir -p "%(CORE_DST)s/modules"
 mkdir -p "%(MEDIA_DST)s/modules"
@@ -42,11 +43,11 @@ rsync -av "%(REPO_DIR)s/bin/cleep" "%(BIN_DST)s/cleep"
 rsync -av "%(REPO_DIR)s/medias/sounds" "%(MEDIA_DST)s/sounds/" --delete
     """ % variables
         self.logger.debug('Coresync cmd: %s' % cmd)
-        resp = c.command(cmd, 15)
+        resp = c.command(cmd, 120)
         self.logger.debug('Coresync stdout:\n%s' % '\n'.join(resp['stdout']))
         if resp['stderr']:
             self.logger.debug('Coresync stderr:\n%s' % '\n'.join(resp['stderr']))
-        if resp['error'] or resp['killed']:
+        if resp['killed'] or resp['returncode'] not in (0, None):
             self.logger.error('Error occured while sync core content: %s' % ('killed' if resp['killed'] else resp['stderr']))
             return False
 
@@ -71,7 +72,8 @@ rsync -av "%(REPO_DIR)s/medias/sounds" "%(MEDIA_DST)s/sounds/" --delete
         mod_scripts_dst = os.path.join(config.MODULES_SCRIPTS_DST, module_name)
 
         c = Console()
-        cmd = """ 
+        cmd = """
+set -e
 if [ -d "%(BACKEND_SRC)s" ]; then
     /bin/mkdir -p "%(BACKEND_DST)s"
     rsync -av "%(BACKEND_SRC)s" "%(BACKEND_DST)s" --delete --exclude "*.pyc" --exclude "*__pycache__*"
@@ -90,13 +92,13 @@ fi
             'SCRIPTS_SRC': mod_scripts_src, 'SCRIPTS_DST': mod_scripts_dst
         }
         self.logger.debug('Modsync cmd: %s' % cmd)
-        resp = c.command(cmd, 15) 
+        resp = c.command(cmd, 120)
 
         self.logger.debug('Modsync stdout:\n%s' % '\n'.join(resp['stdout']))
         if resp['stderr']:
             self.logger.debug('Modsync stderr:\n%s' % '\n'.join(resp['stderr']))
-        if resp['error'] or resp[u'killed']:
-            self.logger.error(u'Error occured while sync module content: %s' % (u'killed' if resp[u'killed'] else resp[u'stderr']))
+        if resp['killed'] or resp['returncode'] not in (0, None):
+            self.logger.error('Error occured while sync module content: %s' % ('killed' if resp['killed'] else resp['stderr']))
             return False
 
         return True

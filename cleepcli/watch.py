@@ -1,36 +1,74 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import sys
 import re
 import os
 import time
 import logging
+from threading import Thread, Lock
 from . import config
 from watchdog.observers import Observer
-from watchdog.events import PatternMatchingEventHandler, EVENT_TYPE_MODIFIED
+from watchdog.events import FileSystemEventHandler, EVENT_TYPE_MODIFIED
 import watchdog.events as events
-from threading import Thread
 from .cleepapi import CleepApi
 from .file import File
-from collections import deque
 
 
-class ActionFileSync:
-    def __init__(self, module=None):
-        self.module = module
+def _is_under(path, root):
+    path = os.path.abspath(path)
+    root = os.path.abspath(root)
+    return path == root or path.startswith(root + os.sep)
 
 
-class ActionRestart:
-    def __init__(self, frontend=False):
-        self.frontend = frontend
+def iter_watch_directories(root):
+    """
+    Yield directories to watch under root.
+
+    Rejected directory names are not yielded and are not descended into, so
+    inotify never watches them.
+    """
+    if not os.path.isdir(root):
+        return
+    for dirpath, dirnames, _filenames in os.walk(root):
+        dirnames[:] = [
+            name for name in dirnames if name not in CleepHandler.REJECTED_DIRS
+        ]
+        yield dirpath
+
+
+class _Batch:
+    def __init__(self):
+        self.core = False
+        self.modules = set()
+        self.frontend = False
+        self.backend = False
+        self.last = 0.0
+
+    def pending(self):
+        return self.core or bool(self.modules)
+
+    def take(self):
+        batch = _Batch()
+        batch.core = self.core
+        batch.modules = set(self.modules)
+        batch.frontend = self.frontend
+        batch.backend = self.backend
+        self.core = False
+        self.modules = set()
+        self.frontend = False
+        self.backend = False
+        self.last = 0.0
+        return batch
 
 
 class ActionsExecutor(Thread):
     """
-    Actions executor
-    Implements queue to execute sequentially actions
+    Collect filesystem changes and run one sync plus one restart
+    after writes have settled.
     """
+
+    QUIET_PERIOD = 2.0
+    POLL_INTERVAL = 0.25
 
     def __init__(self, rpc_url):
         Thread.__init__(self)
@@ -38,7 +76,10 @@ class ActionsExecutor(Thread):
 
         self.logger = logging.getLogger(self.__class__.__name__)
         self.running = True
-        self.__queue = deque(maxlen=200)
+        self.quiet_period = self.QUIET_PERIOD
+        self.poll_interval = self.POLL_INTERVAL
+        self._lock = Lock()
+        self._batch = _Batch()
         self.file = File()
         self.cleep = CleepApi(rpc_url)
 
@@ -48,50 +89,61 @@ class ActionsExecutor(Thread):
         """
         self.running = False
 
-    def add_action(self, action):
+    def note_change(self, module=None, core=False, frontend=False):
         """
-        Add an action to execute
+        Remember a source change. The sync runs once writes stay quiet.
         """
-        self.__queue.appendleft(action)
-
-    def __execute_action(self, action):
-        """
-        Execute specified action
-
-        Args:
-            action (dict): action to execute
-        """
-        if isinstance(action, ActionFileSync):
-            if action.module is None:
-                self.file.core_sync()
+        with self._lock:
+            if module:
+                self._batch.modules.add(module)
+            if core:
+                self._batch.core = True
+            if frontend:
+                self._batch.frontend = True
             else:
-                self.file.module_sync(action.module)
+                self._batch.backend = True
+            self._batch.last = time.monotonic()
 
-        elif isinstance(action, ActionRestart):
-            if action.frontend:
-                self.cleep.restart_frontend()
-            else:
-                self.cleep.restart_backend()
+    def _run_batch(self, batch):
+        failed = False
+        if batch.core:
+            self.logger.info("Syncing core")
+            if not self.file.core_sync():
+                failed = True
+        for module in sorted(batch.modules):
+            self.logger.info('Syncing module "%s"', module)
+            if not self.file.module_sync(module):
+                failed = True
+        if failed:
+            self.logger.error("Sync failed, Cleep was not restarted")
+            return
+        if batch.backend:
+            # Backend restart drops the UI connection. The page reloads on its own
+            # once Cleep answers again, with the frontend files already synced.
+            self.cleep.restart_backend()
+        elif batch.frontend:
+            self.cleep.restart_frontend()
 
     def run(self):
         """
-        Main process: unqueue action and process it
+        Wait until no new change arrived during the quiet period, then sync.
         """
         while self.running:
             try:
-                action = self.__queue.pop()
-                self.__execute_action(action)
+                time.sleep(self.poll_interval)
+                with self._lock:
+                    if not self._batch.pending():
+                        continue
+                    if time.monotonic() - self._batch.last < self.quiet_period:
+                        continue
+                    batch = self._batch.take()
+                self._run_batch(batch)
 
-            except IndexError:
-                # no action available
-                time.sleep(0.25)
-
-            except:
-                # error occured during action execution
+            except Exception:
                 self.logger.exception("Error during action execution:")
 
 
-class CleepHandler(PatternMatchingEventHandler):
+class CleepHandler(FileSystemEventHandler):
     """
     Watchdog handler for Cleep
     """
@@ -116,14 +168,58 @@ class CleepHandler(PatternMatchingEventHandler):
         ".vscode",
         ".editor",
         "__pycache__",
+        "node_modules",
+        "tests",
     ]
-    DEBOUNCE = 0.25  # seconds
 
     def __init__(self, actions_executor):
-        super().__init__(ignore_patterns=["(\.git|__pycache__|.vscode|.editor)"])
-        self.__last_times = {"backend": 0, "frontend": 0}
+        super().__init__()
         self.logger = logging.getLogger(self.__class__.__name__)
         self.actions_executor = actions_executor
+        self.observer = None
+        self._watched = set()
+
+    def _rejected_path(self, path):
+        if not path:
+            return False
+        return any(part in self.REJECTED_DIRS for part in path.split(os.path.sep))
+
+    def _created_directory(self, event):
+        if not getattr(event, "is_directory", False):
+            return None
+        if event.event_type == events.EVENT_TYPE_CREATED:
+            return event.src_path
+        if event.event_type == events.EVENT_TYPE_MOVED:
+            return getattr(event, "dest_path", None) or event.src_path
+        return None
+
+    def schedule_tree(self, root):
+        """
+        Watch root and every directory under it, except rejected names.
+        """
+        for directory in iter_watch_directories(root):
+            self._watch_directory(directory)
+
+    def _watch_directory(self, path):
+        """
+        Watch one directory. Rejected names and directories already watched are skipped.
+        """
+        if self.observer is None or not path or self._rejected_path(path):
+            return
+        real = os.path.abspath(path)
+        if real in self._watched or not os.path.isdir(real):
+            return
+        self.observer.schedule(self, real, recursive=False)
+        self._watched.add(real)
+
+    def _module_name_from_path(self, path):
+        prefix = config.MODULES_SRC.rstrip(os.sep) + os.sep
+        if not path or not path.startswith(prefix):
+            return None
+        name = path[len(prefix):].split(os.sep, 1)[0]
+        if not name or name in self.REJECTED_DIRS:
+            return None
+        return name
 
     def __is_event_dropped(self, event):
         """
@@ -145,8 +241,6 @@ class CleepHandler(PatternMatchingEventHandler):
             self.logger.debug(" Filtered: invalid event")
             return True
 
-        # filter on non
-
         # filter event on current script
         if event.src_path == ".%s" % __file__:
             self.logger.debug(" Filtered: event on current script")
@@ -163,12 +257,13 @@ class CleepHandler(PatternMatchingEventHandler):
             self.logger.debug(" Filtered: invalid extension")
             return True
 
-        # filter by prefix
+        # filter by prefix (basename: watchdog reports absolute paths)
         for prefix in self.REJECTED_PREFIXES:
-            if event.src_path.startswith(prefix):
+            if os.path.basename(event.src_path).startswith(prefix):
                 self.logger.debug(" Filtered: source prefix")
                 return True
-            if getattr(event, "dest_path", None) and event.dest_path.startswith(prefix):
+            dest_path = getattr(event, "dest_path", None)
+            if dest_path and os.path.basename(dest_path).startswith(prefix):
                 self.logger.debug(" Filtered: destination prefix")
                 return True
 
@@ -177,7 +272,8 @@ class CleepHandler(PatternMatchingEventHandler):
             if event.src_path.endswith(suffix):
                 self.logger.debug("Filtered: source suffix")
                 return True
-            if getattr(event, "dest_path", None) and event.dest_path.endswith(prefix):
+            dest_path = getattr(event, "dest_path", None)
+            if dest_path and dest_path.endswith(suffix):
                 self.logger.debug(" Filtered: destination suffix")
                 return True
 
@@ -188,18 +284,13 @@ class CleepHandler(PatternMatchingEventHandler):
                 return True
 
         # filter by dir
-        parts = event.src_path.split(os.path.sep)
-        for folder in self.REJECTED_DIRS:
-            if folder in parts:
-                self.logger.debug(" Filtered: directory")
-                return True
+        if self._rejected_path(event.src_path) or self._rejected_path(
+            getattr(event, "dest_path", None)
+        ):
+            self.logger.debug(" Filtered: directory")
+            return True
 
         self.logger.debug(" NotFiltered")
-        return False
-
-    def __debounce(self, now, last_time):
-        if now < (last_time + self.DEBOUNCE):
-            return True
         return False
 
     def __change_on_module(self, event):
@@ -212,7 +303,7 @@ class CleepHandler(PatternMatchingEventHandler):
         Returns:
             module name (string) or None if nothing found
         """
-        pattern = "^%s/(.*?)/(?:frontend|backend|scripts)/.*$" % (config.MODULES_SRC)
+        pattern = r"^%s/(.*?)/(?:frontend|backend|scripts)/.*$" % (config.MODULES_SRC)
         # self.logger.debug('Module pattern: %s' % pattern)
 
         if hasattr(event, "src_path"):
@@ -237,11 +328,11 @@ class CleepHandler(PatternMatchingEventHandler):
         Returns:
             True if change occurs in core, False otherwise
         """
-        pattern_core = "^(%s/(?!tests|modules)(.*\.py)|%s/.*)$" % (
+        pattern_core = r"^(%s/(?!tests|modules)(.*\.py)|%s/.*)$" % (
             config.CORE_SRC,
             config.HTML_SRC,
         )
-        pattern_bin = "^%s/cleep" % (config.BIN_SRC)
+        pattern_bin = r"^%s/cleep" % (config.BIN_SRC)
         # self.logger.debug('Core pattern: %s' % pattern_core)
         # self.logger.debug('Bin pattern: %s' % pattern_bin)
 
@@ -267,7 +358,7 @@ class CleepHandler(PatternMatchingEventHandler):
         Returns:
             True if change on frontend, False otherwise
         """
-        pattern = "^(%s/|%s/(?:.*?)/frontend/).*$" % (
+        pattern = r"^(%s/|%s/(?:.*?)/frontend/).*$" % (
             config.HTML_SRC,
             config.MODULES_SRC,
         )
@@ -285,49 +376,47 @@ class CleepHandler(PatternMatchingEventHandler):
 
         return False
 
+    def _queue_change(self, event):
+        frontend = self.__change_on_frontend(event)
+        module = self.__change_on_module(event)
+        core = module is None and self.__change_on_core(event)
+        if module:
+            self.logger.debug('  Change on module "%s"' % module)
+            self.actions_executor.note_change(module=module, frontend=frontend)
+        elif core:
+            self.logger.debug("  Change on core")
+            self.actions_executor.note_change(core=True, frontend=frontend)
+        else:
+            self.logger.debug("  Dropped due to useless change")
+
     def on_any_event(self, event):
         try:
-            now = time.time()
             self.logger.debug("Event: %s" % event)
-            if not self.__is_event_dropped(event):
-                self.__last_action_time = now
-
-                # is event on backend or frontend ?
-                frontend = self.__change_on_frontend(event)
-
-                # debounce ?
-                if self.__debounce(
-                    now, self.__last_times[("frontend" if frontend else "backend")]
-                ):
-                    self.logger.debug("  Dropped by debounce")
+            created = self._created_directory(event)
+            if created:
+                self.schedule_tree(created)
+                if self._rejected_path(created):
+                    self.logger.debug(" Filtered: directory")
                     return
-
-                # is event on module ?
-                change_on_core = False
-                change_on_module = self.__change_on_module(event)
-                if change_on_module is None:
-                    change_on_core = self.__change_on_core(event)
-
-                # push action and update last action time
-                if change_on_module:
-                    self.logger.debug('  Change on module "%s"' % change_on_module)
-                    self.actions_executor.add_action(ActionFileSync(change_on_module))
-                elif change_on_core:
+                module = self._module_name_from_path(created)
+                if module:
+                    frontend = self.__change_on_frontend(event)
+                    self.logger.debug('  Change on module "%s"' % module)
+                    self.actions_executor.note_change(module=module, frontend=frontend)
+                    return
+                if _is_under(created, config.CORE_SRC) or _is_under(
+                    created, config.HTML_SRC
+                ) or _is_under(created, config.BIN_SRC):
+                    frontend = self.__change_on_frontend(event)
                     self.logger.debug("  Change on core")
-                    self.actions_executor.add_action(ActionFileSync())
-                else:
-                    self.logger.debug("  Dropped due to useless change")
-                    return
-                if frontend:
-                    self.logger.debug("  Change on frontend")
-                    self.actions_executor.add_action(ActionRestart(True))
-                    self.__last_times["frontend"] = now
-                else:
-                    self.logger.debug("  Change on backend")
-                    self.actions_executor.add_action(ActionRestart())
-                    self.__last_times["backend"] = now
+                    self.actions_executor.note_change(core=True, frontend=frontend)
+                return
 
-        except:
+            if self.__is_event_dropped(event):
+                return
+            self._queue_change(event)
+
+        except Exception:
             self.logger.exception("Error occured during watcher event processing:")
 
 
@@ -361,7 +450,24 @@ class CleepWatchdog:
 
         event_handler = CleepHandler(self.actions_executor)
         observer = Observer()
-        observer.schedule(event_handler, path, recursive=True)
+        event_handler.observer = observer
+        scheduled = 0
+        for root in (
+            config.CORE_SRC,
+            config.HTML_SRC,
+            config.BIN_SRC,
+            config.MODULES_SRC,
+        ):
+            before = len(event_handler._watched)
+            event_handler.schedule_tree(root)
+            scheduled += len(event_handler._watched) - before
+
+        if not scheduled:
+            self.logger.error(
+                'Please get Cleep sources using "cleep-cli getcore" command'
+            )
+            return False
+
         self.logger.info('Cleep watchdog is running on "%s" (CTRL-C to stop)' % path)
         observer.start()
         try:
