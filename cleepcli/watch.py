@@ -11,6 +11,7 @@ from watchdog.observers import Observer
 from watchdog.events import (
     FileSystemEventHandler,
     EVENT_TYPE_CREATED,
+    EVENT_TYPE_DELETED,
     EVENT_TYPE_MODIFIED,
     EVENT_TYPE_MOVED,
 )
@@ -18,7 +19,12 @@ import watchdog.events as events
 from .cleepapi import CleepApi
 from .file import File
 
-_WATCHED_EVENT_TYPES = (EVENT_TYPE_CREATED, EVENT_TYPE_MODIFIED, EVENT_TYPE_MOVED)
+_WATCHED_EVENT_TYPES = (
+    EVENT_TYPE_CREATED,
+    EVENT_TYPE_DELETED,
+    EVENT_TYPE_MODIFIED,
+    EVENT_TYPE_MOVED,
+)
 
 
 def _is_under(path, root):
@@ -57,6 +63,8 @@ def iter_watch_roots():
         module_path = os.path.join(config.MODULES_SRC, name)
         if not os.path.isdir(module_path):
             continue
+        # Non-recursive: see backend/frontend/scripts appear without watching .git
+        yield module_path, False
         for sub in MODULE_CONTENT_DIRS:
             content = os.path.join(module_path, sub)
             if os.path.isdir(content):
@@ -116,9 +124,12 @@ class ActionsExecutor(Thread):
         """
         self.running = False
 
-    def note_change(self, module=None, core=False, frontend=False):
+    def note_change(self, module=None, core=False, frontend=False, backend=False):
         """
         Remember a source change. The sync runs once writes stay quiet.
+
+        Scripts-only edits set neither frontend nor backend: files are synced
+        and Cleep is left running (install scripts are not re-run on watch).
         """
         with self._lock:
             if module:
@@ -127,7 +138,7 @@ class ActionsExecutor(Thread):
                 self._batch.core = True
             if frontend:
                 self._batch.frontend = True
-            else:
+            if backend:
                 self._batch.backend = True
             self._batch.last = time.monotonic()
 
@@ -242,12 +253,13 @@ class CleepHandler(FileSystemEventHandler):
 
     def _schedule_module(self, module_path):
         """
-        Watch backend/frontend/scripts of a module. Never watches .git.
+        Watch a module root (non-recursive) and its content dirs. Never watches .git.
         """
         if not module_path or not os.path.isdir(module_path):
             return
         if os.path.basename(module_path) in self.REJECTED_DIRS:
             return
+        self._schedule(module_path, recursive=False)
         for sub in MODULE_CONTENT_DIRS:
             self._schedule(os.path.join(module_path, sub), recursive=True)
 
@@ -362,7 +374,7 @@ class CleepHandler(FileSystemEventHandler):
         Returns:
             module name (string) or None if nothing found
         """
-        pattern = r"^%s/(.*?)/(?:frontend|backend|scripts)/.*$" % (
+        pattern = r"^%s/(.*?)/(?:frontend|backend|scripts)(?:/.*)?$" % (
             re.escape(config.MODULES_SRC)
         )
         # self.logger.debug('Module pattern: %s' % pattern)
@@ -413,7 +425,7 @@ class CleepHandler(FileSystemEventHandler):
         Returns:
             True if change on frontend, False otherwise
         """
-        pattern = r"^(%s/|%s/(?:.*?)/frontend/).*$" % (
+        pattern = r"^(%s/|%s/(?:.*?)/frontend(?:/)?).*$" % (
             re.escape(config.HTML_SRC),
             re.escape(config.MODULES_SRC),
         )
@@ -425,16 +437,31 @@ class CleepHandler(FileSystemEventHandler):
 
         return False
 
+    def __change_on_scripts(self, event):
+        """
+        Detect change on module install scripts
+        """
+        pattern = r"^%s/(?:.*?)/scripts(?:/.*)?$" % (re.escape(config.MODULES_SRC))
+        path = self._event_path(event)
+        return bool(path and re.search(pattern, path))
+
     def _queue_change(self, event):
         frontend = self.__change_on_frontend(event)
+        scripts = self.__change_on_scripts(event)
         module = self.__change_on_module(event)
         core = module is None and self.__change_on_core(event)
+        # Scripts are synced for the next install; they do not reload Cleep.
+        backend = not frontend and not scripts
         if module:
             self.logger.debug('  Change on module "%s"' % module)
-            self.actions_executor.note_change(module=module, frontend=frontend)
+            self.actions_executor.note_change(
+                module=module, frontend=frontend, backend=backend
+            )
         elif core:
             self.logger.debug("  Change on core")
-            self.actions_executor.note_change(core=True, frontend=frontend)
+            self.actions_executor.note_change(
+                core=True, frontend=frontend, backend=backend
+            )
         else:
             self.logger.debug("  Dropped due to useless change")
 
@@ -447,18 +474,21 @@ class CleepHandler(FileSystemEventHandler):
                     self.logger.debug(" Filtered: directory")
                     return
                 self._maybe_schedule_new_path(created)
-                module = self._module_name_from_path(created)
-                if module:
-                    frontend = self.__change_on_frontend(event)
-                    self.logger.debug('  Change on module "%s"' % module)
-                    self.actions_executor.note_change(module=module, frontend=frontend)
+                # New module root: only schedule watches; wait for content files
+                modules_root = os.path.abspath(config.MODULES_SRC)
+                if os.path.abspath(os.path.dirname(created)) == modules_root:
                     return
-                if _is_under(created, config.CORE_SRC) or _is_under(
+                if self.__change_on_module(event):
+                    self._queue_change(event)
+                elif _is_under(created, config.CORE_SRC) or _is_under(
                     created, config.HTML_SRC
                 ) or _is_under(created, config.BIN_SRC):
                     frontend = self.__change_on_frontend(event)
-                    self.logger.debug("  Change on core")
-                    self.actions_executor.note_change(core=True, frontend=frontend)
+                    self.actions_executor.note_change(
+                        core=True,
+                        frontend=frontend,
+                        backend=not frontend,
+                    )
                 return
 
             if self.__is_event_dropped(event):

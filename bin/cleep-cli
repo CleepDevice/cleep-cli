@@ -291,11 +291,22 @@ def modssync(run_scripts):
     f = File()
 
     for module in config.MODULES_REPO_URL.keys():
-        res = f.module_sync(module)
-        if not res:
-            sys.exit(1)
         if run_scripts:
-            res = f.module_run_install_scripts(module)
+            # Same order as package install: scripts + preinst, then files, then postinst
+            res = f.module_sync(module, backend=False, frontend=False, scripts=True)
+            if not res:
+                sys.exit(1)
+            res = f.module_run_install_script(module, "preinst.sh")
+            if not res:
+                sys.exit(1)
+            res = f.module_sync(module, backend=True, frontend=True, scripts=True)
+            if not res:
+                sys.exit(1)
+            res = f.module_run_install_script(module, "postinst.sh")
+            if not res:
+                sys.exit(1)
+        else:
+            res = f.module_sync(module)
             if not res:
                 sys.exit(1)
 

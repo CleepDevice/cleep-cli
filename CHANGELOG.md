@@ -1,5 +1,15 @@
 # Cleep-cli
 
+# [1.44.2] - 2026-10-19
+
+## Fixed
+
+- Watch queues module file deletes so rsync `--delete` can drop stale runtime files
+- Watch schedules each module root (non-recursive) so a late `backend` / `frontend` / `scripts` dir is still watched
+- Scripts-only edits sync without restarting Cleep
+- `coresync` keeps `CORE_DST/modules` as a symlink to `/opt/cleep/modules` (needed after `reset`)
+- `modssync --run-scripts` runs preinst before app files and postinst after, like package install
+
 # [1.44.1] - 2026-10-19
 
 ## Fixed

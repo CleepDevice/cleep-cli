@@ -8,7 +8,12 @@ import time
 import unittest
 from unittest.mock import Mock, patch
 
-from watchdog.events import DirCreatedEvent, FileModifiedEvent, FileMovedEvent
+from watchdog.events import (
+    DirCreatedEvent,
+    FileDeletedEvent,
+    FileModifiedEvent,
+    FileMovedEvent,
+)
 from watchdog.observers import Observer
 
 from cleepcli import config
@@ -48,13 +53,15 @@ class IterWatchRootsTests(unittest.TestCase):
         self.assertIn(bin_dir, paths)
         self.assertIn(modules, paths)
         self.assertFalse(recursive[modules])
+        self.assertIn(os.path.join(modules, "audio"), paths)
+        self.assertFalse(recursive[os.path.join(modules, "audio")])
         self.assertIn(os.path.join(modules, "audio", "backend"), paths)
         self.assertIn(os.path.join(modules, "audio", "frontend"), paths)
         self.assertTrue(recursive[os.path.join(modules, "audio", "backend")])
         self.assertFalse(any(".git" in path.split(os.sep) for path in paths))
         self.assertFalse(any(path.endswith(os.path.join("audio", "tests")) for path in paths))
-        # Few watches: 3 core trees + modules root + 2 content dirs
-        self.assertEqual(len(roots), 6)
+        # 3 core trees + modules root + module root + 2 content dirs
+        self.assertEqual(len(roots), 7)
 
 
 class HandlerTests(unittest.TestCase):
@@ -77,13 +84,38 @@ class HandlerTests(unittest.TestCase):
     def test_core_file_is_queued(self):
         path = os.path.join(config.CORE_SRC, "rpcserver.py")
         self.handler.on_any_event(FileModifiedEvent(path))
-        self.executor.note_change.assert_called_once_with(core=True, frontend=False)
+        self.executor.note_change.assert_called_once_with(
+            core=True, frontend=False, backend=True
+        )
 
     def test_atomic_save_move_is_queued(self):
         src = os.path.join(config.CORE_SRC, ".rpcserver.py.tmp")
         dest = os.path.join(config.CORE_SRC, "rpcserver.py")
         self.handler.on_any_event(FileMovedEvent(src, dest))
-        self.executor.note_change.assert_called_once_with(core=True, frontend=False)
+        self.executor.note_change.assert_called_once_with(
+            core=True, frontend=False, backend=True
+        )
+
+    def test_module_file_delete_is_queued(self):
+        path = os.path.join(config.MODULES_SRC, "audio", "backend", "audio.py")
+        self.handler.on_any_event(FileDeletedEvent(path))
+        self.executor.note_change.assert_called_once_with(
+            module="audio", frontend=False, backend=True
+        )
+
+    def test_module_scripts_do_not_restart_backend(self):
+        path = os.path.join(config.MODULES_SRC, "audio", "scripts", "postinst.sh")
+        self.handler.on_any_event(FileModifiedEvent(path))
+        self.executor.note_change.assert_called_once_with(
+            module="audio", frontend=False, backend=False
+        )
+
+    def test_module_frontend_is_queued(self):
+        path = os.path.join(config.MODULES_SRC, "audio", "frontend", "desc.json")
+        self.handler.on_any_event(FileModifiedEvent(path))
+        self.executor.note_change.assert_called_once_with(
+            module="audio", frontend=True, backend=False
+        )
 
     def test_created_git_directory_is_not_watched(self):
         self.handler.observer = Mock()
@@ -126,14 +158,18 @@ class HandlerTests(unittest.TestCase):
         args, kwargs = self.handler.observer.schedule.call_args
         self.assertEqual(os.path.abspath(args[1]), os.path.abspath(path))
         self.assertTrue(kwargs.get("recursive", args[2] if len(args) > 2 else False))
-        self.executor.note_change.assert_called_once_with(module="audio", frontend=False)
+        self.executor.note_change.assert_called_once_with(
+            module="audio", frontend=False, backend=True
+        )
 
     def test_created_core_directory_is_queued(self):
         self.handler.observer = Mock()
         path = os.path.join(config.CORE_SRC, "libs", "newpkg")
         self.handler.on_any_event(DirCreatedEvent(path))
         self.handler.observer.schedule.assert_not_called()
-        self.executor.note_change.assert_called_once_with(core=True, frontend=False)
+        self.executor.note_change.assert_called_once_with(
+            core=True, frontend=False, backend=True
+        )
 
 
 class QuietPeriodTests(unittest.TestCase):
@@ -160,7 +196,7 @@ class QuietPeriodTests(unittest.TestCase):
         executor.start()
         try:
             for _ in range(5):
-                executor.note_change(core=True, frontend=False)
+                executor.note_change(core=True, backend=True)
                 time.sleep(0.02)
             self.assertTrue(self._wait_until(lambda: executor.file.core_sync.call_count >= 1))
             time.sleep(0.4)
@@ -176,7 +212,7 @@ class QuietPeriodTests(unittest.TestCase):
         executor.file.core_sync.return_value = False
         executor.start()
         try:
-            executor.note_change(core=True, frontend=False)
+            executor.note_change(core=True, backend=True)
             self.assertTrue(self._wait_until(lambda: executor.file.core_sync.call_count >= 1))
             time.sleep(0.4)
             executor.cleep.restart_backend.assert_not_called()
@@ -198,12 +234,25 @@ class QuietPeriodTests(unittest.TestCase):
             executor.stop()
             executor.join(timeout=2)
 
+    def test_scripts_only_does_not_restart(self):
+        executor = self._executor()
+        executor.start()
+        try:
+            executor.note_change(module="audio")
+            self.assertTrue(self._wait_until(lambda: executor.file.module_sync.call_count >= 1))
+            time.sleep(0.4)
+            executor.cleep.restart_backend.assert_not_called()
+            executor.cleep.restart_frontend.assert_not_called()
+        finally:
+            executor.stop()
+            executor.join(timeout=2)
+
     def test_core_and_modules_restart_once(self):
         executor = self._executor()
         executor.start()
         try:
-            executor.note_change(core=True, frontend=False)
-            executor.note_change(module="network", frontend=False)
+            executor.note_change(core=True, backend=True)
+            executor.note_change(module="network", backend=True)
             executor.note_change(module="audio", frontend=True)
             self.assertTrue(self._wait_until(lambda: executor.file.core_sync.call_count >= 1))
             time.sleep(0.4)
