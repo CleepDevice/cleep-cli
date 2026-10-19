@@ -27,20 +27,40 @@ def _is_under(path, root):
     return path == root or path.startswith(root + os.sep)
 
 
-def iter_watch_directories(root):
-    """
-    Yield directories to watch under root.
+# One observer.schedule() = one inotify instance. Keep that count low
+# (kernel default is often 128) by using recursive watches on a few roots.
+MODULE_CONTENT_DIRS = ("backend", "frontend", "scripts")
 
-    Rejected directory names are not yielded and are not descended into, so
-    inotify never watches them.
+
+def iter_watch_roots():
     """
-    if not os.path.isdir(root):
+    Yield (path, recursive) pairs to schedule on the observer.
+
+    Core/html/bin are watched recursively. Modules watch only backend,
+    frontend and scripts so .git under each app is never registered.
+    """
+    for root in (config.CORE_SRC, config.HTML_SRC, config.BIN_SRC):
+        if os.path.isdir(root):
+            yield root, True
+
+    if not os.path.isdir(config.MODULES_SRC):
         return
-    for dirpath, dirnames, _filenames in os.walk(root):
-        dirnames[:] = [
-            name for name in dirnames if name not in CleepHandler.REJECTED_DIRS
-        ]
-        yield dirpath
+
+    yield config.MODULES_SRC, False
+    try:
+        names = sorted(os.listdir(config.MODULES_SRC))
+    except OSError:
+        return
+    for name in names:
+        if name in CleepHandler.REJECTED_DIRS:
+            continue
+        module_path = os.path.join(config.MODULES_SRC, name)
+        if not os.path.isdir(module_path):
+            continue
+        for sub in MODULE_CONTENT_DIRS:
+            content = os.path.join(module_path, sub)
+            if os.path.isdir(content):
+                yield content, True
 
 
 class _Batch:
@@ -200,24 +220,53 @@ class CleepHandler(FileSystemEventHandler):
             return getattr(event, "dest_path", None) or event.src_path
         return None
 
-    def schedule_tree(self, root):
+    def schedule_all(self):
         """
-        Watch root and every directory under it, except rejected names.
+        Install the few recursive watches needed for core and module sources.
         """
-        for directory in iter_watch_directories(root):
-            self._watch_directory(directory)
+        for path, recursive in iter_watch_roots():
+            self._schedule(path, recursive=recursive)
 
-    def _watch_directory(self, path):
+    def _schedule(self, path, recursive=True):
         """
-        Watch one directory. Rejected names and directories already watched are skipped.
+        Watch path once. Rejected names and duplicates are skipped.
         """
         if self.observer is None or not path or self._rejected_path(path):
-            return
+            return False
         real = os.path.abspath(path)
         if real in self._watched or not os.path.isdir(real):
-            return
-        self.observer.schedule(self, real, recursive=False)
+            return False
+        self.observer.schedule(self, real, recursive=recursive)
         self._watched.add(real)
+        return True
+
+    def _schedule_module(self, module_path):
+        """
+        Watch backend/frontend/scripts of a module. Never watches .git.
+        """
+        if not module_path or not os.path.isdir(module_path):
+            return
+        if os.path.basename(module_path) in self.REJECTED_DIRS:
+            return
+        for sub in MODULE_CONTENT_DIRS:
+            self._schedule(os.path.join(module_path, sub), recursive=True)
+
+    def _maybe_schedule_new_path(self, path):
+        """
+        Add watches when a new module or module content dir appears.
+
+        Core/html/bin are already recursive, so new dirs there need no schedule.
+        """
+        if not path or self._rejected_path(path):
+            return
+        parent = os.path.dirname(path)
+        name = os.path.basename(path)
+        modules_root = os.path.abspath(config.MODULES_SRC)
+        if os.path.abspath(parent) == modules_root:
+            self._schedule_module(path)
+            return
+        if name in MODULE_CONTENT_DIRS and os.path.abspath(os.path.dirname(parent)) == modules_root:
+            self._schedule(path, recursive=True)
 
     def _module_name_from_path(self, path):
         prefix = config.MODULES_SRC.rstrip(os.sep) + os.sep
@@ -394,10 +443,10 @@ class CleepHandler(FileSystemEventHandler):
             self.logger.debug("Event: %s" % event)
             created = self._created_directory(event)
             if created:
-                self.schedule_tree(created)
                 if self._rejected_path(created):
                     self.logger.debug(" Filtered: directory")
                     return
+                self._maybe_schedule_new_path(created)
                 module = self._module_name_from_path(created)
                 if module:
                     frontend = self.__change_on_frontend(event)
@@ -451,25 +500,38 @@ class CleepWatchdog:
         event_handler = CleepHandler(self.actions_executor)
         observer = Observer()
         event_handler.observer = observer
-        scheduled = 0
-        for root in (
-            config.CORE_SRC,
-            config.HTML_SRC,
-            config.BIN_SRC,
-            config.MODULES_SRC,
-        ):
-            before = len(event_handler._watched)
-            event_handler.schedule_tree(root)
-            scheduled += len(event_handler._watched) - before
+        try:
+            event_handler.schedule_all()
+        except OSError as error:
+            self.logger.error(
+                "Unable to start filesystem watches (%s). "
+                "Check fs.inotify.max_user_instances / max_user_watches",
+                error,
+            )
+            self.actions_executor.stop()
+            return False
 
-        if not scheduled:
+        if not event_handler._watched:
             self.logger.error(
                 'Please get Cleep sources using "cleep-cli getcore" command'
             )
+            self.actions_executor.stop()
             return False
 
-        self.logger.info('Cleep watchdog is running on "%s" (CTRL-C to stop)' % path)
-        observer.start()
+        self.logger.info(
+            'Cleep watchdog is running on "%s" (%d watches, CTRL-C to stop)'
+            % (path, len(event_handler._watched))
+        )
+        try:
+            observer.start()
+        except OSError as error:
+            self.logger.error(
+                "Unable to start filesystem watches (%s). "
+                "Check fs.inotify.max_user_instances / max_user_watches",
+                error,
+            )
+            self.actions_executor.stop()
+            return False
         try:
             while True:
                 time.sleep(0.25)

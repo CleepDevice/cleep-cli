@@ -6,35 +6,55 @@ import shutil
 import tempfile
 import time
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from watchdog.events import DirCreatedEvent, FileModifiedEvent, FileMovedEvent
 from watchdog.observers import Observer
 
 from cleepcli import config
-from cleepcli.watch import ActionsExecutor, CleepHandler, iter_watch_directories
+from cleepcli.watch import ActionsExecutor, CleepHandler, iter_watch_roots
 
 
-class IterWatchDirectoriesTests(unittest.TestCase):
-    def test_skips_rejected_directories(self):
-        root = tempfile.mkdtemp()
+class IterWatchRootsTests(unittest.TestCase):
+    def test_skips_module_git_and_watches_content_dirs(self):
+        repo = tempfile.mkdtemp()
         try:
-            os.makedirs(os.path.join(root, ".git", "objects", "ab"))
-            os.makedirs(os.path.join(root, "pkg", "__pycache__"))
-            os.makedirs(os.path.join(root, "pkg", "tests"))
-            os.makedirs(os.path.join(root, "pkg", "node_modules", "lib"))
-            os.makedirs(os.path.join(root, "pkg", "backend"))
-            watched = set(iter_watch_directories(root))
-        finally:
-            shutil.rmtree(root)
+            core = os.path.join(repo, "cleep")
+            html = os.path.join(repo, "html")
+            bin_dir = os.path.join(repo, "bin")
+            modules = os.path.join(repo, "modules")
+            os.makedirs(os.path.join(core, "libs"))
+            os.makedirs(html)
+            os.makedirs(bin_dir)
+            os.makedirs(os.path.join(modules, "audio", ".git", "objects", "ab"))
+            os.makedirs(os.path.join(modules, "audio", "backend"))
+            os.makedirs(os.path.join(modules, "audio", "frontend"))
+            os.makedirs(os.path.join(modules, "audio", "tests"))
 
-        self.assertIn(root, watched)
-        self.assertIn(os.path.join(root, "pkg"), watched)
-        self.assertIn(os.path.join(root, "pkg", "backend"), watched)
-        self.assertFalse(any(".git" in path.split(os.sep) for path in watched))
-        self.assertFalse(any("__pycache__" in path.split(os.sep) for path in watched))
-        self.assertFalse(any("tests" in path.split(os.sep) for path in watched))
-        self.assertFalse(any("node_modules" in path.split(os.sep) for path in watched))
+            with patch.object(config, "CORE_SRC", core), patch.object(
+                config, "HTML_SRC", html
+            ), patch.object(config, "BIN_SRC", bin_dir), patch.object(
+                config, "MODULES_SRC", modules
+            ):
+                roots = list(iter_watch_roots())
+        finally:
+            shutil.rmtree(repo)
+
+        paths = {path for path, _recursive in roots}
+        recursive = {path: recursive for path, recursive in roots}
+        self.assertIn(core, paths)
+        self.assertTrue(recursive[core])
+        self.assertIn(html, paths)
+        self.assertIn(bin_dir, paths)
+        self.assertIn(modules, paths)
+        self.assertFalse(recursive[modules])
+        self.assertIn(os.path.join(modules, "audio", "backend"), paths)
+        self.assertIn(os.path.join(modules, "audio", "frontend"), paths)
+        self.assertTrue(recursive[os.path.join(modules, "audio", "backend")])
+        self.assertFalse(any(".git" in path.split(os.sep) for path in paths))
+        self.assertFalse(any(path.endswith(os.path.join("audio", "tests")) for path in paths))
+        # Few watches: 3 core trees + modules root + 2 content dirs
+        self.assertEqual(len(roots), 6)
 
 
 class HandlerTests(unittest.TestCase):
@@ -72,21 +92,47 @@ class HandlerTests(unittest.TestCase):
         self.handler.observer.schedule.assert_not_called()
         self.executor.note_change.assert_not_called()
 
-    def test_directory_is_scheduled_once(self):
-        root = tempfile.mkdtemp()
+    def test_schedule_all_is_idempotent(self):
+        repo = tempfile.mkdtemp()
         try:
-            os.makedirs(os.path.join(root, "pkg"))
+            core = os.path.join(repo, "cleep")
+            html = os.path.join(repo, "html")
+            bin_dir = os.path.join(repo, "bin")
+            modules = os.path.join(repo, "modules")
+            os.makedirs(core)
+            os.makedirs(html)
+            os.makedirs(bin_dir)
+            os.makedirs(os.path.join(modules, "audio", "backend"))
             self.handler.observer = Mock()
-            self.handler.schedule_tree(root)
-            self.handler.schedule_tree(root)
-            self.assertEqual(self.handler.observer.schedule.call_count, 2)
+            with patch.object(config, "CORE_SRC", core), patch.object(
+                config, "HTML_SRC", html
+            ), patch.object(config, "BIN_SRC", bin_dir), patch.object(
+                config, "MODULES_SRC", modules
+            ):
+                self.handler.schedule_all()
+                first = self.handler.observer.schedule.call_count
+                self.handler.schedule_all()
+                self.assertEqual(self.handler.observer.schedule.call_count, first)
+                self.assertLess(first, 20)
         finally:
-            shutil.rmtree(root)
+            shutil.rmtree(repo)
+
+    def test_created_module_backend_is_scheduled(self):
+        self.handler.observer = Mock()
+        path = os.path.join(config.MODULES_SRC, "audio", "backend")
+        with patch("os.path.isdir", return_value=True):
+            self.handler.on_any_event(DirCreatedEvent(path))
+        self.handler.observer.schedule.assert_called_once()
+        args, kwargs = self.handler.observer.schedule.call_args
+        self.assertEqual(os.path.abspath(args[1]), os.path.abspath(path))
+        self.assertTrue(kwargs.get("recursive", args[2] if len(args) > 2 else False))
+        self.executor.note_change.assert_called_once_with(module="audio", frontend=False)
 
     def test_created_core_directory_is_queued(self):
         self.handler.observer = Mock()
         path = os.path.join(config.CORE_SRC, "libs", "newpkg")
         self.handler.on_any_event(DirCreatedEvent(path))
+        self.handler.observer.schedule.assert_not_called()
         self.executor.note_change.assert_called_once_with(core=True, frontend=False)
 
 
@@ -171,36 +217,47 @@ class QuietPeriodTests(unittest.TestCase):
 
 
 class InotifyTests(unittest.TestCase):
-    def test_git_objects_are_not_watched(self):
-        root = tempfile.mkdtemp()
+    def test_module_git_objects_are_not_watched(self):
+        repo = tempfile.mkdtemp()
         observer = Observer()
         try:
-            git_dir = os.path.join(root, ".git", "objects", "ab")
+            modules = os.path.join(repo, "modules")
+            git_dir = os.path.join(modules, "audio", ".git", "objects", "ab")
+            backend = os.path.join(modules, "audio", "backend")
             os.makedirs(git_dir)
-            os.makedirs(os.path.join(root, "pkg"))
+            os.makedirs(backend)
+            os.makedirs(os.path.join(repo, "cleep"))
+            os.makedirs(os.path.join(repo, "html"))
+            os.makedirs(os.path.join(repo, "bin"))
+
             executor = Mock()
             handler = CleepHandler(executor)
+            handler.observer = observer
             seen = []
 
             def record(event):
-                seen.append(event.src_path)
+                seen.append(getattr(event, "src_path", "") or "")
 
             handler.on_any_event = record
-            for directory in iter_watch_directories(root):
-                observer.schedule(handler, directory, recursive=False)
+            with patch.object(config, "CORE_SRC", os.path.join(repo, "cleep")), patch.object(
+                config, "HTML_SRC", os.path.join(repo, "html")
+            ), patch.object(config, "BIN_SRC", os.path.join(repo, "bin")), patch.object(
+                config, "MODULES_SRC", modules
+            ):
+                handler.schedule_all()
             observer.start()
             time.sleep(0.2)
             with open(os.path.join(git_dir, "deadbeef"), "w", encoding="utf-8") as handle:
                 handle.write("x")
-            with open(os.path.join(root, "pkg", "a.py"), "w", encoding="utf-8") as handle:
+            with open(os.path.join(backend, "audio.py"), "w", encoding="utf-8") as handle:
                 handle.write("x")
             time.sleep(0.5)
         finally:
             observer.stop()
             observer.join(timeout=2)
-            shutil.rmtree(root)
+            shutil.rmtree(repo)
 
-        self.assertTrue(any(path.endswith("a.py") for path in seen))
+        self.assertTrue(any(path.endswith("audio.py") for path in seen))
         self.assertFalse(any(".git" in path.split(os.sep) for path in seen))
 
 

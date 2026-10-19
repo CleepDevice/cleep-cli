@@ -1,13 +1,22 @@
 # Cleep-cli
 
+# [1.44.1] - 2026-10-19
+
+## Fixed
+
+- Watch uses a few recursive inotify watches instead of one instance per directory, which hit `max_user_instances`
+- Module watches cover only `backend` / `frontend` / `scripts`, so `.git` is not registered
+
 # [1.44.0] - 2026-10-18
 
 ## Added
 
 - After Cleep RPC hardening, CLI must uses local socket to access Cleep api
+
 ## Fixed
 
-- Improve watcher
+- Improve watcher: quiet period before sync, skip rejected trees, no restart after a failed sync, no UI refresh when the backend already restarts
+- Watch also handles created files and atomic saves (`rename`)
 - `Console.command` honors its timeout, sets `killed`, and treats return code as the success signal
 - `systemctl restart cleep` is allowed up to 60 seconds and no longer fails only because of stderr
 - `modssync --run-scripts` only runs install scripts when the flag is set
