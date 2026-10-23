@@ -121,39 +121,60 @@ fi
 
         return True
 
-    def module_run_install_script(self, module_name, script_name):
+    def module_run_phase_manifest(self, module_name, phase):
         """
-        Run one module installation script from the synced scripts directory
+        Run one declarative phase manifest from the synced scripts directory.
 
         Args:
             module_name (str): module name
-            script_name (str): script filename (preinst.sh, postinst.sh, ...)
+            phase (str): preinst or postinst
         """
         if not os.path.exists(os.path.join(config.MODULES_SRC, module_name)):
-            self.logger.error('Module "%s" doesn\'t exist [%s]' % (module_name, os.path.join(config.MODULES_SRC, module_name)))
-            return False
-
-        script_path = os.path.join(config.MODULES_SCRIPTS_DST, module_name, script_name)
-        if not os.path.exists(script_path):
-            return True
-
-        self.logger.info('Running %s', script_path)
-        resp = Console().command(script_path, timeout=300)
-        if resp["killed"] or resp["returncode"] != 0:
             self.logger.error(
-                'Error running %s [%s]: %s',
-                script_path,
-                resp["returncode"],
-                ''.join(resp["stderr"]),
+                'Module "%s" doesn\'t exist [%s]'
+                % (module_name, os.path.join(config.MODULES_SRC, module_name))
             )
             return False
-        return True
+
+        scripts_dir = os.path.join(config.MODULES_SCRIPTS_DST, module_name)
+        manifest_path = os.path.join(scripts_dir, "%s.json" % phase)
+        if not os.path.exists(manifest_path):
+            return True
+
+        try:
+            from cleep.core import CleepModule
+            from cleep.modules.update.install.install_app_manifest import (
+                InstallManifest,
+                MODE_INSTALL,
+            )
+            from cleep.libs.internals.cleepfilesystem import CleepFilesystem
+        except ImportError:
+            self.logger.error(
+                "Unable to import InstallManifest; is Cleep update module installed?"
+            )
+            return False
+
+        self.logger.info("Running %s", manifest_path)
+        try:
+            data = InstallManifest.load(manifest_path)
+            # Dev sync: filesystem may be unrestricted; paths still needed for bin/chmod
+            fs = CleepFilesystem()
+            runner = InstallManifest(
+                module_name,
+                CleepModule.app_paths_for(module_name),
+                fs,
+                logger=self.logger,
+            )
+            runner.run(data, mode=MODE_INSTALL)
+            return True
+        except Exception as exc:
+            self.logger.error("Error running %s: %s", manifest_path, exc)
+            return False
 
     def module_run_install_scripts(self, module_name):
         """
-        Run module installation scripts (preinst then postinst)
+        Run module installation manifests (preinst then postinst)
         """
-        return (
-            self.module_run_install_script(module_name, "preinst.sh")
-            and self.module_run_install_script(module_name, "postinst.sh")
-        )
+        return self.module_run_phase_manifest(
+            module_name, "preinst"
+        ) and self.module_run_phase_manifest(module_name, "postinst")

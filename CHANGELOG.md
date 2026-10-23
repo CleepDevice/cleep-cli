@@ -1,5 +1,12 @@
 # Cleep-cli
 
+# [1.45.0] - 2026-10-23
+
+## Changed
+
+- `modssync --run-scripts` runs declarative `preinst.json` / `postinst.json`
+- Package first-class `bin/` and `asset/` trees into app zips (installer already deploys them)
+
 # [1.44.3] - 2026-10-19
 
 ## Added

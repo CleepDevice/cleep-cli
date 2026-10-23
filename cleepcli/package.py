@@ -30,6 +30,8 @@ class Package:
     BACKEND_DIR = "backend/"
     SCRIPTS_DIR = "scripts/"
     TESTS_DIR = "tests/"
+    BIN_DIR = "bin/"
+    ASSET_DIR = "asset/"
 
     def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -502,6 +504,18 @@ sha256sum $DEB > $SHA256
                 "Error in scripts. Fix it before packaging application: %s"
                 % data_scripts["errors"]
             )
+        data_bin = check.check_bin(module_name)
+        if len(data_bin["errors"]) > 0:
+            raise Exception(
+                "Error in bin/. Fix it before packaging application: %s"
+                % data_bin["errors"]
+            )
+        data_asset = check.check_asset(module_name)
+        if len(data_asset["errors"]) > 0:
+            raise Exception(
+                "Error in asset/. Fix it before packaging application: %s"
+                % data_asset["errors"]
+            )
         data_tests = check.check_tests(module_name)
         if len(data_tests["errors"]) > 0:
             raise Exception(
@@ -608,6 +622,12 @@ sha256sum $DEB > $SHA256
             path_in = a_file["fullpath"]
             path_out = a_file["path"]
             archive.write(path_in, path_out)
+
+        # add bin/ and asset/ (first-class; installer copies to APP_BIN / APP_ASSET)
+        for a_file in data_bin["files"]:
+            archive.write(a_file["fullpath"], a_file["path"])
+        for a_file in data_asset["files"]:
+            archive.write(a_file["fullpath"], a_file["path"])
 
         # add module.json
         archive.write(module_json, "module.json")
