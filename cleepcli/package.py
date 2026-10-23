@@ -556,11 +556,11 @@ sha256sum $DEB > $SHA256
         if ci:
             # execute tests
             test = Test()
-            if not test.module_test(module_name):
+            if not test.module_tests(module_name):
                 raise Exception(
                     'Test execution failed for "%s". Please fix it.' % module_name
                 )
-            data_test = test.module_test_coverage(module_name, as_json=True)
+            data_test = test.module_tests_coverage(module_name, as_json=True)
 
         # build module description file (module.json)
         fdesc = NamedTemporaryFile(delete=False, encoding="utf-8", mode="w")

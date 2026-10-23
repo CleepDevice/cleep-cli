@@ -1,5 +1,11 @@
 # Cleep-cli
 
+# [Unreleased]
+
+## Changed
+
+- Replace unittest by pytest (old tests are still compatible)
+
 # [1.45.0] - 2026-10-23
 
 ## Changed

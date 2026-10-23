@@ -410,26 +410,23 @@ class %(MODULE_NAME_CAPITALIZED)s(CleepModule):
 # -*- coding: utf-8 -*-
 import unittest
 import logging
-import sys
-sys.path.append('../')
 from cleep.libs.tests import session
 from backend.%(MODULE_NAME)s import %(MODULE_NAME_CAPITALIZED)s
 from cleep.exception import InvalidParameter, MissingParameter, CommandError, Unauthorized
-from mock import Mock, patch
+from unittest.mock import Mock, patch
 
-# Unit testing is part of a development, it's why Cleep requires to have application code tested to
-# guarantee a certain source code quality.
+# Unit testing is part of development: Cleep requires tested application code.
 #
-# If you new to unit testing, you can find a good introduction here https://realpython.com/python-testing/
-# Cleep uses unittest framework for which you can find documentation here https://docs.python.org/3/library/unittest.html
+# Hybrid stack: pytest runs the suite; existing tests may stay as unittest.TestCase.
+# New tests can use pytest style (def test_... + fixtures) if preferred.
 #
-# You can launch all your tests manually using this command:
-#   python3 -m unittest test_%(MODULE_NAME)s.Test%(MODULE_NAME_CAPITALIZED)s
-# or a specific test with command:
-#   python3 -m unittest test_%(MODULE_NAME)s.Test%(MODULE_NAME_CAPITALIZED)s.test__on_configure
-# You can get tests coverage with command:
-#   coverage run --omit="*/lib/python*/*","test_*" --concurrency=gevent test_%(MODULE_NAME)s.py; coverage report -m -i
-# or you can simply use developer application that allows you to perform all tests and coverage directly from web interface
+# Run from the application root (parent of backend/ and tests/), e.g.:
+#   PYTHONPATH=. python3 -m pytest tests
+#   PYTHONPATH=. python3 -m pytest tests -k test__on_configure
+# Or via cleep-cli / developer app:
+#   cleep-cli modtests --module %(MODULE_NAME)s
+#
+# Import convention: from backend.%(MODULE_NAME)s import ... (no sys.path hacks).
 class Test%(MODULE_NAME_CAPITALIZED)s(unittest.TestCase):
 
     def setUp(self):
@@ -471,7 +468,7 @@ class Test%(MODULE_NAME_CAPITALIZED)s(unittest.TestCase):
     #
     #   # checks your mocks or function result
 
-# do not remove code below, otherwise tests won't run
+# Optional when running the file directly; prefer pytest from the app root.
 if __name__ == '__main__':
     unittest.main()
     """

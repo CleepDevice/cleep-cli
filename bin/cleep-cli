@@ -282,7 +282,7 @@ def get_module_name(ctx, param, value):
     return module_name
 
 @mod.command()
-@click.option('--run-scripts', default=False, is_flag=True, help='Also run preinst.sh and postinst.sh scripts')
+@click.option('--run-scripts', default=False, is_flag=True, help='Also run preinst.json and postinst.json phase manifests')
 def modssync(run_scripts):
     """
     Synchronize all mandatory modules (system, network...)
@@ -296,13 +296,13 @@ def modssync(run_scripts):
             res = f.module_sync(module, backend=False, frontend=False, scripts=True)
             if not res:
                 sys.exit(1)
-            res = f.module_run_install_script(module, "preinst.sh")
+            res = f.module_run_phase_manifest(module, "preinst")
             if not res:
                 sys.exit(1)
             res = f.module_sync(module, backend=True, frontend=True, scripts=True)
             if not res:
                 sys.exit(1)
-            res = f.module_run_install_script(module, "postinst.sh")
+            res = f.module_run_phase_manifest(module, "postinst")
             if not res:
                 sys.exit(1)
         else:

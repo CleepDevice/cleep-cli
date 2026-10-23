@@ -152,6 +152,18 @@ class Test():
         """
         return '%s/%s/tests' % (config.MODULES_SRC, module_name)
 
+    def __get_module_root_path(self, module_name):
+        """
+        Return module application root path (parent of backend/ and tests/).
+
+        Args:
+            module_name (string): module name
+
+        Returns:
+            string: module root path
+        """
+        return os.path.join(config.MODULES_SRC, module_name)
+
     def __coverage_simple_command(self, path, coverage_command, coverage_options='', coverage_file=None, timeout=5.0, quiet=True):
         coverage_file = 'COVERAGE_FILE=%s ' % coverage_file if coverage_file else ''
         
@@ -203,11 +215,11 @@ cd "%(path)s"
 
         self.logger.info('Running unit tests...')
         coverage_file_path = self.__get_coverage_file(module_name, module_version)
-        module_tests_path = self.__get_module_tests_path(module_name)
+        module_root_path = self.__get_module_root_path(module_name)
         if pattern:
-            cmd = self.__get_tests_cmd_with_pattern(module_tests_path, pattern)
+            cmd = self.__get_tests_cmd_with_pattern(module_root_path, pattern)
         else:
-            cmd = self.__get_tests_cmd_with_coverage(module_tests_path, coverage_file_path)
+            cmd = self.__get_tests_cmd_with_coverage(module_root_path, coverage_file_path)
         self.logger.debug('Test cmd: %s' % cmd)
         self.__endless_command_running = True
         self.__reset_stds()
@@ -235,23 +247,25 @@ cd "%(path)s"
 
         return True
 
-    def __get_tests_cmd_with_coverage(self, module_tests_path, coverage_file_path):
+    def __get_tests_cmd_with_coverage(self, module_root_path, coverage_file_path):
         """
-        Return cmdline to run full tests on file with coverage
-        """
-        return """
-cd "%s"
-COVERAGE_FILE=%s coverage run --omit="*/lib/python*/*","test_*" --source="../backend" --concurrency=thread -m unittest discover
-        """ % (module_tests_path, coverage_file_path)
+        Return cmdline to run full tests on module with coverage (pytest hybrid).
 
-    def __get_tests_cmd_with_pattern(self, module_tests_path, pattern):
-        """
-        Return cmdline to run tests matching specified pattern
+        App root is on PYTHONPATH so tests import ``backend.*`` without sys.path hacks.
         """
         return """
 cd "%s"
-python3 -m unittest -k "%s" test_*
-        """ % (module_tests_path, pattern)
+PYTHONPATH=. COVERAGE_FILE=%s coverage run --omit="*/lib/python*/*","*/tests/*","test_*" --source=backend --concurrency=thread -m pytest tests
+        """ % (module_root_path, coverage_file_path)
+
+    def __get_tests_cmd_with_pattern(self, module_root_path, pattern):
+        """
+        Return cmdline to run tests matching specified pattern (no coverage).
+        """
+        return """
+cd "%s"
+PYTHONPATH=. python3 -m pytest tests -k "%s"
+        """ % (module_root_path, pattern)
 
     def module_tests_coverage(self, module_name, missing=False, as_json=False, quiet=True):
         """
@@ -280,7 +294,7 @@ python3 -m unittest -k "%s" test_*
             raise Exception('No coverage file found. Did tests run ?')
 
         report = self.__coverage_simple_command(
-            self.__get_module_tests_path(module_name),
+            self.__get_module_root_path(module_name),
             'report',
             '-m -i' if missing else '-i',
             coverage_file,
