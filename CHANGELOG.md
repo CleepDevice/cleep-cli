@@ -5,7 +5,10 @@
 ## Changed
 
 - Replace unittest by pytest for `modtests` and `coretests`
+- Migrate cleep-cli own tests to pytest
+- Add unit tests for coverage rules, desc.json/check helpers, doc breaking-change compare, config version, and scaffold templates
 - Scaffold new apps with pytest tests (`cleep_session` fixture), `tests/conftest.py`, and `pytest.ini`
+- Move `is_file_coverage_valid` into `cleepcli.test` (shared by CLI entrypoints)
 
 # [1.45.0] - 2026-10-23
 

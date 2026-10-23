@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import logging
-import unittest
 
 from cleepcli.console import Console, ON_POSIX
 
@@ -18,34 +17,33 @@ if not hasattr(logging, "TRACE"):
     logging.addLevelName(level, "TRACE")
 
 
-class ConsoleCommandTests(unittest.TestCase):
-    def test_on_posix_is_defined(self):
-        self.assertIsInstance(ON_POSIX, bool)
-
-    def test_command_returns_success(self):
-        result = Console().command("true", timeout=2.0)
-        self.assertEqual(result["returncode"], 0)
-        self.assertFalse(result["killed"])
-        self.assertFalse(result["error"])
-
-    def test_command_returns_failure(self):
-        result = Console().command("false", timeout=2.0)
-        self.assertNotEqual(result["returncode"], 0)
-        self.assertFalse(result["killed"])
-        self.assertTrue(result["error"])
-
-    def test_command_stderr_without_failure_is_not_error(self):
-        result = Console().command("echo warn 1>&2; true", timeout=2.0)
-        self.assertEqual(result["returncode"], 0)
-        self.assertFalse(result["error"])
-        self.assertTrue(any("warn" in line for line in result["stderr"]))
-
-    def test_command_timeout_sets_killed(self):
-        result = Console().command("sleep 5", timeout=0.3)
-        self.assertTrue(result["killed"])
-        self.assertTrue(result["error"])
-        self.assertNotEqual(result["returncode"], 0)
+def test_on_posix_is_defined():
+    assert isinstance(ON_POSIX, bool)
 
 
-if __name__ == "__main__":
-    unittest.main()
+def test_command_returns_success():
+    result = Console().command("true", timeout=2.0)
+    assert result["returncode"] == 0
+    assert result["killed"] is False
+    assert result["error"] is False
+
+
+def test_command_returns_failure():
+    result = Console().command("false", timeout=2.0)
+    assert result["returncode"] != 0
+    assert result["killed"] is False
+    assert result["error"] is True
+
+
+def test_command_stderr_without_failure_is_not_error():
+    result = Console().command("echo warn 1>&2; true", timeout=2.0)
+    assert result["returncode"] == 0
+    assert result["error"] is False
+    assert any("warn" in line for line in result["stderr"])
+
+
+def test_command_timeout_sets_killed():
+    result = Console().command("sleep 5", timeout=0.3)
+    assert result["killed"] is True
+    assert result["error"] is True
+    assert result["returncode"] != 0

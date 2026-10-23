@@ -1246,7 +1246,8 @@ overgeneral-exceptions=Exception
             if self.logger.getEffectiveLevel() == logging.DEBUG:
                 self.logger.exception("Error loading desc.json:")
             out["errors"].append(
-                'Error loading "%s". Please check file content.' % desc_json["fullpath"]
+                'Error loading "%s". Please check file content.'
+                % desc_json_info["fullpath"]
             )
             return out
 

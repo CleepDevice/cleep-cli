@@ -12,6 +12,75 @@ import re
 import datetime
 import shutil
 
+PRAGMA_NO_COVER_PATTERN = r'#\s*pragma\s*:\s*no\s+cover'
+
+
+def coverage_report_to_dict(stdout):
+    """
+    Convert coverage report text to a dict with per-file stats and score.
+
+    Args:
+        stdout (string): coverage results
+
+    Returns:
+        dict: {'files': [...], 'score': float}
+    """
+    out = {
+        'files': [],
+        'score': 0.0,
+    }
+
+    c = AdvancedConsole()
+    results = c.find_in_string(
+        stdout,
+        r'((?:/.*?)+\.py)\s+(\d+)\s+\d+\s+(\d+)%|^(TOTAL)\s+\d+\s+\d+\s+(\d+)%$',
+    )
+    for result in results:
+        groups = list(filter(None, result[1]))
+        if groups[0].startswith('TOTAL'):
+            out['score'] = int(groups[1]) / 10
+        else:
+            out['files'].append({
+                'file': groups[0],
+                'statements': int(groups[1]),
+                'coverage': int(groups[2]),
+            })
+
+    return out
+
+
+def is_file_coverage_valid(coverage_info):
+    """
+    Check if a covered file respects Cleep test practices.
+
+    Args:
+        coverage_info (dict): one entry from coverage_report_to_dict()['files']
+
+    Returns:
+        bool: False if the file is fully uncovered or abuses ``pragma: no cover``
+    """
+    if coverage_info['file'].find('__init__.py') != -1:
+        return True
+
+    if coverage_info['statements'] == 0 and coverage_info['coverage'] == 100:
+        logging.error('File "%s" fully uncovered by tests' % coverage_info['file'])
+        return False
+
+    with open(coverage_info['file']) as fdesc:
+        lines = fdesc.readlines()
+    lines_count = len(lines)
+    max_pragma = max(int(lines_count / 150), 1)
+    count_pragma = len(re.findall(PRAGMA_NO_COVER_PATTERN, '\n'.join(lines)))
+    if count_pragma > max_pragma:
+        logging.error(
+            'Number of allowed "no cover" exceed max allowed (1 per 150 source lines) in "%s"'
+            % coverage_info['file']
+        )
+        return False
+
+    return True
+
+
 class Test():
     """
     Handle test processes
@@ -25,7 +94,10 @@ class Test():
         self.__module_version = None
         self.__stderr = []
         if not os.path.exists(self.COVERAGE_PATH):
-            os.makedirs(self.COVERAGE_PATH)
+            try:
+                os.makedirs(self.COVERAGE_PATH)
+            except OSError:
+                pass
 
     def __coverage_to_dict(self, stdout):
         """
@@ -34,25 +106,7 @@ class Test():
         Args:
             stdout (string): coverage results
         """
-        out = {
-            'files': [],
-            'score': 0.0,
-        }
-
-        c = AdvancedConsole()
-        results = c.find_in_string(stdout, r'((?:/.*?)+\.py)\s+(\d+)\s+\d+\s+(\d+)%|^(TOTAL)\s+\d+\s+\d+\s+(\d+)%$')
-        for result in results:
-            groups = list(filter(None, result[1]))
-            if groups[0].startswith('TOTAL'):
-                out['score'] = int(groups[1]) / 10
-            else:
-                out['files'].append({
-                    'file': groups[0],
-                    'statements': int(groups[1]),
-                    'coverage': int(groups[2]),
-                })
-
-        return out
+        return coverage_report_to_dict(stdout)
 
     def __reset_stds(self):
         self.__stderr.clear()
