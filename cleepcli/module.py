@@ -408,70 +408,87 @@ class %(MODULE_NAME_CAPITALIZED)s(CleepModule):
 """
     TEST_DEFAULT = """#!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import unittest
 import logging
-from cleep.libs.tests import session
-from backend.%(MODULE_NAME)s import %(MODULE_NAME_CAPITALIZED)s
-from cleep.exception import InvalidParameter, MissingParameter, CommandError, Unauthorized
 from unittest.mock import Mock, patch
 
-# Unit testing is part of development: Cleep requires tested application code.
+import pytest
+
+from backend.%(MODULE_NAME)s import %(MODULE_NAME_CAPITALIZED)s
+from cleep.exception import InvalidParameter, MissingParameter, CommandError, Unauthorized
+from cleep.libs.tests.common import get_log_level
+
+# Cleep requires tested application code.
 #
-# Hybrid stack: pytest runs the suite; existing tests may stay as unittest.TestCase.
-# New tests can use pytest style (def test_... + fixtures) if preferred.
-#
-# Run from the application root (parent of backend/ and tests/), e.g.:
-#   PYTHONPATH=. python3 -m pytest tests
-#   PYTHONPATH=. python3 -m pytest tests -k test__on_configure
+# Run from the application root (parent of backend/ and tests/):
+#   python3 -m pytest tests
+#   python3 -m pytest tests -k test_get_module_config
 # Or via cleep-cli / developer app:
 #   cleep-cli modtests --module %(MODULE_NAME)s
 #
 # Import convention: from backend.%(MODULE_NAME)s import ... (no sys.path hacks).
-class Test%(MODULE_NAME_CAPITALIZED)s(unittest.TestCase):
+# The cleep_session fixture comes from tests/conftest.py.
+# Logging: DEBUG=1 / TRACE=1 / LOGLEVEL=... via get_log_level(); coverage runs stay quiet.
 
-    def setUp(self):
-        # Change here logging.DEBUG to logging.FATAL to disable logging during tests writings
-        # Note that coverage command does not display logging
-        logging.basicConfig(level=logging.DEBUG, format='%%(asctime)s %%(name)s:%%(lineno)d %%(levelname)s : %%(message)s')
-        self.session = session.TestSession(self)
+LOG_LEVEL = get_log_level()
 
-    def tearDown(self):
-        # clean session
-        self.session.clean()
 
-    def init(self, start=True):
-        \\"\\"\\"
-        Call this function at beginning of every test cases. By default it starts your app, but if you specify start=False,
-        the application must be started manually which is useful in some cases like testing _on_configure app function.
-        \\"\\"\\"
-        # next line instanciates your module, overwriting all useful stuff to isolate your module for tests
-        self.module = self.session.setup(%(MODULE_NAME_CAPITALIZED)s)
-        if start:
-            self.session.start_module(self.module)
+@pytest.fixture(autouse=True)
+def configure_logging():
+    # Runs before every test in this module (pytest equivalent of setUp).
+    logging.basicConfig(
+        level=LOG_LEVEL,
+        format='%%(asctime)s %%(name)s:%%(lineno)d %%(levelname)s : %%(message)s',
+    )
 
-    # Write your tests here defining functions starting with \\"test_\\"
-    # See official documentation https://docs.python.org/3/library/unittest.html
-    # def test__on_configure(self):
-    #   self.init(start=False)
-    #   # create your mocks...
-    #
-    #   self.module._on_configure()
-    #
-    #   # check your mocks
 
-    # Write another test. A test case always starts with \\"test_\\"
-    # def test_my_function(self):
-    #   self.init()
-    #   # create your mocks
-    #
-    #   result = self.module.my_function()
-    #
-    #   # checks your mocks or function result
+def _start_app(cleep_session, start=True):
+    # Build an isolated app instance. With start=True the module is started
+    # (configure + start). Use start=False to test _on_configure yourself.
+    module = cleep_session.setup(%(MODULE_NAME_CAPITALIZED)s)
+    if start:
+        cleep_session.start_module(module)
+    return module
 
-# Optional when running the file directly; prefer pytest from the app root.
-if __name__ == '__main__':
-    unittest.main()
-    """
+
+def test_get_module_config(cleep_session):
+    module = _start_app(cleep_session)
+
+    config = module.get_module_config()
+
+    assert isinstance(config, dict)
+
+
+def test__on_configure(cleep_session):
+    module = _start_app(cleep_session, start=False)
+    # Add mocks here if needed, e.g.:
+    # cleep_session.add_mock_command(cleep_session.make_mock_command('get_modules', data={}))
+
+    module._on_configure()
+
+    # Assert side effects (commands / events / return values):
+    # cleep_session.assert_command_called('get_modules')
+    # cleep_session.assert_event_called('system.device.delete')
+
+
+def test_my_function(cleep_session):
+    module = _start_app(cleep_session)
+    # Add mocks here if needed
+
+    result = module.my_function()
+
+    assert result is not None
+    # cleep_session.assert_command_called_with('some_command', {'key': 'value'})
+    # cleep_session.assert_event_called_with('some.event', {'key': 'value'})
+"""
+    CONFTEST_DEFAULT = """# -*- coding: utf-8 -*-
+# Provides the cleep_session fixture for module tests.
+pytest_plugins = ('cleep.libs.tests.fixtures',)
+"""
+    PYTEST_INI_DEFAULT = """[pytest]
+pythonpath = .
+testpaths = tests
+python_files = test_*.py
+"""
     DOCS_CONF_PY = """# -*- coding: utf-8 -*-
 import os, sys
 sys.path.insert(0, os.path.abspath('../'))
@@ -599,6 +616,8 @@ a:hover.icon.icon-home {
             'DESC': self.DESC_SKEL % {'MODULE_NAME': module_name, 'MODULE_NAME_CAPITALIZED': module_name.capitalize()},
             'PYTHON_MODULE': self.PYTHON_MODULE_SKEL % {'MODULE_NAME': module_name, 'MODULE_NAME_CAPITALIZED': module_name.capitalize()},
             'TEST_DEFAULT': self.TEST_DEFAULT % {'MODULE_NAME': module_name, 'MODULE_NAME_CAPITALIZED': module_name.capitalize()},
+            'CONFTEST_DEFAULT': self.CONFTEST_DEFAULT,
+            'PYTEST_INI_DEFAULT': self.PYTEST_INI_DEFAULT,
             'DOCS_CONF_PY': self.DOCS_CONF_PY % {'MODULE_NAME': module_name, 'MODULE_NAME_CAPITALIZED': module_name.capitalize()},
             'DOCS_INDEX_RST': self.DOCS_INDEX_RST % {'MODULE_NAME': module_name, 'MODULE_NAME_CAPITALIZED': module_name.capitalize(), 'TITLE': title, 'LINE': '='*len(title)},
             'DOCS_CLEEP_CSS': self.DOCS_CLEEP_CSS,
@@ -620,6 +639,8 @@ a:hover.icon.icon-home {
 /bin/echo "from gevent import monkey" > "%(MODULE_DIR)s/tests/__init__.py"
 /bin/echo "monkey.patch_all()" >> "%(MODULE_DIR)s/tests/__init__.py"
 /bin/echo "%(TEST_DEFAULT)s" > %(MODULE_DIR)s/tests/test_%(MODULE_NAME)s.py
+/bin/echo "%(CONFTEST_DEFAULT)s" > %(MODULE_DIR)s/tests/conftest.py
+/bin/echo "%(PYTEST_INI_DEFAULT)s" > %(MODULE_DIR)s/pytest.ini
 /bin/mkdir -p "%(MODULE_DIR)s/docs"
 /bin/echo "%(DOCS_CONF_PY)s" > %(MODULE_DIR)s/docs/conf.py
 /bin/echo "%(DOCS_INDEX_RST)s" > %(MODULE_DIR)s/docs/index.rst
@@ -636,6 +657,8 @@ a:hover.icon.icon-home {
             'ANGULAR_CONTROLLER_TEMPLATE': templates['ANGULAR_CONTROLLER_TEMPLATE'],
             'PYTHON_MODULE': templates['PYTHON_MODULE'],
             'TEST_DEFAULT': templates['TEST_DEFAULT'],
+            'CONFTEST_DEFAULT': templates['CONFTEST_DEFAULT'],
+            'PYTEST_INI_DEFAULT': templates['PYTEST_INI_DEFAULT'],
             'DOCS_CONF_PY': templates['DOCS_CONF_PY'],
             'DOCS_INDEX_RST': templates['DOCS_INDEX_RST'],
             'DOCS_CLEEP_CSS': templates['DOCS_CLEEP_CSS'],

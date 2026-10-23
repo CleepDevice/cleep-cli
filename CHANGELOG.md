@@ -4,7 +4,8 @@
 
 ## Changed
 
-- Replace unittest by pytest (old tests are still compatible)
+- Replace unittest by pytest for `modtests` and `coretests`
+- Scaffold new apps with pytest tests (`cleep_session` fixture), `tests/conftest.py`, and `pytest.ini`
 
 # [1.45.0] - 2026-10-23
 

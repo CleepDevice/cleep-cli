@@ -317,6 +317,14 @@ PYTHONPATH=. python3 -m pytest tests -k "%s"
         """
         return '%s/tests' % (config.CORE_SRC)
 
+    def __get_core_repo_path(self):
+        """
+        Return core repository root (parent of the ``cleep`` package).
+
+        Used as PYTHONPATH so tests can ``import cleep...`` without sys.path hacks.
+        """
+        return config.REPO_DIR
+
     def __list_core_files(self, core_path, pattern=None):
         """
         Return all python files on core with their associated tests
@@ -376,86 +384,55 @@ PYTHONPATH=. python3 -m pytest tests -k "%s"
             display_test_output (bool): display unit test output (default True)
             xml (bool): use xml coverage command instead of report command
             quiet (bool): display or not coverage.py warnings
-            pattern (str): custom pattern to filter files to process
+            pattern (str): custom pattern to filter tests (pytest -k)
 
         Returns:
             bool: True if process succeed.
         """
         start = int(time.time())
+        repo_dir = self.__get_core_repo_path()
 
-        # clear previous results
-        if self.__coverage_simple_command(self.__get_core_tests_path(), 'erase') == False:
+        # clear previous results (run from repo root where .coverage is written)
+        if self.__coverage_simple_command(repo_dir, 'erase') == False:
             self.logger.error('Unable to clear previous tests results')
             return False
 
-        # get files paths
-        core_path = config.CORE_SRC
-        files = self.__list_core_files(core_path, pattern)
-
-        # execute tests
-        self.logger.info('Running unit tests...')
-        files_on_error = []
-        files_on_success = []
+        self.logger.info('Running core unit tests (pytest)...')
+        pattern_opt = '-k "%s"' % pattern if pattern else ''
+        verbosity = '-v' if display_test_output else '-q'
+        cmd = """
+cd "%(repo_dir)s"
+PYTHONPATH=. coverage run --omit="*/lib/python*/*","*/tests/*","*test_*.py" --source=cleep --concurrency=gevent -m pytest %(verbosity)s cleep/tests %(pattern_opt)s
+        """ % {
+            'repo_dir': repo_dir,
+            'verbosity': verbosity,
+            'pattern_opt': pattern_opt,
+        }
+        self.logger.debug('Test cmd: %s' % cmd)
+        self.__endless_command_running = True
+        self.__reset_stds()
         console_callback = self.__console_callback if display_test_output else self.__quiet_console_callback
-        for filepath, test_filepath in files:
-            reduced_filepath = filepath.replace(core_path+'/', '')
-            reduced_test_filepath = test_filepath.replace(core_path+'/', '')
-            self.logger.info('')
-            self.logger.info('Testing %s using %s...', reduced_filepath, reduced_test_filepath)
+        c = EndlessConsole(cmd, console_callback, self.__console_end_callback)
+        c.start()
 
-            cmd = """
-cd "%(core_tests_path)s"
-coverage run --omit="*/lib/python*/*","*test_*.py" --concurrency=gevent --parallel-mode %(test_file)s
-            """ % {
-                'core_tests_path': self.__get_core_tests_path(),
-                'test_file': test_filepath,
-            }
-            self.logger.trace('Test cmd: %s' % cmd)
-            self.__endless_command_running = True
-            self.__reset_stds()
-            c = EndlessConsole(cmd, console_callback, self.__console_end_callback)
-            c.start()
+        while self.__endless_command_running:
+            time.sleep(0.25)
 
-            single_start = int(time.time())
-            while self.__endless_command_running:
-                time.sleep(0.25)
-
-            single_duration = str(datetime.timedelta(seconds=(int(time.time()) - single_start)))
-            self.logger.info('Duration %s' % single_duration)
-
-            if self.__endless_command_return_code!=0:
-                self.logger.debug('Command output:\n%s' % '\n'.join(self.__stderr))
-                errors, failures, exception, notest = self.__get_coverage_errors_and_failures(test_filepath)
-                files_on_error.append({
-                    'filepath': filepath,
-                    'errors': errors,
-                    'failures': failures,
-                    'exception': exception,
-                    'notest': notest,
-                })
-            else:
-                files_on_success.append({
-                    'filepath': filepath
-                })
+        success = self.__endless_command_return_code == 0
 
         # coverage
         if display_coverage:
             coverage = self.core_tests_coverage(xml=xml, quiet=quiet)
             logging.info(coverage)
 
-        # display tests report
         duration = str(datetime.timedelta(seconds=(int(time.time()) - start)))
         self.logger.info('-' * 50)
         self.logger.info('Tests report:')
         self.logger.info('  Duration: %s' % duration)
-        self.logger.info('  %d files succeed' % len(files_on_success))
-        self.logger.info('  %d files on error' % len(files_on_error))
-        if len(files_on_error) != 0:
-            for file_on_error in files_on_error:
-                self.logger.info('    - %(filepath)s: %(notest)s%(exception)s%(errors)s errors, %(failures)s failures' % file_on_error)
+        self.logger.info('  Result: %s' % ('OK' if success else 'FAILED'))
         self.logger.info('-' * 50)
 
-        return True if len(files_on_error) == 0 else False
+        return success
 
     def core_tests_coverage(self, as_json=False, xml=False, quiet=True):
         """
@@ -469,12 +446,11 @@ coverage run --omit="*/lib/python*/*","*test_*.py" --concurrency=gevent --parall
         Returns:
             string or dict according to as_json option
         """
-        # combine results
-        self.__coverage_simple_command(self.__get_core_tests_path(), 'combine', timeout=120.0, quiet=quiet)
+        repo_dir = self.__get_core_repo_path()
 
-        # report results
+        # report results (single pytest+coverage run; no combine needed)
         command = "xml" if xml else "report"
-        res = self.__coverage_simple_command(self.__get_core_tests_path(), command, "--ignore-errors", timeout=120.0, quiet=quiet)
+        res = self.__coverage_simple_command(repo_dir, command, "--ignore-errors", timeout=120.0, quiet=quiet)
         if res == False:
             raise Exception('Error generating coverage results')
 
