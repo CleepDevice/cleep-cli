@@ -1,5 +1,11 @@
 # Cleep-cli
 
+# [Unreleased]
+
+## Fixed
+
+- `coretests` / `modtests` keep short pytest failure tracebacks (`--tb=short -ra`) and no longer drop separator lines from the log
+
 # [1.45.1] - 2026-10-24
 
 ## Fixed

@@ -116,11 +116,11 @@ class Test():
             self.__stderr.append(stderr)
 
     def __console_callback(self, stdout, stderr):
-        if stdout and stdout.find('----------------------------------------------------------------------') < 0:
+        # Forward pytest/unittest output as-is so failure tracebacks stay readable in CI
+        if stdout:
             self.logger.info("  |  " + stdout)
-        if stderr and stderr.find('----------------------------------------------------------------------') < 0:
-            self.logger.info("  | " + stderr)
         if stderr:
+            self.logger.info("  | " + stderr)
             self.__stderr.append(stderr)
 
     def __console_end_callback(self, return_code, killed):
@@ -309,7 +309,7 @@ cd "%(path)s"
         """
         return """
 cd "%s"
-PYTHONPATH=. COVERAGE_FILE=%s coverage run --omit="*/lib/python*/*","*/tests/*","test_*" --source=backend --concurrency=thread -m pytest tests
+PYTHONPATH=. COVERAGE_FILE=%s coverage run --omit="*/lib/python*/*","*/tests/*","test_*" --source=backend --concurrency=thread -m pytest --tb=short -ra tests
         """ % (module_root_path, coverage_file_path)
 
     def __get_tests_cmd_with_pattern(self, module_root_path, pattern):
@@ -318,7 +318,7 @@ PYTHONPATH=. COVERAGE_FILE=%s coverage run --omit="*/lib/python*/*","*/tests/*",
         """
         return """
 cd "%s"
-PYTHONPATH=. python3 -m pytest tests -k "%s"
+PYTHONPATH=. python3 -m pytest --tb=short -ra tests -k "%s"
         """ % (module_root_path, pattern)
 
     def module_tests_coverage(self, module_name, missing=False, as_json=False, quiet=True):
@@ -403,7 +403,8 @@ PYTHONPATH=. python3 -m pytest tests -k "%s"
 
         self.logger.info('Running core unit tests (pytest)...')
         pattern_opt = '-k "%s"' % pattern if pattern else ''
-        verbosity = '-v' if display_test_output else '-q'
+        # Always keep short failure tracebacks (+ failed/error summary) so CI logs are actionable
+        verbosity = '-v --tb=short -ra' if display_test_output else '-q --tb=short -ra'
         cmd = """
 cd "%(repo_dir)s"
 PYTHONPATH=. coverage run --omit="*/lib/python*/*","*/tests/*","*test_*.py" --source=cleep --concurrency=gevent -m pytest %(verbosity)s cleep/tests %(pattern_opt)s
