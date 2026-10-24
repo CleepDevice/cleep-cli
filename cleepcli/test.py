@@ -379,7 +379,7 @@ PYTHONPATH=. python3 -m pytest --tb=short -ra tests -k "%s"
         """
         return config.REPO_DIR
 
-    def core_tests(self, display_coverage=False, display_test_output=False, xml=False, quiet=True, pattern=None):
+    def core_tests(self, display_coverage=False, display_test_output=False, xml=False, quiet=True, pattern=None, functional=False):
         """
         Execute core unit tests and display process output on stdout
 
@@ -389,6 +389,7 @@ PYTHONPATH=. python3 -m pytest --tb=short -ra tests -k "%s"
             xml (bool): use xml coverage command instead of report command
             quiet (bool): display or not coverage.py warnings
             pattern (str): custom pattern to filter tests (pytest -k)
+            functional (bool): run functional tests (real OS binaries) instead of unit tests
 
         Returns:
             bool: True if process succeed.
@@ -401,16 +402,25 @@ PYTHONPATH=. python3 -m pytest --tb=short -ra tests -k "%s"
             self.logger.error('Unable to clear previous tests results')
             return False
 
-        self.logger.info('Running core unit tests (pytest)...')
+        if functional:
+            self.logger.info('Running core functional tests (pytest, real OS binaries)...')
+            marker_opt = '-m functional'
+            env_prefix = 'CLEEP_FUNCTIONAL_TESTS=1 '
+        else:
+            self.logger.info('Running core unit tests (pytest)...')
+            marker_opt = '-m "not functional"'
+            env_prefix = ''
         pattern_opt = '-k "%s"' % pattern if pattern else ''
         # Always keep short failure tracebacks (+ failed/error summary) so CI logs are actionable
         verbosity = '-v --tb=short -ra' if display_test_output else '-q --tb=short -ra'
         cmd = """
 cd "%(repo_dir)s"
-PYTHONPATH=. coverage run --omit="*/lib/python*/*","*/tests/*","*test_*.py" --source=cleep --concurrency=gevent -m pytest %(verbosity)s cleep/tests %(pattern_opt)s
+%(env_prefix)sPYTHONPATH=. coverage run --omit="*/lib/python*/*","*/tests/*","*test_*.py" --source=cleep --concurrency=gevent -m pytest %(verbosity)s %(marker_opt)s cleep/tests %(pattern_opt)s
         """ % {
             'repo_dir': repo_dir,
+            'env_prefix': env_prefix,
             'verbosity': verbosity,
+            'marker_opt': marker_opt,
             'pattern_opt': pattern_opt,
         }
         self.logger.debug('Test cmd: %s' % cmd)

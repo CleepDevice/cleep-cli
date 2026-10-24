@@ -6,7 +6,7 @@ This utility helps developers to build Cleep applications providing some useful 
     - `coreget` to clone or pull official Cleep repository.
     - `coredocs` to generate core documentation in HTML format.
     - `coresync` to synchronize sources from repository to execution folders.
-    - `coretests` to perform core tests suite.
+    - `coretests` to perform core unit tests suite (`--functional` for real OS binary tests on device / OS migration).
     - `coretestscov` to display last core tests code coverage report.
     - `cpuprof` to run CPU profiler on application execution instance.
     - `memprof` to run memory profiler on application execution instance.

@@ -1,6 +1,10 @@
 # Cleep-cli
 
-# [Unreleased]
+# [1.46.0] - 2026-10-24
+
+## Added
+
+- `coretests --functional` runs pytest marker `functional` with `CLEEP_FUNCTIONAL_TESTS=1` (real OS binaries); default `coretests` excludes them (`-m "not functional"`)
 
 ## Fixed
 
