@@ -6,6 +6,7 @@
 
 - `EndlessConsole` always reaps its process group (Ctrl-C used to orphan coverage/pytest and freeze low-RAM boards)
 - `coretests` interrupts cleanly (Ctrl-C kills the pytest process group)
+- PyPI publish workflow: use Python 3.12 (`ubuntu-latest` is 26.04, which no longer ships 3.9)
 
 # [1.45.0] - 2026-10-23
 

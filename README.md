@@ -106,7 +106,7 @@ The [watchdog](https://pypi.org/project/watchdog/) python library is used to det
 
 ## CI (GitHub Actions)
 
-A tag `vX.Y.Z` (or a manual **workflow_dispatch**) builds a **py3** wheel + sdist on `ubuntu-latest` (Python 3.9) via `python -m build` and uploads them to PyPI.
+A tag `vX.Y.Z` (or a manual **workflow_dispatch**) builds a **py3** wheel + sdist on `ubuntu-latest` (Python 3.12) via `python -m build` and uploads them to PyPI.
 
 GitHub **environment** `actions` (Settings → Environments), secret:
 
