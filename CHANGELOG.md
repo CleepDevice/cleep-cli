@@ -5,6 +5,7 @@
 ## Added
 
 - `coretests --functional` runs pytest marker `functional` with `CLEEP_FUNCTIONAL_TESTS=1` (real OS binaries); default `coretests` excludes them (`-m "not functional"`)
+- `modtests --functional` same for apps; default `modtests` excludes `@pytest.mark.functional`; empty suite is OK
 
 ## Fixed
 

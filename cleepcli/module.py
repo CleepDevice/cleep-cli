@@ -488,6 +488,8 @@ pytest_plugins = ('cleep.libs.tests.fixtures',)
 pythonpath = .
 testpaths = tests
 python_files = test_*.py
+markers =
+    functional: real OS/device tests (CLEEP_FUNCTIONAL_TESTS / modtests --functional)
 """
     DOCS_CONF_PY = """# -*- coding: utf-8 -*-
 import os, sys

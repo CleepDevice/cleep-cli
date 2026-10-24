@@ -243,7 +243,7 @@ cd "%(path)s"
 
         return res
 
-    def module_tests(self, module_name, display_coverage=False, copy_to=None, pattern=None):
+    def module_tests(self, module_name, display_coverage=False, copy_to=None, pattern=None, functional=False):
         """
         Execute module unit tests and display process output on stdout
 
@@ -252,6 +252,7 @@ cd "%(path)s"
             display_coverage (bool): display coverage report (default False)
             copy_to (str): copy coverage file to specified path
             pattern (str): run testcase that match pattern (no coverage)
+            functional (bool): run functional tests (real OS / device) instead of unit tests
 
         Returns:
             bool: True if process succeed, False otherwise
@@ -267,11 +268,16 @@ cd "%(path)s"
         if module_version is None:
             return False
 
-        self.logger.info('Running unit tests...')
+        if functional:
+            self.logger.info('Running module functional tests...')
+        else:
+            self.logger.info('Running unit tests...')
         coverage_file_path = self.__get_coverage_file(module_name, module_version)
         module_root_path = self.__get_module_root_path(module_name)
         if pattern:
-            cmd = self.__get_tests_cmd_with_pattern(module_root_path, pattern)
+            cmd = self.__get_tests_cmd_with_pattern(module_root_path, pattern, functional=functional)
+        elif functional:
+            cmd = self.__get_functional_tests_cmd(module_root_path)
         else:
             cmd = self.__get_tests_cmd_with_coverage(module_root_path, coverage_file_path)
         self.logger.debug('Test cmd: %s' % cmd)
@@ -284,18 +290,22 @@ cd "%(path)s"
             time.sleep(0.25)
 
         # display coverage report
-        if display_coverage:
+        if display_coverage and not functional:
             self.logger.debug('Display coverage')
             self.logger.info(self.module_tests_coverage(module_name))
 
         # copy coverage file to standart location (in module tests directory) for coverage report tools
-        if copy_to:
+        if copy_to and not functional:
             if not os.path.isfile(coverage_file_path):
                 self.logger.error('Coverage file missing: %s' % coverage_file_path)
                 return False
             shutil.copyfile(coverage_file_path, os.path.join(copy_to, '.coverage'))
 
         self.logger.debug('Return code: %s' % self.__endless_command_return_code)
+        # pytest exit code 5 = no tests collected (app has no @pytest.mark.functional)
+        if functional and self.__endless_command_return_code == 5:
+            self.logger.info('No functional tests for module "%s" — OK' % module_name)
+            return True
         if self.__endless_command_return_code!=0:
             return False
 
@@ -309,16 +319,30 @@ cd "%(path)s"
         """
         return """
 cd "%s"
-PYTHONPATH=. COVERAGE_FILE=%s coverage run --omit="*/lib/python*/*","*/tests/*","test_*" --source=backend --concurrency=thread -m pytest --tb=short -ra tests
+PYTHONPATH=. COVERAGE_FILE=%s coverage run --omit="*/lib/python*/*","*/tests/*","test_*" --source=backend --concurrency=thread -m pytest --tb=short -ra -m "not functional" tests
         """ % (module_root_path, coverage_file_path)
 
-    def __get_tests_cmd_with_pattern(self, module_root_path, pattern):
+    def __get_functional_tests_cmd(self, module_root_path):
         """
-        Return cmdline to run tests matching specified pattern (no coverage).
+        Return cmdline to run module functional tests only (no coverage).
         """
         return """
 cd "%s"
-PYTHONPATH=. python3 -m pytest --tb=short -ra tests -k "%s"
+CLEEP_FUNCTIONAL_TESTS=1 PYTHONPATH=. python3 -m pytest -v --tb=short -ra -m functional tests
+        """ % module_root_path
+
+    def __get_tests_cmd_with_pattern(self, module_root_path, pattern, functional=False):
+        """
+        Return cmdline to run tests matching specified pattern (no coverage).
+        """
+        if functional:
+            return """
+cd "%s"
+CLEEP_FUNCTIONAL_TESTS=1 PYTHONPATH=. python3 -m pytest --tb=short -ra -m functional tests -k "%s"
+            """ % (module_root_path, pattern)
+        return """
+cd "%s"
+PYTHONPATH=. python3 -m pytest --tb=short -ra -m "not functional" tests -k "%s"
         """ % (module_root_path, pattern)
 
     def module_tests_coverage(self, module_name, missing=False, as_json=False, quiet=True):

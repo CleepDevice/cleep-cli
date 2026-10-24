@@ -16,7 +16,7 @@ This utility helps developers to build Cleep applications providing some useful 
     - `moddelete` to delete installed files of a module.
     - `moddocs` to generate module documentation.
     - `modsync` to synchronize sources from module folder to execution folders.
-    - `modtests` to execute module tests.
+    - `modtests` to execute module unit tests (`--functional` for real OS/device tests).
     - `modtestscov` to display last module tests code coverage report.
     - `modbuild` to create application package (.zip)
     - `modcheckback` to check app backend (python files structure and content)
