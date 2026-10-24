@@ -1,5 +1,12 @@
 # Cleep-cli
 
+# [1.45.1] - 2026-10-24
+
+## Fixed
+
+- `EndlessConsole` always reaps its process group (Ctrl-C used to orphan coverage/pytest and freeze low-RAM boards)
+- `coretests` interrupts cleanly (Ctrl-C kills the pytest process group)
+
 # [1.45.0] - 2026-10-23
 
 ## Changed

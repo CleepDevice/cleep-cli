@@ -379,56 +379,6 @@ PYTHONPATH=. python3 -m pytest tests -k "%s"
         """
         return config.REPO_DIR
 
-    def __list_core_files(self, core_path, pattern=None):
-        """
-        Return all python files on core with their associated tests
-
-        Args:
-            core_path (string): core path
-            pattern (str): custom pattern to filter files to process
-
-        Returns:
-            dict: list of files with test file path::
-
-                {
-                    python file (string): test file (string)
-                }
-
-        """
-        files = []
-        tests_path = self.__get_core_tests_path()
-
-        self.logger.info('Searching core files...')
-        for root, _, filenames in os.walk(core_path):
-            for filename in filenames:
-                # build paths
-                filepath = os.path.join(root, filename)
-                core_relative_path = root.replace('%s' % core_path, '')
-                core_relative_path = core_relative_path[1:] if core_relative_path.startswith('/') else core_relative_path
-                test_filepath = os.path.join(tests_path, core_relative_path, 'test_%s' % filename)
-
-                # drop useless files
-                if not filename.endswith('.py'):
-                    self.logger.debug('  Drop file "%s": not python file', filepath)
-                    continue
-                if filename.startswith('__init__'):
-                    self.logger.debug('  Drop file "%s": python init file', filepath)
-                    continue
-                if filename.startswith('test_'):
-                    self.logger.debug('  Drop file "%s": test file', filepath)
-                    continue
-                if root.endswith('libs/tests'):
-                    self.logger.debug('  Drop file "%s": test lib', filepath)
-                    continue
-                if pattern and not re.search(pattern, test_filepath) and not re.search(pattern, filepath):
-                    self.logger.debug('  Drop file "%s": does not match pattern %s', filepath, pattern)
-                    continue
-
-                self.logger.debug('  Found "%s" [%s]' % (filepath, test_filepath))
-                files.append((filepath, test_filepath))
-
-        return files
-
     def core_tests(self, display_coverage=False, display_test_output=False, xml=False, quiet=True, pattern=None):
         """
         Execute core unit tests and display process output on stdout
@@ -469,8 +419,15 @@ PYTHONPATH=. coverage run --omit="*/lib/python*/*","*/tests/*","*test_*.py" --so
         c = EndlessConsole(cmd, console_callback, self.__console_end_callback)
         c.start()
 
-        while self.__endless_command_running:
-            time.sleep(0.25)
+        try:
+            while self.__endless_command_running:
+                time.sleep(0.25)
+        except KeyboardInterrupt:
+            self.logger.warning('Interrupted — stopping tests...')
+            c.kill()
+            while self.__endless_command_running:
+                time.sleep(0.1)
+            raise
 
         success = self.__endless_command_return_code == 0
 
