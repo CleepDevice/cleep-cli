@@ -1,6 +1,22 @@
 # Cleep-cli
 
-# [Unreleased]
+# [1.48.0] - 2026-11-11
+
+## Added
+
+- `syncall` synchronizes core and every module under `/root/cleep-dev` to execution folders
+- `watch` runs a catch-up `syncall` before starting inotify (so writes during downtime are not missed)
+- Ship `cleep-watch.service` inside the package and manage it with `watchsvc` (`install` / `uninstall` / `enable` / `disable` / `start` / `stop` / `restart` / `status`)
+
+## Changed
+
+- Prefer `cleep-cli watchsvc restart` / `cleep-cli syncall` as the reliable resync path for development
+
+## Fixed
+
+- Ignore module-root docs (`CHANGELOG.md`, `README.md`, …) in the watcher so they do not create noise
+
+# [1.47.0] - 2026-11-08
 
 ## Added
 

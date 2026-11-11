@@ -131,6 +131,13 @@ def test_module_frontend_is_queued(handler):
     )
 
 
+def test_module_changelog_is_ignored(handler):
+    h, executor = handler
+    path = os.path.join(config.MODULES_SRC, "audio", "CHANGELOG.md")
+    h.on_any_event(FileModifiedEvent(path))
+    executor.note_change.assert_not_called()
+
+
 def test_created_git_directory_is_not_watched(handler):
     h, executor = handler
     h.observer = Mock()

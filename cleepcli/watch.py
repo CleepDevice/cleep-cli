@@ -18,6 +18,7 @@ from watchdog.events import (
 import watchdog.events as events
 from .cleepapi import CleepApi
 from .file import File
+from .watchsvc import WATCH_SERVICE
 
 _WATCHED_EVENT_TYPES = (
     EVENT_TYPE_CREATED,
@@ -206,6 +207,11 @@ class CleepHandler(FileSystemEventHandler):
     REJECTED_FILENAMES = [
         "4913",  # vim furtive temp file to check user permissions
         ".gitignore",
+        # Module-root docs are not synced by module_sync; ignore to avoid noise.
+        "CHANGELOG.md",
+        "README.md",
+        "LICENSE",
+        "COPYING",
     ]
     REJECTED_EXTENSIONS = [
         ".swp",  # vim
@@ -521,28 +527,44 @@ class CleepWatchdog:
     Cleep core and module watchdog
     """
 
-    def __init__(self, rpc_url):
+    def __init__(self, rpc_url, catch_up=True):
         """
         Constructor
 
         Args:
             rpc_url (str): Cleep RPC url
+            catch_up (bool): when True, sync core + all modules before watching
+                so files written while the watcher was down are not missed
         """
         self.logger = logging.getLogger(self.__class__.__name__)
         self.actions_executor = ActionsExecutor(rpc_url)
+        self.catch_up = catch_up
 
     def watch(self):
         """
         Start watchdog that monitors filesystem changes on Cleep sources
         """
         path = "%s/" % config.REPO_DIR
-        self.actions_executor.start()
 
         if not os.path.exists(path):
             self.logger.error(
                 'Please get Cleep sources using "cleep-cli getcore" command'
             )
             return False
+
+        # Catch-up before inotify: Desktop (or editors) may have written while
+        # this process was stopped (cleep restart, create-app pause, boot).
+        if self.catch_up:
+            self.logger.info("Catch-up sync before watching...")
+            if not File().sync_all():
+                self.logger.error(
+                    "Catch-up sync failed; fix errors then retry "
+                    "(cleep-cli syncall / systemctl restart %s)",
+                    WATCH_SERVICE,
+                )
+                return False
+
+        self.actions_executor.start()
 
         event_handler = CleepHandler(self.actions_executor)
         observer = Observer()

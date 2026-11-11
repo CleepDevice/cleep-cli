@@ -7,3 +7,4 @@ include setup.cfg
 include MANIFEST.in
 recursive-include bin *
 recursive-include cleepcli *.py
+recursive-include cleepcli/systemd *

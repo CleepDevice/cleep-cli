@@ -39,6 +39,7 @@ setup(
     maintainer_email="tanguy.bonneau@gmail.com",
     url="https://github.com/CleepDevice/cleep-cli",
     packages=["cleepcli"],
+    package_data={"cleepcli": ["systemd/cleep-watch.service"]},
     include_package_data=True,
     install_requires=get_requirements(),
     python_requires=">=3.7",

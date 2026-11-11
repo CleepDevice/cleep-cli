@@ -60,6 +60,51 @@ rsync -av "%(REPO_DIR)s/medias/sounds" "%(MEDIA_DST)s/sounds/" --delete
 
         return True
 
+    def list_modules(self):
+        """
+        List module folder names under MODULES_SRC (skips hidden dirs).
+
+        Returns:
+            list: sorted module names
+        """
+        if not os.path.isdir(config.MODULES_SRC):
+            return []
+        names = []
+        try:
+            for name in os.listdir(config.MODULES_SRC):
+                if name.startswith("."):
+                    continue
+                path = os.path.join(config.MODULES_SRC, name)
+                if os.path.isdir(path):
+                    names.append(name)
+        except OSError as error:
+            self.logger.error("Unable to list modules: %s", error)
+            return []
+        return sorted(names)
+
+    def sync_all(self):
+        """
+        Synchronize core and every module from REPO_DIR to execution folders.
+
+        Used as watch catch-up on start and by the ``syncall`` CLI command so a
+        full resync is always one explicit action away.
+
+        Returns:
+            bool: True if every sync succeeded
+        """
+        self.logger.info("Synchronizing core sources...")
+        if not self.core_sync():
+            return False
+
+        modules = self.list_modules()
+        for module_name in modules:
+            self.logger.info('Synchronizing module "%s" sources...', module_name)
+            if not self.module_sync(module_name):
+                return False
+
+        self.logger.info("Sync all done (%d module(s))", len(modules))
+        return True
+
     def module_sync(self, module_name, backend=True, frontend=True, scripts=True):
         """
         Copy specified module content to valid execution location

@@ -1,0 +1,18 @@
+[Unit]
+Description=Cleep development source watcher (cleep-cli watch)
+Documentation=https://github.com/CleepDevice/cleep-cli
+# Independent from cleep.service so backend restarts do not kill the watcher
+# mid-sync (Desktop writes would otherwise be missed until the next edit).
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/cleep-cli watch --loglevel=20
+Restart=always
+RestartSec=3
+# Allow a long catch-up sync on start before the main loop
+TimeoutStartSec=180
+
+[Install]
+WantedBy=multi-user.target

@@ -25,7 +25,9 @@ This utility helps developers to build Cleep applications providing some useful 
     - `modcheckscripts` to check app scripts files
     - `modcheckcode` to check backend code quality (run pylint)
 - Watch commands:
-    - `watch` to watch for repository filesystem changes and automatically update files on execution folders. It also restart backend or/and frontend according to changes.
+    - `watch` to watch for repository filesystem changes and automatically update files on execution folders. It also restart backend or/and frontend according to changes (catch-up sync on start).
+    - `watchsvc` to install/enable/disable/restart the durable `cleep-watch` systemd unit (runs `watch` outside `cleep.service`).
+    - `syncall` to force a one-shot sync of core + all modules (same catch-up as watch start).
 - Misc commands:
     - `version` to get cleep-cli version
 
@@ -49,9 +51,23 @@ Execute this command to get help on this cli:
 
 ## Watch usage
 
-Launch `watch` cli command to monitor changes on "/root/cleep-dev" directory after getting official Cleep repository using `coreget` command.
+Preferred: let the CLI own the durable systemd unit:
 
-Then open your favorite editor on your development computer, configure a remote sync plugin to push local changes on your raspberry pi then cleep-cli will synchronize sources on Cleep execution environment and restart application automatically.
+```
+cleep-cli watchsvc install
+cleep-cli watchsvc enable
+```
+
+The unit runs `cleep-cli watch`, survives `systemctl restart cleep`, and on each start performs a catch-up `syncall` so files written while the watcher was down are applied.
+
+Manual one-shot resync (when the UI looks stale):
+
+```
+cleep-cli syncall
+cleep-cli watchsvc restart   # catch-up again + resume watch
+```
+
+You can still run `cleep-cli watch` in a terminal for debugging. Push sources to `/root/cleep-dev` (CleepDesktop developer sync or SFTP); the watcher copies them into the execution folders and restarts backend/frontend as needed.
 
 ### Paths
 

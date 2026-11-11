@@ -17,6 +17,7 @@ from cleepcli.git import Git
 from cleepcli.module import Module
 from cleepcli.file import File
 from cleepcli.watch import CleepWatchdog
+from cleepcli.watchsvc import WatchService
 from cleepcli.test import Test, is_file_coverage_valid
 from cleepcli.package import Package
 from cleepcli.docs import Docs
@@ -107,6 +108,18 @@ def coresync():
     if not res:
         sys.exit(1)
     logging.info('Done')
+
+@core.command()
+def syncall():
+    """
+    Synchronize core and all modules from /root/cleep-dev to execution folders.
+
+    Same catch-up used when cleep-watch.service starts. Safe one-shot resync when
+    the UI looks stale: run this, then reload the device page.
+    """
+    f = File()
+    if not f.sync_all():
+        sys.exit(1)
 
 @core.command()
 @click.option('--coverage', is_flag=True, help='Display coverage report.')
@@ -358,9 +371,13 @@ def watchdog():
 @click.option('--quiet', is_flag=True, help='Disable logging.')
 @click.option('--loglevel', default=logging.INFO, help='Logging level (10=DEBUG, 20=INFO, 30=WARN, 40=ERROR).')
 @click.option('--rpc-url', default='https://127.0.0.1:443', help='Cleep RPC url (ex https://ip|host:port')
-def watch(quiet, loglevel, rpc_url):
+@click.option('--skip-catchup', is_flag=True, help='Do not syncall before watching (not recommended).')
+def watch(quiet, loglevel, rpc_url, skip_catchup):
     """
-    Start watchdog that monitors filesystem changes on Cleep sources
+    Start watchdog that monitors filesystem changes on Cleep sources.
+
+    Prefer managing the durable unit with watchsvc (survives Cleep restarts).
+    On start, syncs core + all modules once unless --skip-catchup is set.
     """
     if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
         # do not overwrite root logger level if configured to DEBUG (dev mode)
@@ -369,11 +386,49 @@ def watch(quiet, loglevel, rpc_url):
         logging.disable(logging.CRITICAL)
     else:
         logging.getLogger().setLevel(loglevel)
-        
-    w = CleepWatchdog(rpc_url)
+
+    w = CleepWatchdog(rpc_url, catch_up=not skip_catchup)
     res = w.watch()
 
     if not res:
+        sys.exit(1)
+
+@watchdog.command('watchsvc')
+@click.argument(
+    'action',
+    type=click.Choice(
+        ['install', 'uninstall', 'enable', 'disable', 'start', 'stop', 'restart', 'status']
+    ),
+)
+def watchsvc_cmd(action):
+    """
+    Manage the durable cleep-watch systemd unit.
+
+    ACTION is one of: install, uninstall, enable, disable, start, stop, restart, status.
+
+    The unit runs ``cleep-cli watch`` outside of cleep.service. Typical setup::
+
+        cleep-cli watchsvc install
+        cleep-cli watchsvc enable
+    """
+    svc = WatchService()
+    handlers = {
+        'install': svc.install,
+        'uninstall': svc.uninstall,
+        'enable': svc.enable,
+        'disable': svc.disable,
+        'start': svc.start,
+        'stop': svc.stop,
+        'restart': svc.restart,
+    }
+    if action == 'status':
+        status = svc.status()
+        logging.info(status)
+        if status != 'active':
+            sys.exit(1)
+        return
+
+    if not handlers[action]():
         sys.exit(1)
 
 @click.group()
