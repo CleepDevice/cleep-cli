@@ -18,10 +18,10 @@ jobs:
         # Required so PYPI_API_TOKEN is loaded (environment secret, not repo secret).
         environment: actions
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v7
 
             - name: Set up Python
-              uses: actions/setup-python@v5
+              uses: actions/setup-python@v6
               with:
                   # ubuntu-latest is 26.04+: CPython 3.9 builds are no longer published there
                   python-version: "3.12"

@@ -165,6 +165,9 @@ class ActionsExecutor(Thread):
                 self.logger.error("Sync failed, Cleep was not restarted")
                 self.cleep.notify_sync_failed()
                 return
+            # Always mint a fresh asset bust before UI reload so Chrome/Electron
+            # cannot reuse ?cleepversion / max-age=3600 core scripts.
+            self.cleep.ensure_frontend_nocache()
             if batch.backend:
                 # Backend restart drops the UI connection. The page reloads on its own
                 # once Cleep answers again, with the frontend files already synced.
@@ -563,6 +566,9 @@ class CleepWatchdog:
                     WATCH_SERVICE,
                 )
                 return False
+            # Files may have landed while Cleep/UI were up with an old bust token.
+            self.actions_executor.cleep.ensure_frontend_nocache()
+            self.actions_executor.cleep.restart_frontend()
 
         self.actions_executor.start()
 

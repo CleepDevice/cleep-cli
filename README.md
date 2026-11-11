@@ -27,7 +27,7 @@ This utility helps developers to build Cleep applications providing some useful 
 - Watch commands:
     - `watch` to watch for repository filesystem changes and automatically update files on execution folders. It also restart backend or/and frontend according to changes (catch-up sync on start).
     - `watchsvc` to install/enable/disable/restart the durable `cleep-watch` systemd unit (runs `watch` outside `cleep.service`).
-    - `syncall` to force a one-shot sync of core + all modules (same catch-up as watch start).
+    - `syncall` to force a one-shot sync of core + all modules, disable static cache, and reload the UI.
 - Misc commands:
     - `version` to get cleep-cli version
 
@@ -60,7 +60,7 @@ cleep-cli watchsvc enable
 
 The unit runs `cleep-cli watch`, survives `systemctl restart cleep`, and on each start performs a catch-up `syncall` so files written while the watcher was down are applied.
 
-Manual one-shot resync (when the UI looks stale):
+Manual one-shot resync (when the UI looks stale) — `syncall` also mints a fresh asset bust and reloads the device UI:
 
 ```
 cleep-cli syncall

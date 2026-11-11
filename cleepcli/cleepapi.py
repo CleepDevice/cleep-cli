@@ -243,6 +243,32 @@ class CleepApi():
             return False
         return True
 
+    def ensure_frontend_nocache(self):
+        """
+        Disable RPC static cache and mint a fresh asset bust token.
+
+        Safe to call repeatedly; used after syncall / frontend watch batches so
+        the browser cannot keep stale core or module JS.
+        """
+        data = {
+            'to': 'inventory',
+            'command': 'bump_rpc_asset_cache',
+            'params': {},
+        }
+        result = self.__post(self.command_url, data)
+        if not result or result[0] != 200:
+            # Older cores only expose set_rpc_cache_control
+            data = {
+                'to': 'inventory',
+                'command': 'set_rpc_cache_control',
+                'params': {'cache_enabled': False},
+            }
+            result = self.__post(self.command_url, data)
+            if not result or result[0] != 200:
+                self.logger.debug('Unable to disable frontend static cache')
+                return False
+        return True
+
     def notify_sync_started(self):
         """
         Tell the developer UI a watch sync is starting.

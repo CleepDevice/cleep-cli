@@ -1,5 +1,13 @@
 # Cleep-cli
 
+# [1.48.1] - 2026-11-11
+
+## Added
+
+- `ensure_frontend_nocache` RPC helper (bump asset bust / disable static cache)
+- After catch-up and after every successful sync batch, mint a fresh frontend asset bust
+- `syncall` disables static cache and reloads the UI so the device page cannot keep stale JS
+
 # [1.48.0] - 2026-11-11
 
 ## Added

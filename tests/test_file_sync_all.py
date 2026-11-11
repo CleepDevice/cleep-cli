@@ -57,17 +57,22 @@ def test_watch_catch_up_calls_sync_all():
         "cleepcli.watch.CleepHandler"
     ) as handler_cls, patch(
         "cleepcli.watch.ActionsExecutor"
-    ), patch(
+    ) as executor_cls, patch(
         "cleepcli.watch.time.sleep", side_effect=KeyboardInterrupt
     ):
         file_cls.return_value.sync_all.return_value = True
         handler = handler_cls.return_value
         handler._watched = {"/tmp"}
         handler.schedule_all = Mock()
+        executor = executor_cls.return_value
+        executor.cleep.ensure_frontend_nocache = Mock(return_value=True)
+        executor.cleep.restart_frontend = Mock(return_value=True)
 
         watchdog = CleepWatchdog("https://127.0.0.1:443", catch_up=True)
         assert watchdog.watch() is True
         file_cls.return_value.sync_all.assert_called_once_with()
+        executor.cleep.ensure_frontend_nocache.assert_called_once_with()
+        executor.cleep.restart_frontend.assert_called_once_with()
 
 
 def test_watch_skip_catch_up():
@@ -79,13 +84,18 @@ def test_watch_skip_catch_up():
         "cleepcli.watch.CleepHandler"
     ) as handler_cls, patch(
         "cleepcli.watch.ActionsExecutor"
-    ), patch(
+    ) as executor_cls, patch(
         "cleepcli.watch.time.sleep", side_effect=KeyboardInterrupt
     ):
         handler = handler_cls.return_value
         handler._watched = {"/tmp"}
         handler.schedule_all = Mock()
+        executor = executor_cls.return_value
+        executor.cleep.ensure_frontend_nocache = Mock()
+        executor.cleep.restart_frontend = Mock()
 
         watchdog = CleepWatchdog("https://127.0.0.1:443", catch_up=False)
         assert watchdog.watch() is True
         file_cls.return_value.sync_all.assert_not_called()
+        executor.cleep.ensure_frontend_nocache.assert_not_called()
+        executor.cleep.restart_frontend.assert_not_called()

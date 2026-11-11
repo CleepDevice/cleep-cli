@@ -114,12 +114,18 @@ def syncall():
     """
     Synchronize core and all modules from /root/cleep-dev to execution folders.
 
-    Same catch-up used when cleep-watch.service starts. Safe one-shot resync when
-    the UI looks stale: run this, then reload the device page.
+    Same catch-up used when cleep-watch.service starts. Also disables frontend
+    static cache, mints a new asset bust, and reloads the UI so the device page
+    cannot keep stale JS.
     """
+    from cleepcli.cleepapi import CleepApi
+
     f = File()
     if not f.sync_all():
         sys.exit(1)
+    api = CleepApi(None)
+    api.ensure_frontend_nocache()
+    api.restart_frontend()
 
 @core.command()
 @click.option('--coverage', is_flag=True, help='Display coverage report.')
