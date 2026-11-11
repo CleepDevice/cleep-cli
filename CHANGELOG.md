@@ -8,6 +8,13 @@
 - After catch-up and after every successful sync batch, mint a fresh frontend asset bust
 - `syncall` disables static cache and reloads the UI so the device page cannot keep stale JS
 
+## Changed
+
+- Shared deps (`requests`, `passlib`, `coverage`, `psutil`) use permissive ranges; exact pins stay owned by Cleep / cleepapp-system
+- `semver` relaxed to `>=3.0.0,<4.0.0`
+- `requests` floor raised to `>=2.32.5` (aligned with Cleep Python 3.9 security bump)
+
+
 # [1.48.0] - 2026-11-11
 
 ## Added
