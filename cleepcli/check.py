@@ -1497,6 +1497,50 @@ overgeneral-exceptions=Exception
         """
         return self._check_module_tree(module_name, "asset")
 
+    def check_firmwares(self, module_name):
+        """
+        Validate optional ``firmwares/`` zip+sidecar ``.manifest`` pairs and list
+        files for packaging (see ``cleep.libs.internals.firmware_manifest``).
+
+        Returns:
+            dict: errors / warnings / files (same shape as check_scripts)
+        """
+        if not os.path.exists(os.path.join(config.MODULES_DST, module_name)):
+            raise Exception('Module "%s" does not exist' % module_name)
+
+        firmwares_path = os.path.join(config.MODULES_SRC, module_name, "firmwares")
+        out = {
+            "errors": [],
+            "warnings": [],
+            "files": [],
+        }
+        if not os.path.isdir(firmwares_path):
+            return out
+
+        try:
+            from cleep.libs.internals.firmware_manifest import (
+                FirmwareManifestError,
+                scan_firmwares_dir,
+            )
+        except ImportError:
+            out["errors"].append(
+                "Unable to import cleep.libs.internals.firmware_manifest "
+                "(is Cleep core available on PYTHONPATH?)"
+            )
+            return out
+
+        try:
+            scan_firmwares_dir(firmwares_path)
+        except FirmwareManifestError as error:
+            out["errors"].append(str(error))
+            return out
+
+        # Include valid pairs in the package file list
+        tree = self._check_module_tree(module_name, "firmwares")
+        out["files"] = tree["files"]
+        out["warnings"] = tree["warnings"]
+        return out
+
     def check_tests(self, module_name):
         """
         Check test files

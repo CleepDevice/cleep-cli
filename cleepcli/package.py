@@ -516,6 +516,12 @@ sha256sum $DEB > $SHA256
                 "Error in asset/. Fix it before packaging application: %s"
                 % data_asset["errors"]
             )
+        data_firmwares = check.check_firmwares(module_name)
+        if len(data_firmwares["errors"]) > 0:
+            raise Exception(
+                "Error in firmwares/. Fix it before packaging application: %s"
+                % data_firmwares["errors"]
+            )
         data_tests = check.check_tests(module_name)
         if len(data_tests["errors"]) > 0:
             raise Exception(
@@ -627,6 +633,10 @@ sha256sum $DEB > $SHA256
         for a_file in data_bin["files"]:
             archive.write(a_file["fullpath"], a_file["path"])
         for a_file in data_asset["files"]:
+            archive.write(a_file["fullpath"], a_file["path"])
+
+        # add firmwares/ (zip + sidecar .manifest; installer copies to APP_FIRMWARE)
+        for a_file in data_firmwares["files"]:
             archive.write(a_file["fullpath"], a_file["path"])
 
         # add module.json

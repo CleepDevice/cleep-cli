@@ -1,5 +1,11 @@
 # Cleep-cli
 
+# [Unreleased]
+
+## Added
+
+- Implement firwmare feature for raspberry pi pico
+
 # [1.46.0] - 2026-10-24
 
 ## Added
