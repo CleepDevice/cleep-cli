@@ -23,6 +23,7 @@ from cleepcli.package import Package
 from cleepcli.docs import Docs
 from cleepcli.check import Check
 from cleepcli.ci import Ci
+from cleepcli.pico import Pico, PicoError
 import cleepcli.config as config
 from cleepcli.version import VERSION
 
@@ -114,9 +115,8 @@ def syncall():
     """
     Synchronize core and all modules from /root/cleep-dev to execution folders.
 
-    Same catch-up used when cleep-watch.service starts. Also disables frontend
-    static cache, mints a new asset bust, and reloads the UI so the device page
-    cannot keep stale JS.
+    Same catch-up used when cleep-watch.service starts. Disables frontend static
+    cache, then restarts the Cleep backend so Python modules (not only JS) reload.
     """
     from cleepcli.cleepapi import CleepApi
 
@@ -125,7 +125,10 @@ def syncall():
         sys.exit(1)
     api = CleepApi(None)
     api.ensure_frontend_nocache()
-    api.restart_frontend()
+    # Backend restart is required: sync_all updates on-disk apps, but a
+    # frontend-only reload would keep stale Python RPC commands in memory.
+    if not api.restart_backend():
+        sys.exit(1)
 
 @core.command()
 @click.option('--coverage', is_flag=True, help='Display coverage report.')
@@ -406,7 +409,12 @@ def watch(quiet, loglevel, rpc_url, skip_catchup):
         ['install', 'uninstall', 'enable', 'disable', 'start', 'stop', 'restart', 'status']
     ),
 )
-def watchsvc_cmd(action):
+@click.option(
+    '--restart-if-active',
+    is_flag=True,
+    help='With install: restart the unit if it is already running (pick up a new cleep-cli).',
+)
+def watchsvc_cmd(action, restart_if_active):
     """
     Manage the durable cleep-watch systemd unit.
 
@@ -416,17 +424,12 @@ def watchsvc_cmd(action):
 
         cleep-cli watchsvc install
         cleep-cli watchsvc enable
+
+    After upgrading cleep-cli (pip), restart the watcher so it loads the new code::
+
+        cleep-cli watchsvc restart
     """
     svc = WatchService()
-    handlers = {
-        'install': svc.install,
-        'uninstall': svc.uninstall,
-        'enable': svc.enable,
-        'disable': svc.disable,
-        'start': svc.start,
-        'stop': svc.stop,
-        'restart': svc.restart,
-    }
     if action == 'status':
         status = svc.status()
         logging.info(status)
@@ -434,7 +437,19 @@ def watchsvc_cmd(action):
             sys.exit(1)
         return
 
-    if not handlers[action]():
+    if action == 'install':
+        ok = svc.install(restart_if_active=restart_if_active)
+    else:
+        handlers = {
+            'uninstall': svc.uninstall,
+            'enable': svc.enable,
+            'disable': svc.disable,
+            'start': svc.start,
+            'stop': svc.stop,
+            'restart': svc.restart,
+        }
+        ok = handlers[action]()
+    if not ok:
         sys.exit(1)
 
 @click.group()
@@ -935,14 +950,172 @@ def cicorecheckversion():
         sys.exit(1)
 
 
+@click.group()
+def pico():
+    """Raspberry Pi Pico SDK and UF2 firmware builds."""
+    pass
+
+
+@click.group()
+def pico_sdk():
+    """Install / update / remove the shared Pico SDK."""
+    pass
+
+
+@pico_sdk.command('install')
+@click.option('--json', 'as_json', is_flag=True, help='Print JSON metadata.')
+def pico_sdk_install(as_json):
+    """Install toolchain packages and clone the Pico SDK."""
+    try:
+        meta = Pico().sdk_install()
+    except PicoError as error:
+        logging.error(str(error))
+        sys.exit(1)
+    if as_json:
+        click.echo(json.dumps(meta, indent=2))
+    else:
+        logging.info(
+            'SDK installed=%s version=%s revision=%s toolchain_ok=%s',
+            meta.get('installed'),
+            meta.get('version'),
+            meta.get('revision'),
+            meta.get('toolchain_ok'),
+        )
+
+
+@pico_sdk.command('update')
+@click.option('--json', 'as_json', is_flag=True, help='Print JSON metadata.')
+def pico_sdk_update(as_json):
+    """Update the Pico SDK checkout."""
+    try:
+        meta = Pico().sdk_update()
+    except PicoError as error:
+        logging.error(str(error))
+        sys.exit(1)
+    if as_json:
+        click.echo(json.dumps(meta, indent=2))
+    else:
+        logging.info(
+            'SDK updated version=%s revision=%s',
+            meta.get('version'),
+            meta.get('revision'),
+        )
+
+
+@pico_sdk.command('uninstall')
+@click.option('--json', 'as_json', is_flag=True, help='Print JSON metadata.')
+def pico_sdk_uninstall(as_json):
+    """Remove the Pico SDK (keeps apt toolchain packages)."""
+    try:
+        meta = Pico().sdk_uninstall()
+    except PicoError as error:
+        logging.error(str(error))
+        sys.exit(1)
+    if as_json:
+        click.echo(json.dumps(meta, indent=2))
+    else:
+        logging.info('Pico SDK uninstalled')
+
+
+@pico_sdk.command('info')
+@click.option('--json', 'as_json', is_flag=True, help='Print JSON metadata.')
+def pico_sdk_info(as_json):
+    """Show Pico SDK install status."""
+    meta = Pico().sdk_info()
+    if as_json:
+        click.echo(json.dumps(meta, indent=2))
+    else:
+        logging.info(
+            'installed=%s path=%s version=%s revision=%s updated_at=%s toolchain_ok=%s',
+            meta.get('installed'),
+            meta.get('path'),
+            meta.get('version'),
+            meta.get('revision'),
+            meta.get('updated_at'),
+            meta.get('toolchain_ok'),
+        )
+
+
+@pico.command('build')
+@click.option('--module', required=True, help='Module name.')
+@click.option('--firmware', default=None, help='Firmware slug (default: all uf2).')
+@click.option('--json', 'as_json', is_flag=True, help='Print JSON result.')
+def pico_build(module, firmware, as_json):
+    """Compile UF2 firmwares for a module (writes firmwares/<slug>/.build/)."""
+    try:
+        result = Pico().build_firmware(module, slug=firmware)
+    except PicoError as error:
+        logging.error(str(error))
+        sys.exit(1)
+    if as_json:
+        click.echo(json.dumps(result, indent=2))
+    else:
+        logging.info('Built %s UF2 firmware(s)', result.get('count'))
+
+
+@pico.command('status')
+@click.option('--module', required=True, help='Module name.')
+@click.option('--json', 'as_json', is_flag=True, help='Print JSON result.')
+def pico_status(module, as_json):
+    """Show UF2 build freshness for a module's firmwares."""
+    try:
+        result = Pico().status(module)
+    except PicoError as error:
+        logging.error(str(error))
+        sys.exit(1)
+    if as_json:
+        click.echo(json.dumps(result, indent=2))
+    else:
+        logging.info(
+            'uf2_ready=%s count=%s',
+            result.get('uf2_ready'),
+            result.get('count'),
+        )
+        for item in result.get('items') or []:
+            logging.info(
+                '  %s [%s] %s — %s',
+                item.get('slug'),
+                item.get('kind'),
+                item.get('status'),
+                item.get('message'),
+            )
+        for msg in result.get('uf2_blocking') or []:
+            logging.warning('blocking: %s', msg)
+
+
+pico.add_command(pico_sdk, name='sdk')
+
+
 def print_version(ctx, param, value):
     if not value or ctx.resilient_parsing:
         return
     click.echo('cleep-cli version %s' % VERSION)
     ctx.exit()
 
+
+class CleepCliCollection(click.CommandCollection):
+    """
+    Flatten legacy command groups, but keep ``pico`` nested
+    (``cleep-cli pico sdk install``, ``cleep-cli pico build``, …).
+    """
+
+    def list_commands(self, ctx):
+        names = list(click.CommandCollection.list_commands(self, ctx))
+        if 'pico' not in names:
+            names.append('pico')
+        return names
+
+    def get_command(self, ctx, cmd_name):
+        if cmd_name == 'pico':
+            return pico
+        return click.CommandCollection.get_command(self, ctx, cmd_name)
+
+
 # https://github.com/pallets/click/issues/341
-@click.command(cls=click.CommandCollection, sources=[core, mod, watchdog, test, package, docs, check, ci])
+@click.command(
+    cls=CleepCliCollection,
+    sources=[core, mod, watchdog, test, package, docs, check, ci],
+)
 @click.option('--version', is_flag=True, callback=print_version, expose_value=False, is_eager=True)
 def cli():
     pass

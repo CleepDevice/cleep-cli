@@ -48,9 +48,31 @@ class WatchService:
     def _daemon_reload(self):
         return self._ok(self._systemctl("daemon-reload"))
 
-    def install(self):
+    def _unit_content_changed(self, src):
+        """
+        Return True when bundled unit differs from the installed unit (or missing).
+        """
+        if not os.path.isfile(WATCH_UNIT_DST):
+            return True
+        try:
+            with open(src, "rb") as handle:
+                new = handle.read()
+            with open(WATCH_UNIT_DST, "rb") as handle:
+                old = handle.read()
+        except OSError:
+            return True
+        return new != old
+
+    def install(self, restart_if_active=False):
         """
         Copy the bundled unit to systemd and reload the daemon.
+
+        Args:
+            restart_if_active (bool): when True, restart the unit if it is
+                already running so a new cleep-cli binary/unit is picked up.
+                Default False: developer ``ensure`` calls install on every
+                Cleep start and must not bounce the watcher (catch-up would
+                restart Cleep again).
 
         Returns:
             bool: True on success
@@ -59,6 +81,8 @@ class WatchService:
         if not os.path.isfile(src):
             self.logger.error("Bundled unit not found: %s", src)
             return False
+        unit_changed = self._unit_content_changed(src)
+        was_active = self.is_active()
         try:
             os.makedirs(os.path.dirname(WATCH_UNIT_DST), exist_ok=True)
             shutil.copyfile(src, WATCH_UNIT_DST)
@@ -69,6 +93,13 @@ class WatchService:
             self.logger.error("systemctl daemon-reload failed after install")
             return False
         self.logger.info("Installed %s", WATCH_UNIT_DST)
+        # Restart when asked (package upgrade) or when the unit file changed
+        # while the service was already running.
+        if was_active and (restart_if_active or unit_changed):
+            self.logger.info(
+                "Restarting %s to apply watcher changes", WATCH_SERVICE
+            )
+            return self.restart()
         return True
 
     def uninstall(self):

@@ -58,3 +58,14 @@ DOCS_PROJECT_NAME = 'Cleep core'
 CORE_VERSION = get_core_version_from_sources(REPO_DIR)
 
 CONFIG_DIR = '/etc/cleep'
+
+# Raspberry Pi Pico SDK (shared install for cleep-cli pico build)
+PICO_SDK_DIR = '/var/opt/cleep/pico-sdk'
+PICO_SDK_META = '/var/opt/cleep/pico-sdk.json'
+PICO_SDK_REPO = 'https://github.com/raspberrypi/pico-sdk.git'
+PICO_TOOLCHAIN_PACKAGES = (
+    'cmake',
+    'gcc-arm-none-eabi',
+    'libnewlib-arm-none-eabi',
+    'libstdc++-arm-none-eabi-newlib',
+)

@@ -234,6 +234,9 @@ class CleepHandler(FileSystemEventHandler):
         "__pycache__",
         "node_modules",
         "tests",
+        # Pico firmware build artefacts (cleep-cli pico build / packaging)
+        ".build",
+        ".dist",
     ]
 
     def __init__(self, actions_executor):
@@ -566,9 +569,15 @@ class CleepWatchdog:
                     WATCH_SERVICE,
                 )
                 return False
-            # Files may have landed while Cleep/UI were up with an old bust token.
+            # sync_all refreshes on-disk module backends; a frontend-only reload
+            # would leave Python commands/events stale in the running process.
             self.actions_executor.cleep.ensure_frontend_nocache()
-            self.actions_executor.cleep.restart_frontend()
+            if not self.actions_executor.cleep.restart_backend():
+                self.logger.error(
+                    "Catch-up synced files but failed to restart Cleep; "
+                    "run: systemctl restart cleep"
+                )
+                return False
 
         self.actions_executor.start()
 

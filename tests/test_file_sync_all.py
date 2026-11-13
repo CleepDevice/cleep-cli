@@ -48,8 +48,40 @@ def test_sync_all_stops_on_core_failure():
     f.module_sync.assert_not_called()
 
 
-def test_watch_catch_up_calls_sync_all():
+def _import_watch_with_fake_watchdog():
+    """Import cleepcli.watch even when the watchdog package is unavailable."""
+    import sys
+    import types
+
+    if "watchdog" not in sys.modules:
+        watchdog_mod = types.ModuleType("watchdog")
+        observers = types.ModuleType("watchdog.observers")
+        events = types.ModuleType("watchdog.events")
+
+        class _Observer:
+            pass
+
+        class _FileSystemEventHandler:
+            pass
+
+        observers.Observer = _Observer
+        events.FileSystemEventHandler = _FileSystemEventHandler
+        events.EVENT_TYPE_CREATED = "created"
+        events.EVENT_TYPE_DELETED = "deleted"
+        events.EVENT_TYPE_MODIFIED = "modified"
+        events.EVENT_TYPE_MOVED = "moved"
+        events.DirModifiedEvent = type("DirModifiedEvent", (), {})
+        sys.modules["watchdog"] = watchdog_mod
+        sys.modules["watchdog.observers"] = observers
+        sys.modules["watchdog.events"] = events
+
     from cleepcli.watch import CleepWatchdog
+
+    return CleepWatchdog
+
+
+def test_watch_catch_up_calls_sync_all():
+    CleepWatchdog = _import_watch_with_fake_watchdog()
 
     with patch("cleepcli.watch.File") as file_cls, patch(
         "cleepcli.watch.os.path.exists", return_value=True
@@ -66,17 +98,39 @@ def test_watch_catch_up_calls_sync_all():
         handler.schedule_all = Mock()
         executor = executor_cls.return_value
         executor.cleep.ensure_frontend_nocache = Mock(return_value=True)
-        executor.cleep.restart_frontend = Mock(return_value=True)
+        executor.cleep.restart_backend = Mock(return_value=True)
 
         watchdog = CleepWatchdog("https://127.0.0.1:443", catch_up=True)
         assert watchdog.watch() is True
         file_cls.return_value.sync_all.assert_called_once_with()
         executor.cleep.ensure_frontend_nocache.assert_called_once_with()
-        executor.cleep.restart_frontend.assert_called_once_with()
+        executor.cleep.restart_backend.assert_called_once_with()
+        executor.cleep.restart_frontend.assert_not_called()
+
+
+def test_watch_catch_up_fails_when_backend_restart_fails():
+    CleepWatchdog = _import_watch_with_fake_watchdog()
+
+    with patch("cleepcli.watch.File") as file_cls, patch(
+        "cleepcli.watch.os.path.exists", return_value=True
+    ), patch("cleepcli.watch.Observer"), patch(
+        "cleepcli.watch.CleepHandler"
+    ) as handler_cls, patch(
+        "cleepcli.watch.ActionsExecutor"
+    ) as executor_cls:
+        file_cls.return_value.sync_all.return_value = True
+        handler_cls.return_value._watched = {"/tmp"}
+        executor = executor_cls.return_value
+        executor.cleep.ensure_frontend_nocache = Mock(return_value=True)
+        executor.cleep.restart_backend = Mock(return_value=False)
+
+        watchdog = CleepWatchdog("https://127.0.0.1:443", catch_up=True)
+        assert watchdog.watch() is False
+        executor.start.assert_not_called()
 
 
 def test_watch_skip_catch_up():
-    from cleepcli.watch import CleepWatchdog
+    CleepWatchdog = _import_watch_with_fake_watchdog()
 
     with patch("cleepcli.watch.File") as file_cls, patch(
         "cleepcli.watch.os.path.exists", return_value=True
@@ -92,10 +146,12 @@ def test_watch_skip_catch_up():
         handler.schedule_all = Mock()
         executor = executor_cls.return_value
         executor.cleep.ensure_frontend_nocache = Mock()
+        executor.cleep.restart_backend = Mock()
         executor.cleep.restart_frontend = Mock()
 
         watchdog = CleepWatchdog("https://127.0.0.1:443", catch_up=False)
         assert watchdog.watch() is True
         file_cls.return_value.sync_all.assert_not_called()
         executor.cleep.ensure_frontend_nocache.assert_not_called()
+        executor.cleep.restart_backend.assert_not_called()
         executor.cleep.restart_frontend.assert_not_called()

@@ -1499,11 +1499,14 @@ overgeneral-exceptions=Exception
 
     def check_firmwares(self, module_name):
         """
-        Validate optional ``firmwares/`` zip+sidecar ``.manifest`` pairs and list
-        files for packaging (see ``cleep.libs.internals.firmware_manifest``).
+        Validate optional ``firmwares/<slug>/`` source folders (author manifests)
+        and list **built** zip+manifest pairs for packaging.
+
+        Sources live under one folder per firmware. Packaging files come from
+        ``firmwares/.dist/`` after :func:`build_all_firmware_packages`.
 
         Returns:
-            dict: errors / warnings / files (same shape as check_scripts)
+            dict: errors / warnings / files / count
         """
         if not os.path.exists(os.path.join(config.MODULES_DST, module_name)):
             raise Exception('Module "%s" does not exist' % module_name)
@@ -1513,6 +1516,7 @@ overgeneral-exceptions=Exception
             "errors": [],
             "warnings": [],
             "files": [],
+            "count": 0,
         }
         if not os.path.isdir(firmwares_path):
             return out
@@ -1520,7 +1524,8 @@ overgeneral-exceptions=Exception
         try:
             from cleep.libs.internals.firmware_manifest import (
                 FirmwareManifestError,
-                scan_firmwares_dir,
+                build_all_firmware_packages,
+                scan_firmware_sources,
             )
         except ImportError:
             out["errors"].append(
@@ -1530,15 +1535,33 @@ overgeneral-exceptions=Exception
             return out
 
         try:
-            scan_firmwares_dir(firmwares_path)
+            sources = scan_firmware_sources(firmwares_path)
         except FirmwareManifestError as error:
             out["errors"].append(str(error))
             return out
 
-        # Include valid pairs in the package file list
-        tree = self._check_module_tree(module_name, "firmwares")
-        out["files"] = tree["files"]
-        out["warnings"] = tree["warnings"]
+        out["count"] = len(sources)
+        if not sources:
+            return out
+
+        try:
+            built = build_all_firmware_packages(firmwares_path)
+        except FirmwareManifestError as error:
+            out["errors"].append(str(error))
+            return out
+
+        for item in built:
+            for key, ext in (("zip", ".zip"), ("manifest", ".manifest")):
+                fullpath = item[key]
+                out["files"].append(
+                    {
+                        "fullpath": fullpath,
+                        "filename": os.path.basename(fullpath),
+                        "path": os.path.join(
+                            "firmwares", os.path.basename(fullpath)
+                        ),
+                    }
+                )
         return out
 
     def check_tests(self, module_name):

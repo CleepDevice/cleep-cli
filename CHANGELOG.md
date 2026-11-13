@@ -1,5 +1,23 @@
 # Cleep-cli
 
+# [1.49.0] - 2026-11-13
+
+## Added
+
+- `pico sdk install|update|uninstall|info` — shared Pico SDK under `/var/opt/cleep/pico-sdk` (+ apt toolchain)
+- `pico build --module` / `pico status --module` — compile UF2 into `firmwares/<slug>/.build/` with freshness stamp
+
+## Changed
+
+- Pico firmwares: validate `firmwares/<slug>/` author sources; packaging zips prebuilt `.build/payload.uf2` (no cmake during `modbuild`); kinds `uf2` / `micropython`
+- Watcher ignores `firmwares/**/.build` and `.dist`
+- `watchsvc install --restart-if-active` for package-upgrade paths that must bounce a running watcher
+
+## Fixed
+
+- Watch catch-up / `syncall` restart the Cleep **backend** after syncing modules (was frontend-only, so new Python RPC commands stayed invisible until a manual `systemctl restart cleep`)
+- `watchsvc install` restarts the unit when it is active and the unit file changed (or with `--restart-if-active`) so an upgraded cleep-cli is loaded
+
 # [1.48.1] - 2026-11-11
 
 ## Added
