@@ -440,7 +440,12 @@ def watch(quiet, loglevel, rpc_url, skip_catchup):
     is_flag=True,
     help='With install: force-restart if already running. Default install also restarts when the unit changed or cleep-cli binary is newer than the running watch.',
 )
-def watchsvc_cmd(action, restart_if_active):
+@click.option(
+    '--skip-catchup',
+    is_flag=True,
+    help='With start: resume watching without catch-up sync/restart (e.g. after create-app modsync).',
+)
+def watchsvc_cmd(action, restart_if_active, skip_catchup):
     """
     Manage the durable cleep-watch systemd unit.
 
@@ -455,6 +460,10 @@ def watchsvc_cmd(action, restart_if_active):
     the watcher when the on-disk binary is newer than the running process. Force with::
 
         cleep-cli watchsvc install --restart-if-active
+
+    Resume after a deliberate pause without restarting Cleep::
+
+        cleep-cli watchsvc start --skip-catchup
     """
     svc = WatchService()
     if action == 'status':
@@ -466,12 +475,13 @@ def watchsvc_cmd(action, restart_if_active):
 
     if action == 'install':
         ok = svc.install(restart_if_active=restart_if_active)
+    elif action == 'start':
+        ok = svc.start(skip_catchup=skip_catchup)
     else:
         handlers = {
             'uninstall': svc.uninstall,
             'enable': svc.enable,
             'disable': svc.disable,
-            'start': svc.start,
             'stop': svc.stop,
             'restart': svc.restart,
         }

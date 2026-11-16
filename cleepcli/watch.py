@@ -18,7 +18,7 @@ from watchdog.events import (
 import watchdog.events as events
 from .cleepapi import CleepApi
 from .file import File
-from .watchsvc import WATCH_SERVICE
+from .watchsvc import WATCH_SERVICE, consume_skip_catchup_once
 
 _WATCHED_EVENT_TYPES = (
     EVENT_TYPE_CREATED,
@@ -557,6 +557,13 @@ class CleepWatchdog:
                 'Please get Cleep sources using "cleep-cli getcore" command'
             )
             return False
+
+        # One-shot flag from ``watchsvc start --skip-catchup`` (create-app resume).
+        if consume_skip_catchup_once():
+            self.logger.info(
+                "Skipping catch-up sync (one-shot flag from watchsvc start)"
+            )
+            self.catch_up = False
 
         # Catch-up before inotify: Desktop (or editors) may have written while
         # this process was stopped (cleep restart, create-app pause, boot).

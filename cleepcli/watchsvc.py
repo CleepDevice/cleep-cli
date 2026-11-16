@@ -16,6 +16,48 @@ from .console import Console
 
 WATCH_SERVICE = "cleep-watch.service"
 WATCH_UNIT_DST = "/lib/systemd/system/%s" % WATCH_SERVICE
+# One-shot flag for ``watchsvc start --skip-catchup``: watch consumes and deletes it.
+SKIP_CATCHUP_ONCE_PATH = "/run/cleep-watch.skip-catchup"
+
+
+def arm_skip_catchup_once():
+    """
+    Arm a one-shot skip of watch catch-up on the next watch process start.
+
+    Returns:
+        bool: True if the flag file was written
+    """
+    try:
+        directory = os.path.dirname(SKIP_CATCHUP_ONCE_PATH)
+        if directory:
+            os.makedirs(directory, exist_ok=True)
+        with open(SKIP_CATCHUP_ONCE_PATH, "w", encoding="utf-8") as handle:
+            handle.write("1\n")
+        return True
+    except OSError as error:
+        logging.getLogger("WatchService").error(
+            "Unable to arm skip-catchup flag %s: %s",
+            SKIP_CATCHUP_ONCE_PATH,
+            error,
+        )
+        return False
+
+
+def consume_skip_catchup_once():
+    """
+    Consume the one-shot skip-catchup flag if present.
+
+    Returns:
+        bool: True when catch-up must be skipped for this watch start
+    """
+    if not os.path.exists(SKIP_CATCHUP_ONCE_PATH):
+        return False
+    try:
+        os.remove(SKIP_CATCHUP_ONCE_PATH)
+    except OSError:
+        # Still honor the flag even if unlink fails (avoid surprise restart).
+        pass
+    return True
 
 
 def bundled_unit_path():
@@ -207,9 +249,15 @@ class WatchService:
             )
         return True
 
-    def start(self):
+    def start(self, skip_catchup=False):
         """
-        Start the unit (catch-up sync runs on ExecStart).
+        Start the unit.
+
+        Args:
+            skip_catchup (bool): when True, arm a one-shot flag so the next
+                watch process skips catch-up sync/restart (e.g. resume after
+                create-app already ran ``modsync``). Default False: catch-up
+                runs on ExecStart.
 
         Returns:
             bool: True on success
@@ -217,6 +265,8 @@ class WatchService:
         if not os.path.isfile(WATCH_UNIT_DST):
             if not self.install():
                 return False
+        if skip_catchup and not arm_skip_catchup_once():
+            return False
         resp = self._systemctl("start", WATCH_SERVICE)
         if not self._ok(resp):
             self.logger.error(

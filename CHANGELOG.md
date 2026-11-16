@@ -1,5 +1,11 @@
 # Cleep-cli
 
+# [1.49.4] - 2026-11-16
+
+## Added
+
+- `watchsvc start --skip-catchup`: resume inotify without catch-up sync/restart (one-shot flag for create-app pause)
+
 # [1.49.3] - 2026-11-16
 
 ## Fixed

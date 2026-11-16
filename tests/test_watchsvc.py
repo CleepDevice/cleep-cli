@@ -4,7 +4,13 @@
 import os
 from unittest.mock import Mock, patch
 
-from cleepcli.watchsvc import WatchService, WATCH_UNIT_DST, bundled_unit_path
+from cleepcli.watchsvc import (
+    WatchService,
+    WATCH_UNIT_DST,
+    arm_skip_catchup_once,
+    bundled_unit_path,
+    consume_skip_catchup_once,
+)
 
 
 def test_bundled_unit_path_exists():
@@ -145,3 +151,42 @@ def test_status_active():
     }
     with patch("cleepcli.watchsvc.os.path.isfile", return_value=True):
         assert svc.status() == "active"
+
+
+def test_start_skip_catchup_arms_flag():
+    svc = WatchService()
+    svc.console = Mock()
+    svc.console.command.return_value = {"returncode": 0, "stdout": "", "stderr": ""}
+
+    with patch("cleepcli.watchsvc.os.path.isfile", return_value=True), patch(
+        "cleepcli.watchsvc.arm_skip_catchup_once", return_value=True
+    ) as arm:
+        assert svc.start(skip_catchup=True) is True
+    arm.assert_called_once_with()
+    svc.console.command.assert_called_with(
+        "/bin/systemctl start %s" % "cleep-watch.service", 60.0
+    )
+
+
+def test_start_default_does_not_arm_skip_catchup():
+    svc = WatchService()
+    svc.console = Mock()
+    svc.console.command.return_value = {"returncode": 0, "stdout": "", "stderr": ""}
+
+    with patch("cleepcli.watchsvc.os.path.isfile", return_value=True), patch(
+        "cleepcli.watchsvc.arm_skip_catchup_once"
+    ) as arm:
+        assert svc.start() is True
+    arm.assert_not_called()
+
+
+def test_arm_and_consume_skip_catchup_once(tmp_path, monkeypatch):
+    flag = tmp_path / "cleep-watch.skip-catchup"
+    monkeypatch.setattr("cleepcli.watchsvc.SKIP_CATCHUP_ONCE_PATH", str(flag))
+
+    assert consume_skip_catchup_once() is False
+    assert arm_skip_catchup_once() is True
+    assert flag.is_file()
+    assert consume_skip_catchup_once() is True
+    assert not flag.exists()
+    assert consume_skip_catchup_once() is False
