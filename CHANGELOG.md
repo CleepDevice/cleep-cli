@@ -1,5 +1,21 @@
 # Cleep-cli
 
+# [1.49.2] - 2026-11-13
+
+## Added
+
+- `modcreate --base-class` / `--category` / `--tag` / `--firmware` for wizard-driven app skeletons
+
+# [1.49.1] - 2026-11-13
+
+## Fixed
+
+- `modtests --coverage`: silence third-party DeprecationWarning noise (passlib, etc.) so pytest results stay readable
+
+## Changed
+
+- New apps' `pytest.ini` filters passlib DeprecationWarnings by default
+
 # [1.49.0] - 2026-11-13
 
 ## Added

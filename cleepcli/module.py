@@ -298,10 +298,10 @@ function(\$rootScope, cleepService, toastService, %(MODULE_NAME)sService) {
 # -*- coding: utf-8 -*-
 
 from cleep.exception import MissingParameter, InvalidParameter, CommandError
-from cleep.core import CleepModule
-from cleep.common import CATEGORIES
+from cleep.core import %(BASE_CLASS)s
+from cleep.common import CATEGORIES%(EXTRA_IMPORTS)s
 
-class %(MODULE_NAME_CAPITALIZED)s(CleepModule):
+class %(MODULE_NAME_CAPITALIZED)s(%(BASE_CLASS)s):
     \\"\\"\\"
     %(MODULE_NAME_CAPITALIZED)s application
     \\"\\"\\"
@@ -310,8 +310,8 @@ class %(MODULE_NAME_CAPITALIZED)s(CleepModule):
     MODULE_DEPS = []
     MODULE_DESCRIPTION = 'TODO'
     MODULE_LONGDESCRIPTION = 'TODO'
-    MODULE_TAGS = []
-    MODULE_CATEGORY = CATEGORIES.APPLICATION
+    MODULE_TAGS = %(MODULE_TAGS)s
+    MODULE_CATEGORY = CATEGORIES.%(MODULE_CATEGORY)s
     MODULE_URLINFO = 'https://www.google.com'
     MODULE_URLHELP = None
     MODULE_URLSITE = None
@@ -319,7 +319,7 @@ class %(MODULE_NAME_CAPITALIZED)s(CleepModule):
 
     MODULE_CONFIG_FILE = '%(MODULE_NAME)s.conf'
     DEFAULT_CONFIG = {}
-
+%(EXTRA_MEMBERS)s
     def __init__(self, bootstrap, debug_enabled):
         \\"\\"\\"
         Constructor
@@ -328,7 +328,7 @@ class %(MODULE_NAME_CAPITALIZED)s(CleepModule):
             bootstrap (dict): bootstrap objects
             debug_enabled: debug status
         \\"\\"\\"
-        CleepModule.__init__(self, bootstrap, debug_enabled)
+        %(BASE_CLASS)s.__init__(self, bootstrap, debug_enabled)
 
     def _configure(self):
         \\"\\"\\"
@@ -405,7 +405,65 @@ class %(MODULE_NAME_CAPITALIZED)s(CleepModule):
         Charge to you to move or delete file after processing it.
         \\"\\"\\"
         self.logger.info('File %%s uploaded', filepath)
+%(EXTRA_METHODS)s"""
+
+    BASE_CLASS_CHOICES = (
+        "CleepModule",
+        "CleepResources",
+        "CleepRenderer",
+        "CleepExternalBus",
+        "CleepRemoteAccessModule",
+    )
+
+    FIRMWARE_MANIFEST_SKEL = """{
+  "schema_version": 1,
+  "name": "%(MODULE_NAME_CAPITALIZED)s Pico",
+  "app": "%(MODULE_NAME)s",
+  "version": "0.0.1",
+  "targets": ["pico"],
+  "kind": "uf2",
+  "description": "Companion firmware for %(MODULE_NAME)s"
+}
 """
+
+    FIRMWARE_CMAKE_SKEL = """cmake_minimum_required(VERSION 3.13)
+
+include($ENV{PICO_SDK_PATH}/external/pico_sdk_import.cmake)
+
+project(%(MODULE_NAME)s_fw C CXX ASM)
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
+
+pico_sdk_init()
+
+add_executable(%(MODULE_NAME)s_fw
+    main.c
+)
+
+target_link_libraries(%(MODULE_NAME)s_fw pico_stdlib)
+
+pico_enable_stdio_usb(%(MODULE_NAME)s_fw 1)
+pico_enable_stdio_uart(%(MODULE_NAME)s_fw 0)
+
+pico_add_extra_outputs(%(MODULE_NAME)s_fw)
+"""
+
+    FIRMWARE_MAIN_C_SKEL = """#include "pico/stdlib.h"
+
+int main() {
+    stdio_init_all();
+    const uint LED_PIN = PICO_DEFAULT_LED_PIN;
+    gpio_init(LED_PIN);
+    gpio_set_dir(LED_PIN, GPIO_OUT);
+    while (true) {
+        gpio_put(LED_PIN, 1);
+        sleep_ms(250);
+        gpio_put(LED_PIN, 0);
+        sleep_ms(250);
+    }
+}
+"""
+
     TEST_DEFAULT = """#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import logging
@@ -490,6 +548,8 @@ testpaths = tests
 python_files = test_*.py
 markers =
     functional: real OS/device tests (CLEEP_FUNCTIONAL_TESTS / modtests --functional)
+filterwarnings =
+    ignore::DeprecationWarning:passlib.*
 """
     DOCS_CONF_PY = """# -*- coding: utf-8 -*-
 import os, sys
@@ -594,21 +654,100 @@ a:hover.icon.icon-home {
         """
         self.logger = logging.getLogger(self.__class__.__name__)
 
-    def create(self, module_name):
+    def __base_class_extras(self, base_class):
+        """
+        Return skeleton extras for the selected core base class.
+        """
+        extras = {
+            "CleepModule": {
+                "extra_imports": "",
+                "extra_members": "",
+                "extra_methods": "",
+            },
+            "CleepResources": {
+                "extra_imports": "",
+                "extra_members": "\n    # resource_name -> {\"permanent\": bool}\n    MODULE_RESOURCES = {}\n",
+                "extra_methods": "",
+            },
+            "CleepRenderer": {
+                "extra_imports": ", RENDERERS",
+                "extra_members": (
+                    "\n    RENDERER_TYPE = RENDERERS.UNKNOWN\n"
+                    "    RENDERER_PROFILES = []\n"
+                ),
+                "extra_methods": """
+    def on_render(self, profile_name, profile_values):
+        \\"\\"\\"
+        Render a profile received from the bus.
+
+        Args:
+            profile_name (str): profile class name
+            profile_values (dict): profile field values
+        \\"\\"\\"
+        self.logger.info('on_render %%s %%s', profile_name, profile_values)
+""",
+            },
+            "CleepExternalBus": {
+                "extra_imports": "",
+                "extra_members": "",
+                "extra_methods": "",
+            },
+            "CleepRemoteAccessModule": {
+                "extra_imports": "",
+                "extra_members": "",
+                "extra_methods": """
+    def get_remote_url_refresh(self):
+        \\"\\"\\"
+        Describe how Desktop can re-resolve this app's public URL.
+
+        Returns:
+            dict|None: refresh descriptor or None if unsupported
+        \\"\\"\\"
+        return None
+""",
+            },
+        }
+        return extras.get(base_class, extras["CleepModule"])
+
+    def create(
+        self,
+        module_name,
+        base_class="CleepModule",
+        category="APPLICATION",
+        tags=None,
+        with_firmware=False,
+    ):
         """
         Create module skeleton
 
         Args:
             module_name (string): module name
+            base_class (string): core base class (CleepModule, CleepRenderer, ...)
+            category (string): CATEGORIES value
+            tags (list): optional MODULE_TAGS values
+            with_firmware (bool): also scaffold firmwares/<module>/ UF2 sources
         """
         module_name = re.sub('[^0-9a-zA-Z]+', '', module_name).lstrip('0123456789').lower()
         self.logger.debug('Module name to create: %s' % module_name)
         path = os.path.join(config.MODULES_SRC, module_name)
         self.logger.info('Creating module "%s" in "%s"' % (module_name, path))
-        
+
+        if base_class not in self.BASE_CLASS_CHOICES:
+            self.logger.error('Unsupported base class "%s"' % base_class)
+            return False
+        category = (category or "APPLICATION").upper()
+        from cleep.common import CATEGORIES
+        if category not in CATEGORIES.ALL:
+            self.logger.error('Unsupported category "%s"' % category)
+            return False
+
         if os.path.exists(path):
             self.logger.error('Module "%s" already exists in "%s"' % (module_name, path))
             return False
+
+        tags = [str(tag).strip() for tag in (tags or []) if str(tag).strip()]
+        tags_repr = "[" + ", ".join("'%s'" % tag.replace("'", "") for tag in tags) + "]"
+        extras = self.__base_class_extras(base_class)
 
         title = 'Welcome to %s\'s documentation!' % module_name.capitalize()
         templates = {
@@ -616,7 +755,16 @@ a:hover.icon.icon-home {
             'ANGULAR_CONTROLLER': self.ANGULAR_CONTROLLER_SKEL % {'MODULE_NAME': module_name, 'MODULE_NAME_CAPITALIZED': module_name.capitalize()},
             'ANGULAR_CONTROLLER_TEMPLATE': self.ANGULAR_CONTROLLER_TEMPLATE_SKEL % {'MODULE_NAME': module_name, 'MODULE_NAME_CAPITALIZED': module_name.capitalize()},
             'DESC': self.DESC_SKEL % {'MODULE_NAME': module_name, 'MODULE_NAME_CAPITALIZED': module_name.capitalize()},
-            'PYTHON_MODULE': self.PYTHON_MODULE_SKEL % {'MODULE_NAME': module_name, 'MODULE_NAME_CAPITALIZED': module_name.capitalize()},
+            'PYTHON_MODULE': self.PYTHON_MODULE_SKEL % {
+                'MODULE_NAME': module_name,
+                'MODULE_NAME_CAPITALIZED': module_name.capitalize(),
+                'BASE_CLASS': base_class,
+                'MODULE_TAGS': tags_repr,
+                'MODULE_CATEGORY': category,
+                'EXTRA_IMPORTS': extras['extra_imports'],
+                'EXTRA_MEMBERS': extras['extra_members'],
+                'EXTRA_METHODS': extras['extra_methods'],
+            },
             'TEST_DEFAULT': self.TEST_DEFAULT % {'MODULE_NAME': module_name, 'MODULE_NAME_CAPITALIZED': module_name.capitalize()},
             'CONFTEST_DEFAULT': self.CONFTEST_DEFAULT,
             'PYTEST_INI_DEFAULT': self.PYTEST_INI_DEFAULT,
@@ -671,7 +819,34 @@ a:hover.icon.icon-home {
             self.logger.error('Error occured while creating application: %s' % ('killed' if resp['killed'] else resp['stderr']))
             shutil.rmtree(path)
             return False
-        
+
+        if with_firmware:
+            fw_dir = os.path.join(path, "firmwares", module_name)
+            fw_ctx = {
+                "MODULE_NAME": module_name,
+                "MODULE_NAME_CAPITALIZED": module_name.capitalize(),
+            }
+            # Single-quoted echoes: CMakeLists contains $ENV{...} that must not expand.
+            fw_cmd = """
+/bin/mkdir -p "%(FW_DIR)s"
+/bin/echo '%(MANIFEST)s' > "%(FW_DIR)s/firmware.manifest"
+/bin/echo '%(CMAKE)s' > "%(FW_DIR)s/CMakeLists.txt"
+/bin/echo '%(MAIN_C)s' > "%(FW_DIR)s/main.c"
+""" % {
+                "FW_DIR": fw_dir,
+                "MANIFEST": (self.FIRMWARE_MANIFEST_SKEL % fw_ctx).replace("'", "'\\''"),
+                "CMAKE": (self.FIRMWARE_CMAKE_SKEL % fw_ctx).replace("'", "'\\''"),
+                "MAIN_C": self.FIRMWARE_MAIN_C_SKEL.replace("'", "'\\''"),
+            }
+            fw_resp = c.command(fw_cmd, 10)
+            if fw_resp["killed"] or fw_resp["returncode"] != 0:
+                self.logger.error(
+                    "Error creating firmware skeleton: %s",
+                    "killed" if fw_resp["killed"] else fw_resp["stderr"],
+                )
+                shutil.rmtree(path)
+                return False
+
         self.logger.info('Done')
         return True
 

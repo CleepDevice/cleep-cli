@@ -349,12 +349,38 @@ def modsync(module):
 
 @mod.command()
 @click.option('--module', prompt='Module name', help='Module name.')
-def modcreate(module):
+@click.option(
+    '--base-class',
+    default='CleepModule',
+    type=click.Choice(
+        ['CleepModule', 'CleepResources', 'CleepRenderer', 'CleepExternalBus', 'CleepRemoteAccessModule'],
+        case_sensitive=True,
+    ),
+    help='Core base class for the application.',
+)
+@click.option(
+    '--category',
+    default='APPLICATION',
+    type=click.Choice(
+        ['APPLICATION', 'MOBILE', 'DRIVER', 'HOMEAUTOMATION', 'MEDIA', 'SERVICE', 'HOBBY'],
+        case_sensitive=True,
+    ),
+    help='Market category (cleep.common.CATEGORIES).',
+)
+@click.option('--tag', multiple=True, help='MODULE_TAGS entry (repeatable).')
+@click.option('--firmware', is_flag=True, help='Also scaffold firmwares/<module>/ UF2 sources.')
+def modcreate(module, base_class, category, tag, firmware):
     """
     Create new module skeleton
     """
     m = Module()
-    res = m.create(module)
+    res = m.create(
+        module,
+        base_class=base_class,
+        category=category,
+        tags=list(tag),
+        with_firmware=firmware,
+    )
 
     if not res:
         sys.exit(1)
