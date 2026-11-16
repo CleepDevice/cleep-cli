@@ -316,10 +316,12 @@ cd "%(path)s"
         Return cmdline to run full tests on module with coverage (pytest hybrid).
 
         App root is on PYTHONPATH so tests import ``backend.*`` without sys.path hacks.
+        PYTHONWARNINGS silences noisy third-party DeprecationWarnings (not coverage
+        no-ctracer — that is filtered when forwarding output to the developer UI).
         """
         return """
 cd "%s"
-PYTHONPATH=. COVERAGE_FILE=%s coverage run --omit="*/lib/python*/*","*/tests/*","test_*" --source=backend --concurrency=thread -m pytest --tb=short -ra -m "not functional" tests
+PYTHONWARNINGS=ignore::DeprecationWarning PYTHONPATH=. COVERAGE_FILE=%s coverage run --omit="*/lib/python*/*","*/tests/*","test_*" --source=backend --concurrency=thread -m pytest --tb=short -ra -m "not functional" tests
         """ % (module_root_path, coverage_file_path)
 
     def __get_functional_tests_cmd(self, module_root_path):
