@@ -60,6 +60,8 @@ cleep-cli watchsvc enable
 
 The unit runs `cleep-cli watch`, survives `systemctl restart cleep`, and on each start performs a catch-up `syncall` so files written while the watcher was down are applied.
 
+After `pip install` / upgrade of `cleepcli`, the next `watchsvc install` (idempotent ensure) restarts the unit when the on-disk binary is newer than the running process, so the watcher loads the new CLI without a forced bounce on every Cleep boot.
+
 Manual one-shot resync (when the UI looks stale) — `syncall` also mints a fresh asset bust and reloads the device UI:
 
 ```

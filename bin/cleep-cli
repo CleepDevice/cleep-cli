@@ -438,7 +438,7 @@ def watch(quiet, loglevel, rpc_url, skip_catchup):
 @click.option(
     '--restart-if-active',
     is_flag=True,
-    help='With install: restart the unit if it is already running (pick up a new cleep-cli).',
+    help='With install: force-restart if already running. Default install also restarts when the unit changed or cleep-cli binary is newer than the running watch.',
 )
 def watchsvc_cmd(action, restart_if_active):
     """
@@ -451,9 +451,10 @@ def watchsvc_cmd(action, restart_if_active):
         cleep-cli watchsvc install
         cleep-cli watchsvc enable
 
-    After upgrading cleep-cli (pip), restart the watcher so it loads the new code::
+    After ``pip install cleepcli``, a later ``watchsvc install`` (or enable) restarts
+    the watcher when the on-disk binary is newer than the running process. Force with::
 
-        cleep-cli watchsvc restart
+        cleep-cli watchsvc install --restart-if-active
     """
     svc = WatchService()
     if action == 'status':

@@ -1,5 +1,11 @@
 # Cleep-cli
 
+# [1.49.3] - 2026-11-16
+
+## Fixed
+
+- `watchsvc install` restarts a running watcher when the on-disk `cleep-cli` binary is newer than the service start (pip upgrade), without requiring `--restart-if-active` on every ensure
+
 # [1.49.2] - 2026-11-16
 
 ## Changed

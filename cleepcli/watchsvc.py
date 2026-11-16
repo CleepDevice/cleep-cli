@@ -63,15 +63,54 @@ class WatchService:
             return True
         return new != old
 
+    @staticmethod
+    def _cli_executable_path():
+        """
+        On-disk ``cleep-cli`` path used by the watch unit ExecStart.
+        """
+        return shutil.which("cleep-cli") or "/usr/local/bin/cleep-cli"
+
+    def _cli_binary_newer_than_running(self):
+        """
+        Return True when the installed cleep-cli binary is newer than the
+        running watch main process (typical after ``pip install cleepcli``).
+
+        Used so ``watchsvc install`` (without ``--restart-if-active``) still
+        picks up an upgraded CLI once, without bouncing on every Cleep boot.
+        """
+        path = self._cli_executable_path()
+        if not path or not os.path.isfile(path):
+            return False
+        try:
+            bin_mtime = os.path.getmtime(path)
+        except OSError:
+            return False
+        resp = self._systemctl(
+            "show",
+            "-p",
+            "ExecMainStartTimestampUSec",
+            "--value",
+            WATCH_SERVICE,
+            timeout=5.0,
+        )
+        raw = "".join(resp.get("stdout") or []).strip()
+        if not raw.isdigit():
+            return False
+        start_sec = int(raw) / 1_000_000.0
+        if start_sec <= 0:
+            return False
+        return bin_mtime > start_sec
+
     def install(self, restart_if_active=False):
         """
         Copy the bundled unit to systemd and reload the daemon.
 
         Args:
-            restart_if_active (bool): when True, restart the unit if it is
-                already running so a new cleep-cli binary/unit is picked up.
-                Default False: developer ``ensure`` calls install on every
-                Cleep start and must not bounce the watcher (catch-up would
+            restart_if_active (bool): when True, always restart the unit if it
+                is already running. Default False: still restart when the unit
+                file changed or when the on-disk cleep-cli binary is newer than
+                the running watch process (pip upgrade). Idempotent ensure on
+                every Cleep boot must not bounce otherwise (catch-up would
                 restart Cleep again).
 
         Returns:
@@ -83,6 +122,7 @@ class WatchService:
             return False
         unit_changed = self._unit_content_changed(src)
         was_active = self.is_active()
+        cli_upgraded = was_active and self._cli_binary_newer_than_running()
         try:
             os.makedirs(os.path.dirname(WATCH_UNIT_DST), exist_ok=True)
             shutil.copyfile(src, WATCH_UNIT_DST)
@@ -93,11 +133,15 @@ class WatchService:
             self.logger.error("systemctl daemon-reload failed after install")
             return False
         self.logger.info("Installed %s", WATCH_UNIT_DST)
-        # Restart when asked (package upgrade) or when the unit file changed
-        # while the service was already running.
-        if was_active and (restart_if_active or unit_changed):
+        # Restart after forced upgrade, unit change, or pip-replaced cleep-cli.
+        if was_active and (restart_if_active or unit_changed or cli_upgraded):
             self.logger.info(
-                "Restarting %s to apply watcher changes", WATCH_SERVICE
+                "Restarting %s to apply watcher changes "
+                "(forced=%s unit_changed=%s cli_upgraded=%s)",
+                WATCH_SERVICE,
+                restart_if_active,
+                unit_changed,
+                cli_upgraded,
             )
             return self.restart()
         return True
