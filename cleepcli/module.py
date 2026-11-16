@@ -27,11 +27,13 @@ docs/_build
 """
     CHANGELOG = """# Changelog
 
-## [UNRELEASED] - YYYY-MM-DD
-### Added
+## [Unreleased]
+
+### Added
+
 - First release
 
-    """
+"""
     DESC_SKEL = """{
     \\"icon\\": \\"help-circle-outline\\",
     \\"global\\": {
@@ -45,12 +47,15 @@ docs/_build
         \\"css\\": []
     }
 }
-    """
+"""
     ANGULAR_SERVICE_SKEL = """/**
- * %(MODULE_NAME_CAPITALIZED)s service.
- * Handle %(MODULE_NAME)s application requests.
- * Service is the place to store your application content (it is a singleton) and
- * to provide your application functions.
+ * %(MODULE_NAME_CAPITALIZED)s Angular service.
+ *
+ * Singleton shared by all UI pieces of this app. Prefer storing shared state
+ * and RPC helpers here (not in the config controller).
+ *
+ * rpcService.sendCommand(command, moduleName, params?) calls a public Python
+ * method on the backend (same name, snake_case).
  */
 angular
 .module('Cleep')
@@ -59,94 +64,119 @@ function(\$rootScope, rpcService) {
     var self = this;
 
     /**
-     * Call backend execute_command command
+     * Sample RPC: no parameters.
+     * Maps to backend.%(MODULE_NAME)s.%(MODULE_NAME_CAPITALIZED)s.execute_command().
      */
     self.executeCommand = function() {
         return rpcService.sendCommand('execute_command', '%(MODULE_NAME)s');
     };
 
     /**
-     * Call backend configure_value command
+     * Sample RPC: pass a value from the UI to the backend.
+     * Maps to configure_value(value) on the Python module.
      */
     self.configureValue = function(value) {
         return rpcService.sendCommand('configure_value', '%(MODULE_NAME)s', {
-            'value': value,
+            value: value,
         });
     };
 
+    /**
+     * Sample file upload. rpcService.upload posts the file then calls the
+     * named Python handler with a temporary filepath on the device.
+     */
     self.addFile = function(file) {
-        // it uses provided rpcservice upload function
-        // add_file refers to your python function that will be called
         return rpcService.upload('add_file', '%(MODULE_NAME)s', file);
     };
 
     /**
-     * Catch an.app.event event
+     * Optional: react to a bus event pushed to the UI.
+     * Uncomment and replace the event name with one your backend emits.
      */
-    /*\$rootScope.\$on('an.app.event', function(event, uuid, params) {
-        console.log('Event an.app.event received with parameters:', parameters);
+    /*\$rootScope.\$on('%(MODULE_NAME)s.something.happened', function(_event, uuid, params) {
+        console.log('Event %(MODULE_NAME)s.something.happened', uuid, params);
     });*/
 }]);"""
     ANGULAR_CONTROLLER_SKEL = """/**
- * %(MODULE_NAME_CAPITALIZED)s config component
- * Handle %(MODULE_NAME)s application configuration
- * If your application doesn't need configuration page, delete this file and its references into desc.json
+ * %(MODULE_NAME_CAPITALIZED)s configuration page (Angular directive).
+ *
+ * Shown when the user opens this app in the market / installed apps UI.
+ * If you do not need a config page, delete this file, the matching .html, and
+ * remove them from frontend/desc.json.
  */
 angular
 .module('Cleep')
 .directive('%(MODULE_NAME)sConfigComponent', ['\$rootScope', 'cleepService', 'toastService', '%(MODULE_NAME)sService',
 function(\$rootScope, cleepService, toastService, %(MODULE_NAME)sService) {
 
-    var %(MODULE_NAME)sConfigController = function(\$scope) {
+    var %(MODULE_NAME)sConfigController = function() {
         var self = this;
-        // use this config variable in all your app (controller and view) to always have up-to-date config values
+
+        // Always bind the view to self.config: it stays in sync with the device.
         self.config = {};
-        self.message = 'message';
+
+        // Sample UI state for the starter widgets (replace with real fields).
+        self.message = 'hello';
         self.checkbox = true;
         self.slider = 25;
-        self.addFile = null;
 
         /**
-         * Init component
+         * Load persisted module config once the page is ready.
          */
         self.\$onInit = function() {
-            // get module config
             cleepService.getModuleConfig('%(MODULE_NAME)s');
         };
 
         /**
-         * Keep app configuration in sync
+         * Keep self.config aligned with cleepService whenever the backend
+         * config changes (reloadModuleConfig, external updates, …).
          */
         \$rootScope.\$watch(function() {
-            return cleepService.modules['%(MODULE_NAME)s'].config;
-        }, function(newVal, oldVal) {
-            if(newVal && Object.keys(newVal).length) {
+            return cleepService.modules['%(MODULE_NAME)s']
+                && cleepService.modules['%(MODULE_NAME)s'].config;
+        }, function(newVal) {
+            if (newVal && Object.keys(newVal).length) {
                 Object.assign(self.config, newVal);
             }
         });
 
+        /**
+         * Sample: send the text field to the backend and refresh config.
+         */
         self.setMessage = function() {
             %(MODULE_NAME)sService.configureValue(self.message)
                 .then(function(response) {
-                    console.log('Response:', response);
                     if (response.error) {
                         toastService.error('Command failed: ' + response.message);
                         return;
                     }
-                    toastService.success('Command succeed');
+                    toastService.success('Value saved');
                 })
                 .finally(function() {
                     cleepService.reloadModuleConfig('%(MODULE_NAME)s');
                 });
         };
 
+        /**
+         * Sample: trigger a parameter-less backend command.
+         */
         self.executeCommand = function() {
             %(MODULE_NAME)sService.executeCommand()
+                .then(function(response) {
+                    if (response.error) {
+                        toastService.error('Command failed: ' + response.message);
+                        return;
+                    }
+                    toastService.success('Command OK');
+                })
                 .finally(function() {
                     cleepService.reloadModuleConfig('%(MODULE_NAME)s');
                 });
         };
 
+        /**
+         * Sample: checkbox change → backend.
+         */
         self.updateCheckbox = function() {
             %(MODULE_NAME)sService.configureValue(self.checkbox)
                 .finally(function() {
@@ -154,6 +184,9 @@ function(\$rootScope, cleepService, toastService, %(MODULE_NAME)sService) {
                 });
         };
 
+        /**
+         * Sample: slider change → backend (via config-slider cl-on-change).
+         */
         self.setSlider = function() {
             %(MODULE_NAME)sService.configureValue(self.slider)
                 .finally(function() {
@@ -162,23 +195,21 @@ function(\$rootScope, cleepService, toastService, %(MODULE_NAME)sService) {
         };
 
         /**
-         * Handle file upload. Please don't forget to declare self.addFile (see above)
+         * Sample: file chosen via config-file (cl-click passes { file }).
          */
-        \$scope.\$watch(function() {
-            return self.addFile;
-        }, function(file) {
+        self.onFileSelected = function(file) {
             if (!file) {
                 return;
             }
-
             %(MODULE_NAME)sService.addFile(file)
-                .then((response) => {
-                    if (!response.error) {
-                        toastService.success('File added');
-                        // surely need to refresh something ;-)
+                .then(function(response) {
+                    if (response.error) {
+                        toastService.error('Upload failed: ' + response.message);
+                        return;
                     }
+                    toastService.success('File uploaded');
                 });
-        });
+        };
     };
 
     return {
@@ -191,109 +222,63 @@ function(\$rootScope, cleepService, toastService, %(MODULE_NAME)sService) {
 }]);"""
     ANGULAR_CONTROLLER_TEMPLATE_SKEL = """<div layout=\\"column\\" layout-padding ng-cloak>
 
-    <md-list ng-cloak>
+    <!--
+      Starter config page using Cleep config-* components.
+      Replace these samples with your real settings; remove unused rows.
+      Icons: https://pictogrammers.com/library/mdi/
+    -->
 
-        <!-- A configuration section. It is a good way to make separation between different kind of parameters -->
-        <md-subheader class=\\"md-no-sticky\\">A section header</md-subheader>
+    <config-note
+        cl-type=\\"info\\"
+        cl-icon=\\"information\\"
+        cl-note=\\"This page is a starter. Replace the sample controls below with your application settings.\\"
+    ></config-note>
 
-        <!-- list item with single line description -->
-        <md-list-item>
-            <!-- generic cleep icon, use it as default line icon -->
-            <md-icon md-svg-icon=\\"chevron-right\\"></md-icon>
-            <p>One line description</p>
-        </md-list-item>
+    <config-section cl-title=\\"Examples\\" cl-icon=\\"flask-outline\\"></config-section>
 
-        <!-- list item with double line description -->
-        <md-list-item class=\\"md-2-line\\">
-            <md-icon md-svg-icon=\\"chevron-right\\"></md-icon>
-            <div class=\\"md-list-item-text\\">
-                <h3>Two line description</h3>
-                <p>Sub line uses smallest font</p>
-            </div>
-        </md-list-item>
+    <config-button
+        cl-title=\\"Sample command\\"
+        cl-subtitle=\\"Calls execute_command on the backend (no parameters)\\"
+        cl-btn-label=\\"Run\\"
+        cl-btn-icon=\\"play\\"
+        cl-click=\\"%(MODULE_NAME)sCtl.executeCommand()\\"
+    ></config-button>
 
-        <!-- list item with button -->
-        <md-list-item>
-            <md-icon md-svg-icon=\\"chevron-right\\"></md-icon>
-            <p>Button</p>
-            <md-button ng-click=\\"%(MODULE_NAME)sCtl.executeCommand()\\" class=\\"md-raised md-primary md-secondary\\">
-                <md-icon md-svg-icon=\\"cog\\"></md-icon>
-                Button label
-            </md-button>
-        </md-list-item>
+    <config-text
+        cl-title=\\"Sample text value\\"
+        cl-subtitle=\\"Saved via configure_value on the backend\\"
+        cl-model=\\"%(MODULE_NAME)sCtl.message\\"
+        cl-btn-icon=\\"content-save\\"
+        cl-btn-tooltip=\\"Save\\"
+        cl-click=\\"%(MODULE_NAME)sCtl.setMessage()\\"
+    ></config-text>
 
-        <!-- list item with text input -->
-        <md-list-item>
-            <md-icon md-svg-icon=\\"chevron-right\\"></md-icon>
-            <p>Text input</p>
-            <md-input-container md-no-float class=\\"md-secondary no-margin\\" layout=\\"row\\" layout-align=\\"start center\\" layout-padding>
-                <div class=\\"no-md-error\\">
-                    <input ng-model=\\"%(MODULE_NAME)sCtl.message\\" placeholder=\\"message\\" class=\\"no-margin\\">
-                </div>
-                <md-button ng-click=\\"%(MODULE_NAME)sCtl.setMessage()\\" class=\\"md-raised md-primary\\">
-                    <md-icon md-svg-icon=\\"pencil\\"></md-icon>
-                </md-button>
-            </md-input-container>
-        </md-list-item>
+    <config-checkbox
+        cl-title=\\"Sample checkbox\\"
+        cl-subtitle=\\"Toggles a boolean sent with configure_value\\"
+        cl-model=\\"%(MODULE_NAME)sCtl.checkbox\\"
+        cl-click=\\"%(MODULE_NAME)sCtl.updateCheckbox()\\"
+    ></config-checkbox>
 
-        <!-- list item with checkbox -->
-        <md-list-item>
-            <md-icon md-svg-icon=\\"chevron-right\\"></md-icon>
-            <p>Checkbox</p>
-            <md-checkbox
-                class=\\"md-secondary\\"
-                ng-model=\\"%(MODULE_NAME)sCtl.checkbox\\"
-                ng-change=\\"%(MODULE_NAME)sCtl.updateCheckbox()\\"
-            >
-            </md-checkbox>
-        </md-list-item>
+    <config-slider
+        cl-title=\\"Sample slider\\"
+        cl-subtitle=\\"Number from 0 to 100\\"
+        cl-model=\\"%(MODULE_NAME)sCtl.slider\\"
+        cl-min=\\"0\\"
+        cl-max=\\"100\\"
+        cl-on-change=\\"%(MODULE_NAME)sCtl.setSlider()\\"
+    ></config-slider>
 
-        <!-- list item with slider -->
-        <md-list-item>
-            <md-icon md-svg-icon=\\"chevron-right\\"></md-icon>
-            <p>Slider</p>
-            <div class=\\"md-secondary\\">
-                <md-slider
-                    ng-model=\\"%(MODULE_NAME)sCtl.slider\\"
-                    ng-model-options=\\"{debounce: 1000}\\"
-                    ng-change=\\"%(MODULE_NAME)sCtl.setSlider()\\"
-                    min=\\"0\\"
-                    max=\\"100\\"
-                    md-discrete
-                >
-                </md-slider>
-            </div>
-        </md-list-item>
-
-        <!-- list item with multiple actions -->
-        <md-list-item>
-            <md-icon md-svg-icon=\\"chevron-right\\"></md-icon>
-            <p>Multiple actions on the same line</p>
-            <md-input-container md-no-float class=\\"md-secondary no-margin\\" layout=\\"row\\" layout-align=\\"start center\\" layout-padding>
-                <md-button class=\\"md-raised md-primary\\" ng-click=\\"\\">
-                    <md-icon md-svg-icon=\\"delete\\"></md-icon>
-                    <md-tooltip>Delete item</md-tooltip>
-                </md-button>
-                <md-button class=\\"md-raised md-primary\\" ng-click=\\"\\">
-                    <md-icon md-svg-icon=\\"pencil\\"></md-icon>
-                    <md-tooltip>Edit item</md-tooltip>
-                </md-button>
-            </md-input-container>
-        </md-list-item>
-
-        <!-- upload file example -->
-        <md-list-item>
-            <md-icon md-svg-icon=\\"chevron-right\\"></md-icon>
-            <p>Upload a file to your application</p>
-            <md-input-container md-no-float class=\\"md-secondary no-margin\\">
-                <div upload-file selected-file=\\"%(MODULE_NAME)sCtl.addFile\\" label=\\"Add file\\"></div>
-            </md-input-container>
-        </md-list-item>
-
-    </md-list>
+    <config-file
+        cl-title=\\"Sample file upload\\"
+        cl-subtitle=\\"Uploads to add_file on the backend; move or delete the temp file there\\"
+        cl-btn-label=\\"Choose file\\"
+        cl-btn-icon=\\"upload\\"
+        cl-click=\\"%(MODULE_NAME)sCtl.onFileSelected(file)\\"
+    ></config-file>
 
 </div>
-    """
+"""
     PYTHON_MODULE_SKEL = """#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -301,110 +286,127 @@ from cleep.exception import MissingParameter, InvalidParameter, CommandError
 from cleep.core import %(BASE_CLASS)s
 from cleep.common import CATEGORIES%(EXTRA_IMPORTS)s
 
+
 class %(MODULE_NAME_CAPITALIZED)s(%(BASE_CLASS)s):
     \\"\\"\\"
-    %(MODULE_NAME_CAPITALIZED)s application
-    \\"\\"\\"
-    MODULE_AUTHOR = 'TODO'
-    MODULE_VERSION = '0.0.0'
-    MODULE_DEPS = []
-    MODULE_DESCRIPTION = 'TODO'
-    MODULE_LONGDESCRIPTION = 'TODO'
-    MODULE_TAGS = %(MODULE_TAGS)s
-    MODULE_CATEGORY = CATEGORIES.%(MODULE_CATEGORY)s
-    MODULE_URLINFO = 'https://www.google.com'
-    MODULE_URLHELP = None
-    MODULE_URLSITE = None
-    MODULE_URLBUGS = None
+    %(MODULE_NAME_CAPITALIZED)s application.
 
+    Public methods (no leading underscore) are exposed as RPC commands that the
+    frontend can call via rpcService.sendCommand / upload.
+    \\"\\"\\"
+
+    # --- Market / install metadata (shown in CleepDesktop & the device market) ---
+    MODULE_AUTHOR = 'TODO'
+    MODULE_VERSION = '0.0.0'  # semver; bump when you release
+    MODULE_DEPS = []  # other Cleep apps required at runtime, e.g. ['audio']
+    MODULE_DESCRIPTION = 'TODO'  # short one-line summary
+    MODULE_LONGDESCRIPTION = 'TODO'  # longer description for the market page
+    MODULE_TAGS = %(MODULE_TAGS)s  # keywords for market search
+    MODULE_CATEGORY = CATEGORIES.%(MODULE_CATEGORY)s
+    MODULE_URLINFO = None  # project / docs URL
+    MODULE_URLHELP = None  # help / wiki URL
+    MODULE_URLSITE = None  # homepage
+    MODULE_URLBUGS = None  # bug tracker
+
+    # --- Persistent config (JSON file under the device config path) ---
     MODULE_CONFIG_FILE = '%(MODULE_NAME)s.conf'
-    DEFAULT_CONFIG = {}
+    DEFAULT_CONFIG = {
+        # Declare default keys here; they are created on first start and synced
+        # to the frontend via getModuleConfig / reloadModuleConfig.
+        # 'enabled': False,
+    }
 %(EXTRA_MEMBERS)s
     def __init__(self, bootstrap, debug_enabled):
         \\"\\"\\"
-        Constructor
+        Constructor. Keep it light: no blocking I/O, no bus commands yet.
 
         Args:
-            bootstrap (dict): bootstrap objects
-            debug_enabled: debug status
+            bootstrap (dict): core bootstrap objects (logger helpers, events, …)
+            debug_enabled (bool): True when debug logging was requested
         \\"\\"\\"
         %(BASE_CLASS)s.__init__(self, bootstrap, debug_enabled)
 
     def _configure(self):
         \\"\\"\\"
-        Configure module.
-        Use this function to configure your variables and local stuff that is not blocking.
-        At this time other applications are not started and all your command requests will fail.
+        Early setup while Cleep is still starting.
+
+        Other apps are not ready: do not send_command() here. Use this for local
+        state, timers preparation, reading files, etc.
         \\"\\"\\"
         pass
 
     def _on_start(self):
         \\"\\"\\"
-        Start module.
-        Use this function to start your tasks.
-        At this time all applications are started and should respond to your command requests.
+        App is starting; the bus and other modules are available.
+
+        Start background tasks and send_command() to peer apps from here.
         \\"\\"\\"
         pass
 
     def _on_stop(self):
         \\"\\"\\"
-        Stop module
-        Use this function to stop your tasks and close your external connections.
+        App is stopping (uninstall, shutdown, or developer reload).
+
+        Stop threads, close sockets, and release hardware here.
         \\"\\"\\"
         pass
 
     def on_event(self, event):
         \\"\\"\\"
-        Event received
+        Bus event callback (every event your module is allowed to see).
+
+        Typical uses: react to time/cron ticks, system alerts, device changes.
 
         Args:
-            event (MessageRequest): event data
+            event (MessageRequest): event name + parameters from the bus
         \\"\\"\\"
-        # execute here actions when you receive a specific event:
-        #  - on time event => cron task
-        #  - on alert event => send email or push message
-        #  - ...
+        # if event['event'] == 'time.now':
+        #     ...
         pass
 
     def execute_command(self):
         \\"\\"\\"
-        This is a simple command execution
+        Sample RPC command with no parameters (see frontend service).
 
         Returns:
-            bool: returns always True
+            bool: True on success
         \\"\\"\\"
         self.logger.info('execute_command called')
         return True
 
     def configure_value(self, value):
         \\"\\"\\"
-        This function is an example of how to pass value from frontend to backend
+        Sample RPC command with a parameter from the frontend.
 
         Args:
-            value (any): a value
+            value (any): value sent by the UI (str, bool, number, …)
         \\"\\"\\"
-        self.logger.info('set_value called with param value=%%s' %% value)
-
-    def _unexposed_command(self):
-        \\"\\"\\"
-        A function that starts with _ if not exposed to outside. But it can be used inherited class
-        \\"\\"\\"
-        self.logger.info('Unexposed function')
-
-    def __another_unexposed_command(self):
-        \\"\\"\\"
-        A function that starts with __ if not exposed to outside. This kind of function is also declared as private in Python
-        and cannot be used elsewhere than in this class itself.
-        \\"\\"\\"
-        self.logger.info('Another unexposed function')
+        self.logger.info('configure_value called with value=%%r', value)
+        # Example: persist it
+        # self._set_config_field('example', value)
 
     def add_file(self, filepath):
         \\"\\"\\"
-        Handle upload from your frontend service
-        Parameter filepath gives you path to uploaded file.
-        Charge to you to move or delete file after processing it.
+        Sample upload handler. ``filepath`` is a temporary path on the device.
+
+        You must move the file to a permanent location or delete it when done.
+
+        Args:
+            filepath (str): path to the uploaded temporary file
         \\"\\"\\"
-        self.logger.info('File %%s uploaded', filepath)
+        self.logger.info('File uploaded: %%s', filepath)
+
+    def _helper_for_subclasses(self):
+        \\"\\"\\"
+        Single leading underscore: not exposed as RPC, but usable by subclasses.
+        \\"\\"\\"
+        self.logger.debug('_helper_for_subclasses')
+
+    def __private_helper(self):
+        \\"\\"\\"
+        Double leading underscore: name-mangled private helper (this class only).
+        \\"\\"\\"
+        self.logger.debug('__private_helper')
 %(EXTRA_METHODS)s"""
 
     BASE_CLASS_CHOICES = (
@@ -516,25 +518,25 @@ def test_get_module_config(cleep_session):
     assert isinstance(config, dict)
 
 
-def test__on_configure(cleep_session):
+def test__configure(cleep_session):
     module = _start_app(cleep_session, start=False)
     # Add mocks here if needed, e.g.:
     # cleep_session.add_mock_command(cleep_session.make_mock_command('get_modules', data={}))
 
-    module._on_configure()
+    module._configure()
 
     # Assert side effects (commands / events / return values):
     # cleep_session.assert_command_called('get_modules')
     # cleep_session.assert_event_called('system.device.delete')
 
 
-def test_my_function(cleep_session):
+def test_execute_command(cleep_session):
     module = _start_app(cleep_session)
     # Add mocks here if needed
 
-    result = module.my_function()
+    result = module.execute_command()
 
-    assert result is not None
+    assert result is True
     # cleep_session.assert_command_called_with('some_command', {'key': 'value'})
     # cleep_session.assert_event_called_with('some.event', {'key': 'value'})
 """
@@ -666,23 +668,55 @@ a:hover.icon.icon-home {
             },
             "CleepResources": {
                 "extra_imports": "",
-                "extra_members": "\n    # resource_name -> {\"permanent\": bool}\n    MODULE_RESOURCES = {}\n",
-                "extra_methods": "",
+                "extra_members": """
+    # Exclusive peripherals claimed through CriticalResources.
+    # Keys are catalogue names (see cleep.libs.internals.resource_catalog).
+    # permanent=True: hold at boot (only one app may do this per resource).
+    # permanent=False: acquire on demand with _need_resource / _need_resources.
+    MODULE_RESOURCES = {
+        # 'audio.playback': {'permanent': False},
+    }
+""",
+                "extra_methods": """
+    def _resource_acquired(self, resource_name):
+        \\"\\"\\"
+        Called when a requested resource was granted (compatibility hook).
+
+        Prefer overriding _on_resource_granted(session) for session-aware apps.
+
+        Args:
+            resource_name (str): catalogue resource name
+        \\"\\"\\"
+        self.logger.info('Resource granted: %%s', resource_name)
+
+    def _resource_needs_to_be_released(self, resource_name):
+        \\"\\"\\"
+        Called when another app needs a resource you hold, or after revoke.
+
+        Stop using the peripheral and call _release_resource / _release_resource_session.
+
+        Args:
+            resource_name (str): catalogue resource name
+        \\"\\"\\"
+        self.logger.info('Resource must be released: %%s', resource_name)
+""",
             },
             "CleepRenderer": {
                 "extra_imports": ", RENDERERS",
-                "extra_members": (
-                    "\n    RENDERER_TYPE = RENDERERS.UNKNOWN\n"
-                    "    RENDERER_PROFILES = []\n"
-                ),
+                "extra_members": """
+    # What kind of renderer this is (AUDIO, DISPLAY, HOMEAUTOMATION, …).
+    RENDERER_TYPE = RENDERERS.UNKNOWN
+    # Profile classes this app can render (from cleep profiles).
+    RENDERER_PROFILES = []
+""",
                 "extra_methods": """
     def on_render(self, profile_name, profile_values):
         \\"\\"\\"
-        Render a profile received from the bus.
+        Render a profile published on the bus (display text, play a sound, …).
 
         Args:
             profile_name (str): profile class name
-            profile_values (dict): profile field values
+            profile_values (dict): field values for that profile
         \\"\\"\\"
         self.logger.info('on_render %%s %%s', profile_name, profile_values)
 """,
@@ -690,7 +724,37 @@ a:hover.icon.icon-home {
             "CleepExternalBus": {
                 "extra_imports": "",
                 "extra_members": "",
-                "extra_methods": "",
+                "extra_methods": """
+    def _send_command_to_peer(
+        self, command, to, peer_uuid, params=None, timeout=5.0, manual_response=None
+    ):
+        \\"\\"\\"
+        Transport-specific: deliver a Cleep command to a remote peer.
+
+        Use _get_peer_device_info() when you need uuid / auth / remote URLs to
+        advertise on your bus. Must be implemented for peer RPC to work.
+
+        Args:
+            command (str): command name
+            to (str): recipient module name (None to broadcast, no response)
+            peer_uuid (str): target peer uuid
+            params (dict|None): command parameters
+            timeout (float): seconds to wait for a response
+            manual_response (callable|None): filled by the bus when applicable
+        \\"\\"\\"
+        raise NotImplementedError('_send_command_to_peer must be implemented')
+
+    def _send_event_to_peer(self, event_name, peer_uuid, params=None):
+        \\"\\"\\"
+        Transport-specific: push an event to a remote peer.
+
+        Args:
+            event_name (str): event name
+            peer_uuid (str): target peer uuid
+            params (dict|None): event parameters
+        \\"\\"\\"
+        raise NotImplementedError('_send_event_to_peer must be implemented')
+""",
             },
             "CleepRemoteAccessModule": {
                 "extra_imports": "",
@@ -698,10 +762,17 @@ a:hover.icon.icon-home {
                 "extra_methods": """
     def get_remote_url_refresh(self):
         \\"\\"\\"
-        Describe how Desktop can re-resolve this app's public URL.
+        Tell CleepDesktop how to re-resolve this app's public URL by itself.
+
+        Return None when the provider cannot be queried from outside the device
+        (no API / missing credentials). Otherwise return a descriptor payload
+        (see CleepRemoteAccessModule in cleep.core).
+
+        From _on_start, open your tunnel, publish the URL when ready
+        (``register_remote_access_url``), and call ``_setup_lan_gateway()``.
 
         Returns:
-            dict|None: refresh descriptor or None if unsupported
+            dict|None: refresh descriptor, or None if unsupported
         \\"\\"\\"
         return None
 """,

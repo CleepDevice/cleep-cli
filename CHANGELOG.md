@@ -1,6 +1,10 @@
 # Cleep-cli
 
-# [1.49.2] - 2026-11-13
+# [1.49.2] - 2026-11-16
+
+## Changed
+
+- Enrich `modcreate` skeletons: clearer English comments, config-* frontend samples, base-class stubs (resources / external bus / remote access), fix sample tests
 
 ## Added
 
