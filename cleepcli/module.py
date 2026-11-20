@@ -298,14 +298,14 @@ class %(MODULE_NAME_CAPITALIZED)s(%(BASE_CLASS)s):
     # --- Market / install metadata (shown in CleepDesktop & the device market) ---
     MODULE_AUTHOR = 'TODO'
     MODULE_VERSION = '0.0.0'  # semver; bump when you release
-    MODULE_DEPS = []  # other Cleep apps required at runtime, e.g. ['audio']
-    MODULE_DESCRIPTION = 'TODO'  # short one-line summary
-    MODULE_LONGDESCRIPTION = 'TODO'  # longer description for the market page
+    MODULE_DEPS = %(MODULE_DEPS)s  # other Cleep apps required at runtime, e.g. ['gpio']
+    MODULE_DESCRIPTION = %(MODULE_DESCRIPTION)s  # short one-line summary
+    MODULE_LONGDESCRIPTION = %(MODULE_LONGDESCRIPTION)s  # longer description for the market page
     MODULE_TAGS = %(MODULE_TAGS)s  # keywords for market search
     MODULE_CATEGORY = CATEGORIES.%(MODULE_CATEGORY)s
     MODULE_URLINFO = None  # project / docs URL
     MODULE_URLHELP = None  # help / wiki URL
-    MODULE_URLSITE = None  # homepage
+    MODULE_URLSITE = %(MODULE_URLSITE)s  # homepage / GitHub / service site
     MODULE_URLBUGS = None  # bug tracker
 
     # --- Persistent config (JSON file under the device config path) ---
@@ -417,13 +417,15 @@ class %(MODULE_NAME_CAPITALIZED)s(%(BASE_CLASS)s):
         "CleepRemoteAccessModule",
     )
 
+    FIRMWARE_KINDS = ("uf2", "micropython")
+
     FIRMWARE_MANIFEST_SKEL = """{
   "schema_version": 1,
   "name": "%(MODULE_NAME_CAPITALIZED)s Pico",
   "app": "%(MODULE_NAME)s",
   "version": "0.0.1",
   "targets": ["pico"],
-  "kind": "uf2",
+  "kind": "%(FIRMWARE_KIND)s",
   "description": "Companion firmware for %(MODULE_NAME)s"
 }
 """
@@ -464,6 +466,15 @@ int main() {
         sleep_ms(250);
     }
 }
+"""
+
+    FIRMWARE_MAIN_PY_SKEL = """from machine import Pin
+import time
+
+led = Pin("LED", Pin.OUT)
+while True:
+    led.toggle()
+    time.sleep(0.25)
 """
 
     TEST_DEFAULT = """#!/usr/bin/env python
@@ -780,12 +791,37 @@ a:hover.icon.icon-home {
         }
         return extras.get(base_class, extras["CleepModule"])
 
+    @staticmethod
+    def _skel_str(value, default="TODO"):
+        """Sanitize a free-text value for embedding as a single-quoted Python string."""
+        text = re.sub(r"[\r\n\t]+", " ", str(value or "")).strip()
+        for char in ("\\", "'", '"', "`", "$"):
+            text = text.replace(char, "")
+        if not text:
+            return "'%s'" % default
+        return "'%s'" % text
+
+    @staticmethod
+    def _skel_url(value):
+        """Sanitize a URL for MODULE_URLSITE (None when empty)."""
+        text = str(value or "").strip()
+        for char in ("\\", "'", '"', "`", "$", " "):
+            text = text.replace(char, "")
+        if not text:
+            return "None"
+        return "'%s'" % text
+
     def create(
         self,
         module_name,
         base_class="CleepModule",
         category="APPLICATION",
         tags=None,
+        deps=None,
+        description=None,
+        long_description=None,
+        url=None,
+        firmware=None,
         with_firmware=False,
     ):
         """
@@ -796,7 +832,12 @@ a:hover.icon.icon-home {
             base_class (string): core base class (CleepModule, CleepRenderer, ...)
             category (string): CATEGORIES value
             tags (list): optional MODULE_TAGS values
-            with_firmware (bool): also scaffold firmwares/<module>/ UF2 sources
+            deps (list): optional MODULE_DEPS values (other Cleep apps)
+            description (string): optional MODULE_DESCRIPTION
+            long_description (string): optional MODULE_LONGDESCRIPTION
+            url (string): optional MODULE_URLSITE (homepage / GitHub / service)
+            firmware (string): optional firmware kind (``uf2`` or ``micropython``)
+            with_firmware (bool): deprecated alias for ``firmware="uf2"``
         """
         module_name = re.sub('[^0-9a-zA-Z]+', '', module_name).lstrip('0123456789').lower()
         self.logger.debug('Module name to create: %s' % module_name)
@@ -812,12 +853,30 @@ a:hover.icon.icon-home {
             self.logger.error('Unsupported category "%s"' % category)
             return False
 
+        # Legacy bool flag from older callers / --firmware without kind.
+        if firmware is None and with_firmware:
+            firmware = "uf2"
+        if firmware is not None:
+            firmware = str(firmware).strip().lower()
+            if firmware not in self.FIRMWARE_KINDS:
+                self.logger.error('Unsupported firmware kind "%s"' % firmware)
+                return False
+
         if os.path.exists(path):
             self.logger.error('Module "%s" already exists in "%s"' % (module_name, path))
             return False
 
         tags = [str(tag).strip() for tag in (tags or []) if str(tag).strip()]
         tags_repr = "[" + ", ".join("'%s'" % tag.replace("'", "") for tag in tags) + "]"
+        deps_clean = []
+        for dep in deps or []:
+            dep_name = re.sub('[^0-9a-zA-Z]+', '', str(dep)).lstrip('0123456789').lower()
+            if dep_name and dep_name != module_name and dep_name not in deps_clean:
+                deps_clean.append(dep_name)
+        deps_repr = "[" + ", ".join("'%s'" % dep for dep in deps_clean) + "]"
+        description_repr = self._skel_str(description)
+        long_description_repr = self._skel_str(long_description)
+        url_repr = self._skel_url(url)
         extras = self.__base_class_extras(base_class)
 
         title = 'Welcome to %s\'s documentation!' % module_name.capitalize()
@@ -831,6 +890,10 @@ a:hover.icon.icon-home {
                 'MODULE_NAME_CAPITALIZED': module_name.capitalize(),
                 'BASE_CLASS': base_class,
                 'MODULE_TAGS': tags_repr,
+                'MODULE_DEPS': deps_repr,
+                'MODULE_DESCRIPTION': description_repr,
+                'MODULE_LONGDESCRIPTION': long_description_repr,
+                'MODULE_URLSITE': url_repr,
                 'MODULE_CATEGORY': category,
                 'EXTRA_IMPORTS': extras['extra_imports'],
                 'EXTRA_MEMBERS': extras['extra_members'],
@@ -891,13 +954,35 @@ a:hover.icon.icon-home {
             shutil.rmtree(path)
             return False
 
-        if with_firmware:
-            fw_dir = os.path.join(path, "firmwares", module_name)
-            fw_ctx = {
-                "MODULE_NAME": module_name,
-                "MODULE_NAME_CAPITALIZED": module_name.capitalize(),
-            }
-            # Single-quoted echoes: CMakeLists contains $ENV{...} that must not expand.
+        if firmware:
+            if not self.__scaffold_firmware(c, path, module_name, firmware):
+                shutil.rmtree(path)
+                return False
+
+        self.logger.info('Done')
+        return True
+
+    def __scaffold_firmware(self, console, module_path, module_name, firmware_kind):
+        """
+        Write firmwares/<module>/ skeleton for the given kind.
+
+        Args:
+            console (Console): command runner
+            module_path (string): module root under MODULES_SRC
+            module_name (string): module name
+            firmware_kind (string): ``uf2`` or ``micropython``
+
+        Returns:
+            bool: True on success
+        """
+        fw_dir = os.path.join(module_path, "firmwares", module_name)
+        fw_ctx = {
+            "MODULE_NAME": module_name,
+            "MODULE_NAME_CAPITALIZED": module_name.capitalize(),
+            "FIRMWARE_KIND": firmware_kind,
+        }
+        # Single-quoted echoes: CMakeLists contains $ENV{...} that must not expand.
+        if firmware_kind == "uf2":
             fw_cmd = """
 /bin/mkdir -p "%(FW_DIR)s"
 /bin/echo '%(MANIFEST)s' > "%(FW_DIR)s/firmware.manifest"
@@ -909,16 +994,24 @@ a:hover.icon.icon-home {
                 "CMAKE": (self.FIRMWARE_CMAKE_SKEL % fw_ctx).replace("'", "'\\''"),
                 "MAIN_C": self.FIRMWARE_MAIN_C_SKEL.replace("'", "'\\''"),
             }
-            fw_resp = c.command(fw_cmd, 10)
-            if fw_resp["killed"] or fw_resp["returncode"] != 0:
-                self.logger.error(
-                    "Error creating firmware skeleton: %s",
-                    "killed" if fw_resp["killed"] else fw_resp["stderr"],
-                )
-                shutil.rmtree(path)
-                return False
+        else:
+            fw_cmd = """
+/bin/mkdir -p "%(FW_DIR)s/files"
+/bin/echo '%(MANIFEST)s' > "%(FW_DIR)s/firmware.manifest"
+/bin/echo '%(MAIN_PY)s' > "%(FW_DIR)s/files/main.py"
+""" % {
+                "FW_DIR": fw_dir,
+                "MANIFEST": (self.FIRMWARE_MANIFEST_SKEL % fw_ctx).replace("'", "'\\''"),
+                "MAIN_PY": self.FIRMWARE_MAIN_PY_SKEL.replace("'", "'\\''"),
+            }
 
-        self.logger.info('Done')
+        fw_resp = console.command(fw_cmd, 10)
+        if fw_resp["killed"] or fw_resp["returncode"] != 0:
+            self.logger.error(
+                "Error creating firmware skeleton: %s",
+                "killed" if fw_resp["killed"] else fw_resp["stderr"],
+            )
+            return False
         return True
 
     def delete(self, module_name):

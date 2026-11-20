@@ -1,5 +1,15 @@
 # Cleep-cli
 
+# [1.49.5] - 2026-11-19
+
+## Added
+
+- `pico sdk install|update`: stream apt/git output; emit `CLEEP_PICO_STEP` markers for UI progress
+- `pico sdk * --json`: compact one-line JSON (fixes developer Console line filter)
+- `modcreate --description` / `--long-description` / `--url` for market metadata in the skeleton
+- `modcreate --firmware` takes a kind: `uf2` (CMake/`main.c`) or `micropython` (`files/main.py`)
+- `modcreate --dep` (repeatable): set `MODULE_DEPS` in the generated backend skeleton
+
 # [1.49.4] - 2026-11-16
 
 ## Added

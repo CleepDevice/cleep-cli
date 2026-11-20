@@ -45,19 +45,14 @@ class PicoSdkTests(unittest.TestCase):
         self.assertFalse(os.path.isfile(self.meta))
         self.assertFalse(info["installed"])
 
-    @patch("cleepcli.pico.subprocess.run")
+    @patch.object(Pico, "_run_streamed")
     @patch.object(Pico, "_ensure_toolchain")
-    def test_sdk_install_clones(self, _toolchain, run_mock):
-        run_mock.return_value = MagicMock(returncode=0, stdout="abc123\n", stderr="")
-        os.makedirs(os.path.join(self.sdk_dir, ".git"), exist_ok=True)
-        # Pretend clone created .git by side effect of first call
-        def _run(args, **_kwargs):
-            if args[0:2] == ["git", "clone"]:
+    def test_sdk_install_clones(self, _toolchain, streamed_mock):
+        def _streamed(args, error_prefix, shell=False):
+            if isinstance(args, list) and args[0:2] == ["git", "clone"]:
                 os.makedirs(os.path.join(self.sdk_dir, ".git"), exist_ok=True)
-            return MagicMock(returncode=0, stdout="deadbee\n", stderr="")
 
-        run_mock.side_effect = _run
-        # Start without sdk
+        streamed_mock.side_effect = _streamed
         if os.path.exists(self.sdk_dir):
             import shutil
 
@@ -69,6 +64,7 @@ class PicoSdkTests(unittest.TestCase):
                     meta = self.pico.sdk_install()
         self.assertTrue(meta["installed"])
         self.assertTrue(os.path.isfile(self.meta))
+        self.assertGreaterEqual(streamed_mock.call_count, 2)
 
     def test_status_empty_firmwares(self):
         modules = os.path.join(self.root, "modules")

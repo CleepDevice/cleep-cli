@@ -368,8 +368,17 @@ def modsync(module):
     help='Market category (cleep.common.CATEGORIES).',
 )
 @click.option('--tag', multiple=True, help='MODULE_TAGS entry (repeatable).')
-@click.option('--firmware', is_flag=True, help='Also scaffold firmwares/<module>/ UF2 sources.')
-def modcreate(module, base_class, category, tag, firmware):
+@click.option('--dep', multiple=True, help='MODULE_DEPS entry (repeatable).')
+@click.option('--description', default=None, help='MODULE_DESCRIPTION (short market summary).')
+@click.option('--long-description', default=None, help='MODULE_LONGDESCRIPTION (market page).')
+@click.option('--url', default=None, help='MODULE_URLSITE (homepage / GitHub / service).')
+@click.option(
+    '--firmware',
+    type=click.Choice(['uf2', 'micropython'], case_sensitive=True),
+    default=None,
+    help='Scaffold firmwares/<module>/ (uf2 C/C++ or micropython).',
+)
+def modcreate(module, base_class, category, tag, dep, description, long_description, url, firmware):
     """
     Create new module skeleton
     """
@@ -379,7 +388,11 @@ def modcreate(module, base_class, category, tag, firmware):
         base_class=base_class,
         category=category,
         tags=list(tag),
-        with_firmware=firmware,
+        deps=list(dep),
+        description=description,
+        long_description=long_description,
+        url=url,
+        firmware=firmware,
     )
 
     if not res:
@@ -1009,7 +1022,8 @@ def pico_sdk_install(as_json):
         logging.error(str(error))
         sys.exit(1)
     if as_json:
-        click.echo(json.dumps(meta, indent=2))
+        # Compact one-line JSON (developer parses via Console line filter).
+        click.echo(json.dumps(meta, separators=(',', ':')))
     else:
         logging.info(
             'SDK installed=%s version=%s revision=%s toolchain_ok=%s',
@@ -1030,7 +1044,7 @@ def pico_sdk_update(as_json):
         logging.error(str(error))
         sys.exit(1)
     if as_json:
-        click.echo(json.dumps(meta, indent=2))
+        click.echo(json.dumps(meta, separators=(',', ':')))
     else:
         logging.info(
             'SDK updated version=%s revision=%s',
@@ -1049,7 +1063,7 @@ def pico_sdk_uninstall(as_json):
         logging.error(str(error))
         sys.exit(1)
     if as_json:
-        click.echo(json.dumps(meta, indent=2))
+        click.echo(json.dumps(meta, separators=(',', ':')))
     else:
         logging.info('Pico SDK uninstalled')
 
@@ -1060,7 +1074,7 @@ def pico_sdk_info(as_json):
     """Show Pico SDK install status."""
     meta = Pico().sdk_info()
     if as_json:
-        click.echo(json.dumps(meta, indent=2))
+        click.echo(json.dumps(meta, separators=(',', ':')))
     else:
         logging.info(
             'installed=%s path=%s version=%s revision=%s updated_at=%s toolchain_ok=%s',
@@ -1085,7 +1099,7 @@ def pico_build(module, firmware, as_json):
         logging.error(str(error))
         sys.exit(1)
     if as_json:
-        click.echo(json.dumps(result, indent=2))
+        click.echo(json.dumps(result, separators=(',', ':')))
     else:
         logging.info('Built %s UF2 firmware(s)', result.get('count'))
 
@@ -1101,7 +1115,7 @@ def pico_status(module, as_json):
         logging.error(str(error))
         sys.exit(1)
     if as_json:
-        click.echo(json.dumps(result, indent=2))
+        click.echo(json.dumps(result, separators=(',', ':')))
     else:
         logging.info(
             'uf2_ready=%s count=%s',

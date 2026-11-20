@@ -14,7 +14,6 @@ from datetime import datetime, timezone
 from typing import Any
 
 import cleepcli.config as config
-from cleepcli.console import Console
 
 
 class PicoError(Exception):
@@ -26,10 +25,68 @@ class Pico:
     Install / update the Pico SDK and compile app UF2 firmwares.
     """
 
+    # Machine-readable step markers for developer UI progress (stdout).
+    STEP_MARKER_PREFIX = "CLEEP_PICO_STEP:"
+    INSTALL_STEPS = (
+        ("toolchain", "Install apt toolchain (cmake, arm-none-eabi)"),
+        ("clone", "Clone pico-sdk"),
+        ("submodules", "Initialize pico-sdk submodules"),
+        ("finalize", "Write SDK metadata"),
+    )
+    UPDATE_STEPS = (
+        ("toolchain", "Check apt toolchain"),
+        ("fetch", "Fetch latest pico-sdk"),
+        ("reset", "Reset pico-sdk to origin/master"),
+        ("submodules", "Update pico-sdk submodules"),
+    )
+
     def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
 
     # ------------------------------------------------------------------ SDK
+
+    def _emit(self, message: str) -> None:
+        """Print a line to stdout (streamed by developer EndlessConsole)."""
+        # print only: cleep-cli logging also uses stdout and would duplicate lines.
+        print(message, flush=True)
+        self.logger.debug("%s", message)
+
+    def _emit_step(self, index: int, total: int, step_id: str, label: str) -> None:
+        """Emit a progress marker + human-readable step header."""
+        self._emit(
+            "%s%s/%s:%s:%s"
+            % (self.STEP_MARKER_PREFIX, index, total, step_id, label)
+        )
+        self._emit("=== [%s/%s] %s ===" % (index, total, label))
+
+    def _run_streamed(self, args: list[str] | str, error_prefix: str, shell: bool = False) -> None:
+        """
+        Run a command and stream combined stdout/stderr line by line.
+
+        Args:
+            args: argv list, or shell command string when shell=True
+            error_prefix: message prefix on non-zero exit
+            shell: pass command through the shell
+        """
+        env = os.environ.copy()
+        env["GIT_TERMINAL_PROMPT"] = "0"
+        # Make apt less chatty about progress bars that redraw the same line.
+        env.setdefault("DEBIAN_FRONTEND", "noninteractive")
+        proc = subprocess.Popen(
+            args,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+            shell=shell,
+            env=env,
+        )
+        assert proc.stdout is not None
+        for line in proc.stdout:
+            print(line, end="", flush=True)
+        returncode = proc.wait()
+        if returncode != 0:
+            raise PicoError("%s (exit %s)" % (error_prefix, returncode))
 
     def _toolchain_ok(self) -> bool:
         return bool(shutil.which("cmake") and shutil.which("arm-none-eabi-gcc"))
@@ -104,27 +161,36 @@ class Pico:
         )
         return data
 
-    def _ensure_toolchain(self) -> None:
+    def _ensure_toolchain(self, *, emit_steps: bool = False, step_index: int = 1, step_total: int = 4) -> None:
+        """
+        Ensure cmake + arm-none-eabi-gcc are on PATH (apt install if needed).
+
+        Args:
+            emit_steps: print step markers / headers for UI progress
+            step_index: 1-based step index when emit_steps
+            step_total: total steps when emit_steps
+        """
+        label = self.INSTALL_STEPS[0][1]
+        if emit_steps:
+            self._emit_step(step_index, step_total, "toolchain", label)
         if self._toolchain_ok():
+            self._emit("Toolchain already present (cmake, arm-none-eabi-gcc) — skipping apt.")
             return
         packages = " ".join(config.PICO_TOOLCHAIN_PACKAGES)
-        self.logger.info("Installing Pico toolchain packages: %s", packages)
-        console = Console()
+        self._emit("Installing Pico toolchain packages via apt: %s" % packages)
+        self._emit("(This step alone can take several minutes on a Raspberry Pi.)")
+        # No -qq: stream apt download/install lines to the developer console.
         cmd = (
             "export DEBIAN_FRONTEND=noninteractive; "
-            "apt-get update -qq && apt-get install -y -qq %s" % packages
+            "apt-get update && apt-get install -y %s" % packages
         )
-        result = console.command(cmd, 600.0)
-        if result.get("killed") or result.get("returncode") != 0:
-            raise PicoError(
-                "Failed to install toolchain packages: %s"
-                % ("\n".join(result.get("stderr") or []) or "apt error")
-            )
+        self._run_streamed(cmd, "Failed to install toolchain packages", shell=True)
         if not self._toolchain_ok():
             raise PicoError(
                 "Toolchain still missing after apt install "
                 "(need cmake and arm-none-eabi-gcc on PATH)"
             )
+        self._emit("Toolchain install complete.")
 
     def sdk_info(self) -> dict[str, Any]:
         """Return SDK installation metadata."""
@@ -132,21 +198,29 @@ class Pico:
 
     def sdk_install(self) -> dict[str, Any]:
         """Install toolchain packages + clone pico-sdk with submodules."""
-        self._ensure_toolchain()
+        total = len(self.INSTALL_STEPS)
+        self._emit(
+            "Pico SDK install started (often 10+ minutes on first run — "
+            "apt toolchain + git clone + submodules)."
+        )
+        self._ensure_toolchain(emit_steps=True, step_index=1, step_total=total)
+
         sdk_dir = config.PICO_SDK_DIR
         if os.path.isdir(os.path.join(sdk_dir, ".git")):
-            self.logger.info("Pico SDK already installed at %s — updating", sdk_dir)
+            self._emit("Pico SDK already installed at %s — switching to update." % sdk_dir)
             return self.sdk_update()
 
         os.makedirs(os.path.dirname(sdk_dir), exist_ok=True)
         if os.path.exists(sdk_dir):
             shutil.rmtree(sdk_dir)
 
-        self.logger.info("Cloning Pico SDK into %s", sdk_dir)
-        clone = subprocess.run(
+        self._emit_step(2, total, "clone", self.INSTALL_STEPS[1][1])
+        self._emit("Cloning %s into %s" % (config.PICO_SDK_REPO, sdk_dir))
+        self._run_streamed(
             [
                 "git",
                 "clone",
+                "--progress",
                 "--depth",
                 "1",
                 "--branch",
@@ -154,57 +228,80 @@ class Pico:
                 config.PICO_SDK_REPO,
                 sdk_dir,
             ],
-            capture_output=True,
-            text=True,
+            "git clone failed",
         )
-        if clone.returncode != 0:
-            raise PicoError(
-                "git clone failed: %s" % ((clone.stderr or clone.stdout or "").strip())
-            )
 
-        sub = subprocess.run(
-            ["git", "-C", sdk_dir, "submodule", "update", "--init"],
-            capture_output=True,
-            text=True,
+        self._emit_step(3, total, "submodules", self.INSTALL_STEPS[2][1])
+        self._run_streamed(
+            [
+                "git",
+                "-C",
+                sdk_dir,
+                "submodule",
+                "update",
+                "--init",
+                "--progress",
+            ],
+            "git submodule update failed",
         )
-        if sub.returncode != 0:
-            raise PicoError(
-                "git submodule update failed: %s"
-                % ((sub.stderr or sub.stdout or "").strip())
-            )
 
+        self._emit_step(4, total, "finalize", self.INSTALL_STEPS[3][1])
         meta = self._write_meta()
-        self.logger.info(
-            "Pico SDK installed (%s / %s)", meta.get("version"), meta.get("revision")
+        self._emit(
+            "Pico SDK installed (%s / %s)"
+            % (meta.get("version"), meta.get("revision"))
+        )
+        self._emit(
+            "%s%s/%s:done:Install complete"
+            % (self.STEP_MARKER_PREFIX, total, total)
         )
         return meta
 
     def sdk_update(self) -> dict[str, Any]:
         """Pull latest pico-sdk and refresh submodules."""
-        self._ensure_toolchain()
+        total = len(self.UPDATE_STEPS)
+        self._emit("Pico SDK update started.")
+        self._ensure_toolchain(emit_steps=True, step_index=1, step_total=total)
+
         sdk_dir = config.PICO_SDK_DIR
         if not os.path.isdir(os.path.join(sdk_dir, ".git")):
             return self.sdk_install()
 
-        self.logger.info("Updating Pico SDK in %s", sdk_dir)
-        for args in (
-            ["git", "-C", sdk_dir, "fetch", "--depth", "1", "origin", "master"],
+        self._emit_step(2, total, "fetch", self.UPDATE_STEPS[1][1])
+        self._run_streamed(
+            ["git", "-C", sdk_dir, "fetch", "--progress", "--depth", "1", "origin", "master"],
+            "SDK fetch failed",
+        )
+
+        self._emit_step(3, total, "reset", self.UPDATE_STEPS[2][1])
+        self._run_streamed(
             ["git", "-C", sdk_dir, "reset", "--hard", "origin/master"],
-            ["git", "-C", sdk_dir, "submodule", "update", "--init", "--recursive"],
-        ):
-            result = subprocess.run(args, capture_output=True, text=True)
-            if result.returncode != 0:
-                raise PicoError(
-                    "SDK update failed (%s): %s"
-                    % (
-                        " ".join(args),
-                        (result.stderr or result.stdout or "").strip(),
-                    )
-                )
+            "SDK reset failed",
+        )
+
+        self._emit_step(4, total, "submodules", self.UPDATE_STEPS[3][1])
+        self._run_streamed(
+            [
+                "git",
+                "-C",
+                sdk_dir,
+                "submodule",
+                "update",
+                "--init",
+                "--recursive",
+                "--progress",
+            ],
+            "SDK submodule update failed",
+        )
 
         meta = self._write_meta()
-        self.logger.info(
-            "Pico SDK updated (%s / %s)", meta.get("version"), meta.get("revision")
+        self._emit(
+            "Pico SDK updated (%s / %s)"
+            % (meta.get("version"), meta.get("revision"))
+        )
+        self._emit(
+            "%s%s/%s:done:Update complete"
+            % (self.STEP_MARKER_PREFIX, total, total)
         )
         return meta
 
@@ -213,7 +310,7 @@ class Pico:
         sdk_dir = config.PICO_SDK_DIR
         if os.path.isdir(sdk_dir):
             shutil.rmtree(sdk_dir)
-            self.logger.info("Removed %s", sdk_dir)
+            self._emit("Removed %s" % sdk_dir)
         if os.path.isfile(config.PICO_SDK_META):
             os.remove(config.PICO_SDK_META)
         return {
