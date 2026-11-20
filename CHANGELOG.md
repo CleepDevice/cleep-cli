@@ -1,5 +1,11 @@
 # Cleep-cli
 
+# [1.49.6] - 2026-11-20
+
+## Fixed
+
+- `pico sdk install`: duplicate `_run_streamed` (build helper) overwrote the install helper → `TypeError: missing argument: env`
+
 # [1.49.5] - 2026-11-19
 
 ## Added

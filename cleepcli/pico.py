@@ -59,7 +59,14 @@ class Pico:
         )
         self._emit("=== [%s/%s] %s ===" % (index, total, label))
 
-    def _run_streamed(self, args: list[str] | str, error_prefix: str, shell: bool = False) -> None:
+    def _run_streamed(
+        self,
+        args: list[str] | str,
+        error_prefix: str | None = None,
+        shell: bool = False,
+        cwd: str | None = None,
+        env: dict[str, str] | None = None,
+    ) -> None:
         """
         Run a command and stream combined stdout/stderr line by line.
 
@@ -67,11 +74,15 @@ class Pico:
             args: argv list, or shell command string when shell=True
             error_prefix: message prefix on non-zero exit
             shell: pass command through the shell
+            cwd: optional working directory
+            env: optional environment (defaults to a copy of os.environ)
         """
-        env = os.environ.copy()
-        env["GIT_TERMINAL_PROMPT"] = "0"
+        run_env = dict(env) if env is not None else os.environ.copy()
+        run_env.setdefault("GIT_TERMINAL_PROMPT", "0")
         # Make apt less chatty about progress bars that redraw the same line.
-        env.setdefault("DEBIAN_FRONTEND", "noninteractive")
+        run_env.setdefault("DEBIAN_FRONTEND", "noninteractive")
+        if isinstance(args, list):
+            self.logger.debug("$ %s", " ".join(args))
         proc = subprocess.Popen(
             args,
             stdout=subprocess.PIPE,
@@ -79,14 +90,17 @@ class Pico:
             text=True,
             bufsize=1,
             shell=shell,
-            env=env,
+            cwd=cwd,
+            env=run_env,
         )
         assert proc.stdout is not None
         for line in proc.stdout:
             print(line, end="", flush=True)
         returncode = proc.wait()
         if returncode != 0:
-            raise PicoError("%s (exit %s)" % (error_prefix, returncode))
+            prefix = error_prefix or "Command failed"
+            detail = args if isinstance(args, str) else " ".join(args)
+            raise PicoError("%s (exit %s): %s" % (prefix, returncode, detail))
 
     def _toolchain_ok(self) -> bool:
         return bool(shutil.which("cmake") and shutil.which("arm-none-eabi-gcc"))
@@ -359,24 +373,6 @@ class Pico:
             return None
         candidates.sort(key=lambda path: os.path.getmtime(path), reverse=True)
         return candidates[0]
-
-    def _run_streamed(self, args: list[str], cwd: str, env: dict[str, str]) -> None:
-        self.logger.info("$ %s", " ".join(args))
-        process = subprocess.Popen(
-            args,
-            cwd=cwd,
-            env=env,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            bufsize=1,
-        )
-        assert process.stdout is not None
-        for line in process.stdout:
-            logging.info(line.rstrip("\n"))
-        returncode = process.wait()
-        if returncode != 0:
-            raise PicoError("Command failed (%s): %s" % (returncode, " ".join(args)))
 
     def build_firmware(self, module_name: str, slug: str | None = None) -> dict[str, Any]:
         """
