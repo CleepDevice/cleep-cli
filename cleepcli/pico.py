@@ -38,8 +38,8 @@ class Pico:
     )
     UPDATE_STEPS = (
         ("toolchain", "Check apt toolchain"),
-        ("fetch", "Fetch latest pico-sdk"),
-        ("reset", "Reset pico-sdk to origin/master"),
+        ("fetch", "Fetch requested pico-sdk ref"),
+        ("checkout", "Checkout requested pico-sdk ref"),
         ("submodules", "Update pico-sdk submodules"),
     )
 
@@ -105,8 +105,35 @@ class Pico:
             detail = args if isinstance(args, str) else " ".join(args)
             raise PicoError("%s (exit %s): %s" % (prefix, returncode, detail))
 
+    @staticmethod
+    def _arm_lib_ok(libname: str) -> bool:
+        """
+        True when arm-none-eabi-gcc can resolve a real archive (e.g. libc.a).
+
+        Without libnewlib-arm-none-eabi, the compiler is on PATH but link fails
+        with ``cannot find -lc`` / ``-lg``.
+        """
+        gcc = shutil.which("arm-none-eabi-gcc")
+        if not gcc:
+            return False
+        try:
+            out = subprocess.check_output(
+                [gcc, "-print-file-name=%s" % libname],
+                text=True,
+                stderr=subprocess.DEVNULL,
+            ).strip()
+        except (OSError, subprocess.CalledProcessError):
+            return False
+        # Missing libs are echoed back as the bare name (not a filesystem path).
+        return bool(out) and out != libname and os.path.isfile(out)
+
     def _toolchain_ok(self) -> bool:
-        return bool(shutil.which("cmake") and shutil.which("arm-none-eabi-gcc"))
+        return bool(
+            shutil.which("cmake")
+            and shutil.which("arm-none-eabi-gcc")
+            and self._arm_lib_ok("libc.a")
+            and self._arm_lib_ok("libg.a")
+        )
 
     @staticmethod
     def _disk_free_bytes(path: str) -> int:
@@ -256,8 +283,16 @@ class Pico:
         if emit_steps:
             self._emit_step(step_index, step_total, "toolchain", label)
         if self._toolchain_ok():
-            self._emit("Toolchain already present (cmake, arm-none-eabi-gcc) — skipping apt.")
+            self._emit(
+                "Toolchain already present "
+                "(cmake, arm-none-eabi-gcc, newlib) — skipping apt."
+            )
             return
+        if shutil.which("arm-none-eabi-gcc") and not self._arm_lib_ok("libc.a"):
+            self._emit(
+                "Toolchain incomplete: arm-none-eabi-gcc is installed but newlib "
+                "is missing (linker cannot find -lc/-lg). Installing apt packages…"
+            )
         packages = " ".join(config.PICO_TOOLCHAIN_PACKAGES)
         self._emit("Installing Pico toolchain packages via apt: %s" % packages)
         self._emit("(This step alone can take several minutes on a Raspberry Pi.)")
@@ -269,8 +304,8 @@ class Pico:
         self._run_streamed(cmd, "Failed to install toolchain packages", shell=True)
         if not self._toolchain_ok():
             raise PicoError(
-                "Toolchain still missing after apt install "
-                "(need cmake and arm-none-eabi-gcc on PATH)"
+                "Toolchain still incomplete after apt install "
+                "(need cmake, arm-none-eabi-gcc, and newlib libc/libg)"
             )
         self._emit("Toolchain install complete.")
 
@@ -278,20 +313,83 @@ class Pico:
         """Return SDK installation metadata."""
         return self._load_meta()
 
-    def sdk_install(self) -> dict[str, Any]:
-        """Install toolchain packages + clone pico-sdk with submodules."""
+    @staticmethod
+    def _require_version(version: str) -> str:
+        """Caller-chosen git tag/branch/ref (CLI does not pick a default)."""
+        ref = (version or "").strip()
+        if not ref:
+            raise PicoError(
+                "Pico SDK version/ref is required "
+                '(e.g. cleep-cli pico sdk install --version 2.1.1)'
+            )
+        return ref
+
+    def _fetch_ref(self, sdk_dir: str, version: str) -> None:
+        """
+        Shallow-fetch ``version`` (tag or branch) into FETCH_HEAD.
+
+        Trusts the caller-provided ref; probes ``git fetch … tag`` quietly,
+        then falls back to a plain ref fetch for branches.
+        """
+        self._emit("Fetching %s (quiet)…" % version)
+        tag_cmd = [
+            "git",
+            "-C",
+            sdk_dir,
+            "fetch",
+            "--depth",
+            "1",
+            "origin",
+            "tag",
+            version,
+        ]
+        tag_probe = subprocess.run(
+            tag_cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+        if tag_probe.returncode == 0:
+            return
+        self._emit("Not a tag — fetching as branch/ref %s…" % version)
+        self._run_streamed(
+            [
+                "git",
+                "-C",
+                sdk_dir,
+                "fetch",
+                "--depth",
+                "1",
+                "origin",
+                version,
+            ],
+            "SDK fetch failed",
+        )
+
+    def _checkout_fetch_head(self, sdk_dir: str) -> None:
+        self._run_streamed(
+            ["git", "-C", sdk_dir, "checkout", "--force", "--detach", "FETCH_HEAD"],
+            "SDK checkout failed",
+        )
+
+    def sdk_install(self, version: str) -> dict[str, Any]:
+        """Install toolchain packages + clone pico-sdk at ``version``."""
+        version = self._require_version(version)
         total = len(self.INSTALL_STEPS)
         self._emit(
-            "Pico SDK install started (often 10+ minutes on first run — "
-            "apt toolchain + git clone + submodules)."
+            "Pico SDK install started (ref %s — often 10+ minutes on first run — "
+            "apt toolchain + git clone + submodules)." % version
         )
         self._ensure_disk_space()
         self._ensure_toolchain(emit_steps=True, step_index=1, step_total=total)
 
         sdk_dir = config.PICO_SDK_DIR
         if os.path.isdir(os.path.join(sdk_dir, ".git")):
-            self._emit("Pico SDK already installed at %s — switching to update." % sdk_dir)
-            return self.sdk_update()
+            self._emit(
+                "Pico SDK already installed at %s — switching to update (%s)."
+                % (sdk_dir, version)
+            )
+            return self.sdk_update(version)
 
         os.makedirs(os.path.dirname(sdk_dir), exist_ok=True)
         if os.path.exists(sdk_dir):
@@ -299,10 +397,11 @@ class Pico:
 
         self._emit_step(2, total, "clone", self.INSTALL_STEPS[1][1])
         # No --progress: percent spam floods the developer RPC bus.
-        self._emit("Cloning %s into %s (quiet — can take several minutes)…" % (
-            config.PICO_SDK_REPO,
-            sdk_dir,
-        ))
+        # --branch accepts tags and branch names.
+        self._emit(
+            "Cloning %s @ %s into %s (quiet — can take several minutes)…"
+            % (config.PICO_SDK_REPO, version, sdk_dir)
+        )
         self._run_streamed(
             [
                 "git",
@@ -310,7 +409,7 @@ class Pico:
                 "--depth",
                 "1",
                 "--branch",
-                "master",
+                version,
                 config.PICO_SDK_REPO,
                 sdk_dir,
             ],
@@ -333,10 +432,10 @@ class Pico:
         )
 
         self._emit_step(4, total, "finalize", self.INSTALL_STEPS[3][1])
-        meta = self._write_meta()
+        meta = self._write_meta(requested_version=version)
         self._emit(
-            "Pico SDK installed (%s / %s)"
-            % (meta.get("version"), meta.get("revision"))
+            "Pico SDK installed (%s / %s) [requested %s]"
+            % (meta.get("version"), meta.get("revision"), version)
         )
         self._emit(
             "%s%s/%s:done:Install complete"
@@ -344,29 +443,21 @@ class Pico:
         )
         return meta
 
-    def sdk_update(self) -> dict[str, Any]:
-        """Pull latest pico-sdk and refresh submodules."""
+    def sdk_update(self, version: str) -> dict[str, Any]:
+        """Checkout pico-sdk ``version`` and refresh submodules."""
+        version = self._require_version(version)
         total = len(self.UPDATE_STEPS)
-        self._emit("Pico SDK update started.")
+        self._emit("Pico SDK update started (ref %s)." % version)
         self._ensure_toolchain(emit_steps=True, step_index=1, step_total=total)
 
         sdk_dir = config.PICO_SDK_DIR
         if not os.path.isdir(os.path.join(sdk_dir, ".git")):
-            return self.sdk_install()
+            return self.sdk_install(version)
 
         self._emit_step(2, total, "fetch", self.UPDATE_STEPS[1][1])
-        # No --progress: percent spam floods the developer RPC bus.
-        self._emit("Fetching origin/master (quiet)…")
-        self._run_streamed(
-            ["git", "-C", sdk_dir, "fetch", "--depth", "1", "origin", "master"],
-            "SDK fetch failed",
-        )
-
-        self._emit_step(3, total, "reset", self.UPDATE_STEPS[2][1])
-        self._run_streamed(
-            ["git", "-C", sdk_dir, "reset", "--hard", "origin/master"],
-            "SDK reset failed",
-        )
+        self._fetch_ref(sdk_dir, version)
+        self._emit_step(3, total, "checkout", self.UPDATE_STEPS[2][1])
+        self._checkout_fetch_head(sdk_dir)
 
         self._emit_step(4, total, "submodules", self.UPDATE_STEPS[3][1])
         self._emit("Updating submodules (quiet — can take several minutes)…")
@@ -383,10 +474,10 @@ class Pico:
             "SDK submodule update failed",
         )
 
-        meta = self._write_meta()
+        meta = self._write_meta(requested_version=version)
         self._emit(
-            "Pico SDK updated (%s / %s)"
-            % (meta.get("version"), meta.get("revision"))
+            "Pico SDK updated (%s / %s) [requested %s]"
+            % (meta.get("version"), meta.get("revision"), version)
         )
         self._emit(
             "%s%s/%s:done:Update complete"

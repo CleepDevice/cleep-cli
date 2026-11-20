@@ -1,6 +1,6 @@
 # Cleep-cli
 
-# [1.49.7] - 2026-11-20
+# [1.49.6] - 2026-11-20
 
 ## Added
 
@@ -8,14 +8,13 @@
 
 ## Changed
 
-- `pico sdk install|update`: drop `--progress` on git clone/fetch (percent spam flooded developer RPC queues)
-- `pico sdk install|update`: drop `--progress` on submodule update (flood froze developer UI)
-
-# [1.49.6] - 2026-11-20
+- `pico sdk install|update` require `--version` (git tag/branch/ref); CLI no longer tracks `master` — caller pins the ref
+- `pico sdk install|update`: drop `--progress` on clone/fetch/submodules (percent spam flooded developer RPC queues)
 
 ## Fixed
 
 - `pico sdk install`: duplicate `_run_streamed` (build helper) overwrote the install helper → `TypeError: missing argument: env`
+- Pico toolchain check requires newlib (`libc.a` / `libg.a`), not only `arm-none-eabi-gcc` on PATH — avoids `cannot find -lc/-lg` when apt install was skipped
 
 # [1.49.5] - 2026-11-19
 

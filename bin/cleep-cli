@@ -1013,11 +1013,17 @@ def pico_sdk():
 
 
 @pico_sdk.command('install')
+@click.option(
+    '--version',
+    'version',
+    required=True,
+    help='Git tag or ref to install (caller-chosen; e.g. 2.1.1).',
+)
 @click.option('--json', 'as_json', is_flag=True, help='Print JSON metadata.')
-def pico_sdk_install(as_json):
-    """Install toolchain packages and clone the Pico SDK."""
+def pico_sdk_install(version, as_json):
+    """Install toolchain packages and clone the Pico SDK at --version."""
     try:
-        meta = Pico().sdk_install()
+        meta = Pico().sdk_install(version)
     except PicoError as error:
         logging.error(str(error))
         sys.exit(1)
@@ -1026,20 +1032,27 @@ def pico_sdk_install(as_json):
         click.echo(json.dumps(meta, separators=(',', ':')))
     else:
         logging.info(
-            'SDK installed=%s version=%s revision=%s toolchain_ok=%s',
+            'SDK installed=%s version=%s revision=%s requested=%s toolchain_ok=%s',
             meta.get('installed'),
             meta.get('version'),
             meta.get('revision'),
+            meta.get('requested_version'),
             meta.get('toolchain_ok'),
         )
 
 
 @pico_sdk.command('update')
+@click.option(
+    '--version',
+    'version',
+    required=True,
+    help='Git tag or ref to checkout (caller-chosen; e.g. 2.1.1).',
+)
 @click.option('--json', 'as_json', is_flag=True, help='Print JSON metadata.')
-def pico_sdk_update(as_json):
-    """Update the Pico SDK checkout."""
+def pico_sdk_update(version, as_json):
+    """Checkout the Pico SDK at --version and refresh submodules."""
     try:
-        meta = Pico().sdk_update()
+        meta = Pico().sdk_update(version)
     except PicoError as error:
         logging.error(str(error))
         sys.exit(1)
@@ -1047,9 +1060,10 @@ def pico_sdk_update(as_json):
         click.echo(json.dumps(meta, separators=(',', ':')))
     else:
         logging.info(
-            'SDK updated version=%s revision=%s',
+            'SDK updated version=%s revision=%s requested=%s',
             meta.get('version'),
             meta.get('revision'),
+            meta.get('requested_version'),
         )
 
 

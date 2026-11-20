@@ -45,6 +45,21 @@ class PicoSdkTests(unittest.TestCase):
                     self.pico._ensure_disk_space()
         self.assertIn("Not enough free disk space", str(ctx.exception))
 
+    def test_arm_lib_ok_rejects_echoed_name(self):
+        with patch("cleepcli.pico.shutil.which", return_value="/usr/bin/arm-none-eabi-gcc"):
+            with patch("cleepcli.pico.subprocess.check_output", return_value="libc.a\n"):
+                with patch("cleepcli.pico.os.path.isfile", return_value=False):
+                    self.assertFalse(self.pico._arm_lib_ok("libc.a"))
+
+    def test_arm_lib_ok_accepts_realpath(self):
+        with patch("cleepcli.pico.shutil.which", return_value="/usr/bin/arm-none-eabi-gcc"):
+            with patch(
+                "cleepcli.pico.subprocess.check_output",
+                return_value="/usr/lib/arm-none-eabi/newlib/libc.a\n",
+            ):
+                with patch("cleepcli.pico.os.path.isfile", return_value=True):
+                    self.assertTrue(self.pico._arm_lib_ok("libc.a"))
+
     def test_sdk_uninstall_removes_meta(self):
         os.makedirs(self.sdk_dir)
         with open(self.meta, "w", encoding="utf-8") as handle:
@@ -55,11 +70,19 @@ class PicoSdkTests(unittest.TestCase):
         self.assertFalse(os.path.isfile(self.meta))
         self.assertFalse(info["installed"])
 
+    def test_require_version_rejects_empty(self):
+        with self.assertRaises(PicoError):
+            self.pico._require_version("")
+        with self.assertRaises(PicoError):
+            self.pico._require_version("   ")
+
     @patch.object(Pico, "_run_streamed")
     @patch.object(Pico, "_ensure_toolchain")
-    def test_sdk_install_clones(self, _toolchain, streamed_mock):
+    @patch.object(Pico, "_ensure_disk_space")
+    def test_sdk_install_clones(self, _disk, _toolchain, streamed_mock):
         def _streamed(args, error_prefix, shell=False):
             if isinstance(args, list) and args[0:2] == ["git", "clone"]:
+                self.assertEqual(args[args.index("--branch") + 1], "2.1.1")
                 os.makedirs(os.path.join(self.sdk_dir, ".git"), exist_ok=True)
 
         streamed_mock.side_effect = _streamed
@@ -69,10 +92,11 @@ class PicoSdkTests(unittest.TestCase):
             shutil.rmtree(self.sdk_dir)
 
         with patch.object(self.pico, "_git_revision", return_value="deadbee"):
-            with patch.object(self.pico, "_git_describe", return_value="2.0.0"):
+            with patch.object(self.pico, "_git_describe", return_value="2.1.1"):
                 with patch.object(self.pico, "_toolchain_ok", return_value=True):
-                    meta = self.pico.sdk_install()
+                    meta = self.pico.sdk_install("2.1.1")
         self.assertTrue(meta["installed"])
+        self.assertEqual(meta["requested_version"], "2.1.1")
         self.assertTrue(os.path.isfile(self.meta))
         self.assertGreaterEqual(streamed_mock.call_count, 2)
 
