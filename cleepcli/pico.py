@@ -27,6 +27,9 @@ class Pico:
 
     # Machine-readable step markers for developer UI progress (stdout).
     STEP_MARKER_PREFIX = "CLEEP_PICO_STEP:"
+    # Installed tree ~700 MiB; leave headroom for clone tmp + apt when needed.
+    DISK_FREE_TOOLCHAIN_OK_BYTES = 1024 * 1024 * 1024  # 1 GiB
+    DISK_FREE_TOOLCHAIN_MISSING_BYTES = 2 * 1024 * 1024 * 1024  # 2 GiB
     INSTALL_STEPS = (
         ("toolchain", "Install apt toolchain (cmake, arm-none-eabi)"),
         ("clone", "Clone pico-sdk"),
@@ -105,6 +108,69 @@ class Pico:
     def _toolchain_ok(self) -> bool:
         return bool(shutil.which("cmake") and shutil.which("arm-none-eabi-gcc"))
 
+    @staticmethod
+    def _disk_free_bytes(path: str) -> int:
+        """Return free bytes on the filesystem that holds ``path`` (or its parent)."""
+        probe = path
+        while probe and not os.path.exists(probe):
+            parent = os.path.dirname(probe)
+            if parent == probe:
+                break
+            probe = parent
+        if not probe or not os.path.exists(probe):
+            probe = "/"
+        try:
+            usage = os.statvfs(probe)
+        except OSError:
+            return 0
+        return int(usage.f_bavail * usage.f_frsize)
+
+    def _disk_required_bytes(self) -> int:
+        if self._toolchain_ok():
+            return self.DISK_FREE_TOOLCHAIN_OK_BYTES
+        return self.DISK_FREE_TOOLCHAIN_MISSING_BYTES
+
+    def _disk_status(self) -> dict[str, Any]:
+        free = self._disk_free_bytes(config.PICO_SDK_DIR)
+        required = self._disk_required_bytes()
+        return {
+            "disk_free_bytes": free,
+            "disk_required_bytes": required,
+            "disk_ok": free >= required,
+        }
+
+    @staticmethod
+    def _format_bytes(num: int) -> str:
+        value = float(max(num, 0))
+        for unit in ("B", "KiB", "MiB", "GiB", "TiB"):
+            if value < 1024.0 or unit == "TiB":
+                if unit == "B":
+                    return "%d %s" % (int(value), unit)
+                return "%.1f %s" % (value, unit)
+            value /= 1024.0
+        return "%d B" % num
+
+    def _ensure_disk_space(self) -> None:
+        status = self._disk_status()
+        if status["disk_ok"]:
+            self._emit(
+                "Disk space OK: %s free (need %s)."
+                % (
+                    self._format_bytes(status["disk_free_bytes"]),
+                    self._format_bytes(status["disk_required_bytes"]),
+                )
+            )
+            return
+        raise PicoError(
+            "Not enough free disk space to install the Pico SDK: "
+            "%s free, %s required under %s"
+            % (
+                self._format_bytes(status["disk_free_bytes"]),
+                self._format_bytes(status["disk_required_bytes"]),
+                os.path.dirname(config.PICO_SDK_DIR) or config.PICO_SDK_DIR,
+            )
+        )
+
     def _git_revision(self, sdk_dir: str) -> str:
         try:
             result = subprocess.run(
@@ -152,7 +218,7 @@ class Pico:
     def _load_meta(self) -> dict[str, Any]:
         if not os.path.isfile(config.PICO_SDK_META):
             installed = os.path.isdir(os.path.join(config.PICO_SDK_DIR, ".git"))
-            return {
+            data = {
                 "installed": installed,
                 "path": config.PICO_SDK_DIR,
                 "revision": self._git_revision(config.PICO_SDK_DIR) if installed else "",
@@ -160,19 +226,21 @@ class Pico:
                 "updated_at": None,
                 "toolchain_ok": self._toolchain_ok(),
             }
-        try:
-            with open(config.PICO_SDK_META, "r", encoding="utf-8") as handle:
-                data = json.load(handle)
-        except (OSError, json.JSONDecodeError):
-            data = {}
-        if not isinstance(data, dict):
-            data = {}
-        data.setdefault("path", config.PICO_SDK_DIR)
-        data["toolchain_ok"] = self._toolchain_ok()
-        data["installed"] = bool(
-            data.get("installed")
-            or os.path.isdir(os.path.join(config.PICO_SDK_DIR, ".git"))
-        )
+        else:
+            try:
+                with open(config.PICO_SDK_META, "r", encoding="utf-8") as handle:
+                    data = json.load(handle)
+            except (OSError, json.JSONDecodeError):
+                data = {}
+            if not isinstance(data, dict):
+                data = {}
+            data.setdefault("path", config.PICO_SDK_DIR)
+            data["toolchain_ok"] = self._toolchain_ok()
+            data["installed"] = bool(
+                data.get("installed")
+                or os.path.isdir(os.path.join(config.PICO_SDK_DIR, ".git"))
+            )
+        data.update(self._disk_status())
         return data
 
     def _ensure_toolchain(self, *, emit_steps: bool = False, step_index: int = 1, step_total: int = 4) -> None:
@@ -217,6 +285,7 @@ class Pico:
             "Pico SDK install started (often 10+ minutes on first run — "
             "apt toolchain + git clone + submodules)."
         )
+        self._ensure_disk_space()
         self._ensure_toolchain(emit_steps=True, step_index=1, step_total=total)
 
         sdk_dir = config.PICO_SDK_DIR
@@ -229,12 +298,15 @@ class Pico:
             shutil.rmtree(sdk_dir)
 
         self._emit_step(2, total, "clone", self.INSTALL_STEPS[1][1])
-        self._emit("Cloning %s into %s" % (config.PICO_SDK_REPO, sdk_dir))
+        # No --progress: percent spam floods the developer RPC bus.
+        self._emit("Cloning %s into %s (quiet — can take several minutes)…" % (
+            config.PICO_SDK_REPO,
+            sdk_dir,
+        ))
         self._run_streamed(
             [
                 "git",
                 "clone",
-                "--progress",
                 "--depth",
                 "1",
                 "--branch",
@@ -246,6 +318,8 @@ class Pico:
         )
 
         self._emit_step(3, total, "submodules", self.INSTALL_STEPS[2][1])
+        # No --progress: submodule file spam freezes the developer UI console.
+        self._emit("Initializing submodules (quiet — can take several minutes)…")
         self._run_streamed(
             [
                 "git",
@@ -254,7 +328,6 @@ class Pico:
                 "submodule",
                 "update",
                 "--init",
-                "--progress",
             ],
             "git submodule update failed",
         )
@@ -282,8 +355,10 @@ class Pico:
             return self.sdk_install()
 
         self._emit_step(2, total, "fetch", self.UPDATE_STEPS[1][1])
+        # No --progress: percent spam floods the developer RPC bus.
+        self._emit("Fetching origin/master (quiet)…")
         self._run_streamed(
-            ["git", "-C", sdk_dir, "fetch", "--progress", "--depth", "1", "origin", "master"],
+            ["git", "-C", sdk_dir, "fetch", "--depth", "1", "origin", "master"],
             "SDK fetch failed",
         )
 
@@ -294,6 +369,7 @@ class Pico:
         )
 
         self._emit_step(4, total, "submodules", self.UPDATE_STEPS[3][1])
+        self._emit("Updating submodules (quiet — can take several minutes)…")
         self._run_streamed(
             [
                 "git",
@@ -303,7 +379,6 @@ class Pico:
                 "update",
                 "--init",
                 "--recursive",
-                "--progress",
             ],
             "SDK submodule update failed",
         )

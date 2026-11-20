@@ -31,9 +31,19 @@ class PicoSdkTests(unittest.TestCase):
 
     def test_sdk_info_not_installed(self):
         with patch.object(self.pico, "_toolchain_ok", return_value=True):
-            info = self.pico.sdk_info()
+            with patch.object(self.pico, "_disk_free_bytes", return_value=2 * 1024 * 1024 * 1024):
+                info = self.pico.sdk_info()
         self.assertFalse(info["installed"])
         self.assertTrue(info["toolchain_ok"])
+        self.assertTrue(info["disk_ok"])
+        self.assertEqual(info["disk_required_bytes"], Pico.DISK_FREE_TOOLCHAIN_OK_BYTES)
+
+    def test_ensure_disk_space_raises(self):
+        with patch.object(self.pico, "_toolchain_ok", return_value=True):
+            with patch.object(self.pico, "_disk_free_bytes", return_value=10 * 1024 * 1024):
+                with self.assertRaises(PicoError) as ctx:
+                    self.pico._ensure_disk_space()
+        self.assertIn("Not enough free disk space", str(ctx.exception))
 
     def test_sdk_uninstall_removes_meta(self):
         os.makedirs(self.sdk_dir)

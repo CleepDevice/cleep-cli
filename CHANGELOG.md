@@ -1,5 +1,16 @@
 # Cleep-cli
 
+# [1.49.7] - 2026-11-20
+
+## Added
+
+- `pico sdk install`: refuse to start when free disk space is too low; `pico sdk info` reports `disk_free_bytes` / `disk_required_bytes` / `disk_ok`
+
+## Changed
+
+- `pico sdk install|update`: drop `--progress` on git clone/fetch (percent spam flooded developer RPC queues)
+- `pico sdk install|update`: drop `--progress` on submodule update (flood froze developer UI)
+
 # [1.49.6] - 2026-11-20
 
 ## Fixed
